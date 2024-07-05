@@ -1,0 +1,20 @@
+## This file is Juju managed - do not edit by hand #
+{%- if smtp_auth %}
+auth_mechanisms = plain login
+auth_verbose = yes
+
+service auth {
+    unix_listener /var/spool/postfix/private/auth {
+        mode = 0660
+        user = postfix
+        group = postfix
+    }
+}
+
+passdb {
+    driver = passwd-file
+    args = scheme=CRYPT username_format=%u /etc/dovecot/users
+}
+{% else %}
+## DISABLED
+{% endif %}
