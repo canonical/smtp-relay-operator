@@ -1,3 +1,6 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 options:
   admin_email:
     type: string
@@ -203,7 +206,7 @@ options:
     default: ''
     description: |
       Set of comma-separated CIDR addresses to skip SPF checks
-      (whitelist).
+      (allowlist).
   syslog_forwarders:
     type: string
     default: ''

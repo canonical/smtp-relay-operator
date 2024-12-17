@@ -1,9 +1,11 @@
-#!/usr/bin/python3
-
-# Copyright (C) 2021 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+#
 # Author: Haw Loeung <haw.loeung@canonical.com>
 #
 # Easily search mail logs pulling all associated lines for specific matches.
+
+#!/usr/bin/python3
 
 import datetime
 import glob
