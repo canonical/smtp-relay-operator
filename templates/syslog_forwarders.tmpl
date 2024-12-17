@@ -1,0 +1,10 @@
+#{{JUJU_HEADER}}
+{%- for forwarder in syslog_forwarders %}
+{% set unit, addr = forwarder.split(':') %}
+$ActionQueueType LinkedList   # use asynchronous processing
+$ActionQueueFileName {{unit}} # set file name, also enables disk mode
+$ActionResumeRetryCount -1    # infinite retries on insert failure
+$ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
+
+mail.*   @{{addr}}:514
+{% endfor %}

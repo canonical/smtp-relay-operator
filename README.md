@@ -1,26 +1,46 @@
-<!--
-Avoid using this README file for information that is maintained or published elsewhere, e.g.:
+# SMTP Relay Charm
 
-* metadata.yaml > published on Charmhub
-* documentation > published on (or linked to from) Charmhub
-* detailed contribution guide > documentation or CONTRIBUTING.md
+## Description
 
-Use links instead.
--->
+The SMTP Relay Charm installs a versatile postfix SMTP relay server.
 
-# is-charms-template
+It's intended to be highly configurable, setting up Postfix as requested.
 
-Charmhub package name: operator-template
-More information: https://charmhub.io/is-charms-template
+Features include (not limited to):
+- set up base Postfix system
+- relay through another MTA
+- set up virtual aliases and transport maps
+- restrict relaying per domain, sender, recipient, headers checks
+- enable SPF subsystem
+- set up authenticated submission service
+- restrict sender address per user
+- fine-tune TLS settings
+- set up limits (rate, size, connections, ...)
+- set up Nagios monitoring
+- set up rsyslog relaying and log retention
 
-Describe your charm in one or two sentences.
+## Usage
 
-## Other resources
+Provision a Juju environment then deploy 2 units with:
 
-<!-- If your charm is documented somewhere else other than Charmhub, provide a link separately. -->
+```
+juju deploy -n2 smtp-relay
+```
 
-- [Read more](https://example.com)
+### Scale Out Usage
 
-- [Contributing](CONTRIBUTING.md) <!-- or link to other contribution documentation -->
+To horizontally scale, adding more read-only standbys:
 
-- See the [Juju SDK documentation](https://juju.is/docs/sdk) for more information about developing and improving charms.
+```
+juju add-unit smtp-relay
+```
+
+---
+
+## Testing
+
+Just run `make unittest`.
+
+---
+
+For more details, [see here](https://charmhub.io/smtp-relay/configure).

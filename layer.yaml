@@ -1,0 +1,11 @@
+includes:
+  - layer:basic
+  - layer:nagios
+  - layer:status
+repo: lp:smtp-relay-charm
+options:
+  basic:
+    packages:
+      - dovecot-common
+      - postfix
+      - postfix-policyd-spf-python

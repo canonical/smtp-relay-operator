@@ -1,16 +1,304 @@
-# Copyright 2024 Canonical Ltd.
-# See LICENSE file for licensing details.
-# This file defines charm config options, and populates the Configure tab on Charmhub.
-# If your charm does not require configuration options, delete this file entirely.
-#
-# See https://juju.is/docs/config for guidance.
-
 options:
-  # An example config option to customise the log level of the workload
-  log-level:
-    description: |
-      Configures the log level of gunicorn. 
-
-      Acceptable values are: "info", "debug", "warning", "error" and "critical"
-    default: "info"
+  admin_email:
     type: string
+    default: ''
+    description: |
+      Administrator's email address where root@ emails will go.
+  allowed_relay_networks:
+    type: string
+    default: ''
+    description: |
+      List of allowed networks to relay without authenticating.
+  additional_smtpd_recipient_restrictions:
+    type: string
+    default: ''
+    description: |
+      YAML formatted list of additional smtpd_recipient_restrictions.
+
+      http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
+  append_x_envelope_to:
+    type: boolean
+    default: false
+    description: |
+      Configure Postfix to append X-Envelope-To header consisting of the
+      email address of the recipient, per the envelope.
+
+      This is useful to allow end users filter by destination when they
+      receive emails for multiple individual or shared aliases.
+  connection_limit:
+    type: int
+    default: 100
+    description: |
+      Maximum number of simultaneous SMTP connections allowed.
+  domain:
+    type: string
+    default: ''
+    description: |
+      Primary domain for hostname generation, it will be
+      $application-$unit.$domain. Default is '' to use the system
+      FQDN.
+  enable_rate_limits:
+    type: boolean
+    default: false
+    description: |
+      Enable various rate limiting features.
+
+      smtpd_client_auth_rate_limit 8
+      smtpd_client_connection_rate_limit 8
+      smtpd_client_new_tls_session_rate_limit 8
+  enable_reject_unknown_recipient_domain:
+    type: boolean
+    default: false
+    description: |
+      Reject mail for when recipient's domain cannot be resolved.
+
+      http://www.postfix.org/postconf.5.html#reject_unknown_recipient_domain
+  enable_reject_unknown_sender_domain:
+    type: boolean
+    default: true
+    description: |
+      Reject mail for when sender's domain cannot be resolved.
+
+      http://www.postfix.org/postconf.5.html#reject_unknown_sender_domain
+  enable_spf:
+    type: boolean
+    default: false
+    description: |
+      Enable SPF checking.
+  enable_smtp_auth:
+    type: boolean
+    default: true
+    description: |
+      Enable SMTP authentication.
+  header_checks:
+    type: string
+    default: ''
+    description: |
+      Perform various header checks and action on. See:
+
+      http://www.postfix.org/header_checks.5.html
+  log_retention:
+    type: int
+    default: 120
+    description: |
+      Number of days of mail logs to retain during rotation.
+  message_size_limit:
+    type: int
+    default: 61440000
+    description: |
+      Maximum size of messages allowed (default 60MBytes).
+  relay_access_sources:
+    type: string
+    default: ''
+    description: |
+      Restrict access based on CIDR source per:
+
+      http://www.postfix.org/cidr_table.5.html
+  relay_domains:
+    type: string
+    default: ''
+    description: |
+      Optional list of destination domains this system will relay mail
+      to.
+
+      http://www.postfix.org/postconf.5.html#relay_domains
+  relay_host:
+    type: string
+    default: ''
+    description: |
+      SMTP relay host (or smart host) to forward mail to.
+  relay_recipient_maps:
+    type: string
+    default: ''
+    description: |
+      Optional lookup tables that alias specific mail addresses or
+      domains to other local or remote addresses (use 'MANUAL' to
+      indicate it is managed outside of juju configs).
+
+      Use 'COMBINED' to use both virtual_alias_maps and transport_maps
+      as value for relay_recipient_maps.
+
+      Allows for all configured aliases and transports to be valid
+      recipients for relay_domains.
+
+      http://www.postfix.org/postconf.5.html#relay_recipient_maps
+  restrict_recipients:
+    type: string
+    default: ''
+    description: |
+      Access map for restrictions by recipient address or domain
+      (default '' to allow all).
+  restrict_senders:
+    type: string
+    default: ''
+    description: |
+      Access map for restrictions by sender address or domain (default
+      '' to allow all, use 'MANUAL' to indicate it is managed outside
+      of juju configs).
+  restrict_sender_access:
+    type: string
+    default: ''
+    description: |
+      Restrict relay only from senders from specified domains,
+      addresses, or hosts (default '' is to allow all).
+  sender_login_maps:
+    type: string
+    default: ''
+    description: |
+      Restrict sender addresses to authenticated users defined by this
+      map (use 'MANUAL' to indicate it is managed outside of juju configs).
+  smtp_auth_users:
+    type: string
+    default: ''
+    description: |
+      List of user and crypt password hashes (use mkpasswd to
+      generate). e.g.
+
+      myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.
+      myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1
+  smtp_header_checks:
+    type: string
+    default: ''
+    description: |
+      Perform various header checks and action on. See:
+
+      http://www.postfix.org/header_checks.5.html
+
+      NOTE: You almost always want to use `header_checks` instead of this.
+  smtpd_forbid_bare_newline:
+    type: string
+    default: ''
+    description: |
+      Reject or restrict input lines from an SMTP client that end in <LF> instead of the standard <CR><LF>. Such line endings are commonly allowed with UNIX-based SMTP servers, but they violate RFC 5321, and allowing such line endings can make a server vulnerable to SMTP smuggling.
+
+      As of Postfix 3.9, this defaults to "normalize"; formerly "no".
+
+      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline
+  smtpd_forbid_bare_newline_exclusions:
+    type: string
+    default: ''
+    description: |
+      Exclude the specified clients from smtpd_forbid_bare_newline enforcement.
+
+      This defaults to "$mynetworks".
+
+      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline_exclusions
+  smtpd_forbid_bare_newline_reject_code:
+    type: string
+    default: ''
+    description: |
+      The numerical Postfix SMTP server response code when rejecting a request with "smtpd_forbid_bare_newline = reject". Specify a 5XX status code (521 to disconnect).
+
+      This defaults to "550".
+
+      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline_reject_code
+  spf_check_maps:
+    type: string
+    default: ''
+    description: |
+      Only perform SPF checks for specified domains. Otherwise,
+      perform for all. Be sure to set enable_spf.
+  spf_skip_addresses:
+    type: string
+    default: ''
+    description: |
+      Set of comma-separated CIDR addresses to skip SPF checks
+      (whitelist).
+  syslog_forwarders:
+    type: string
+    default: ''
+    description: |
+      Set of comma-separated label:addresses to forward mail.* logs
+      to. e.g. myhost:192.0.2.1.
+  tls_ciphers:
+    type: string
+    default: 'HIGH'
+    description: |
+      The minimum TLS cipher grade that the Postfix SMTP server will
+      use with TLS encryption. Cipher types listed in
+      smtpd_tls_exclude_ciphers are excluded from the base definition
+      of the selected cipher grade.
+
+      This only applies to incoming connections to smtpd and not
+      outbound to other MTAs as it may cause deliverability issues.
+
+      http://www.postfix.org/postconf.5.html#smtpd_tls_ciphers
+  tls_exclude_ciphers:
+    type: string
+    default: 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA'
+    description: |
+      List of ciphers or cipher types to exclude from the SMTP server
+      cipher list at all TLS security levels. Excluding valid ciphers
+      can create interoperability problems. DO NOT exclude ciphers
+      unless it is essential to do so.
+
+      This only applies to incoming connections to smtpd and not
+      outbound to other MTAs as it may cause deliverability issues.
+
+      http://www.postfix.org/postconf.5.html#smtpd_tls_exclude_ciphers
+  tls_policy_maps:
+    type: string
+    default: ''
+    description: |
+      Free-form TLS policy map per:
+
+      http://www.postfix.org/postconf.5.html#smtp_tls_policy_maps
+  tls_protocols:
+    type: string
+    default: '!SSLv2, !SSLv3'
+    description: |
+      TLS protocols accepted by the Postfix SMTP server with TLS
+      encryption. If the list is empty, the server supports all
+      available TLS protocol versions. A non-empty value is a list of
+      protocol names to include or exclude, separated by whitespace,
+      commas or colons.
+
+      This only applies to incoming connections to smtpd and not
+      outbound to other MTAs as it may cause deliverability issues.
+
+      http://www.postfix.org/postconf.5.html#smtpd_tls_protocols
+  tls_security_level:
+    type: string
+    default: 'may'
+    description: |
+      The SMTP TLS security level for the Postfix SMTP server; when a
+      non-empty value is specified, this overrides the obsolete
+      parameters smtpd_use_tls and smtpd_enforce_tls.
+
+      This only applies to incoming connections to smtpd and not
+      outbound to other MTAs as it may cause deliverability issues.
+
+      http://www.postfix.org/postconf.5.html#smtpd_tls_security_level
+  transport_maps:
+    type: string
+    default: ''
+    description: |
+      Optional lookup tables with mappings from recipient address to
+      message delivery transport or next-hop destination (use 'MANUAL'
+      to indicate it is managed outside of juju configs).
+
+      http://www.postfix.org/postconf.5.html#transport_maps
+  virtual_alias_domains:
+    type: string
+    default: ''
+    description: |
+      Optional list of domains for which all addresses are aliased to
+      addresses in other local or remote domains.
+
+      http://www.postfix.org/postconf.5.html#virtual_alias_domains
+  virtual_alias_maps:
+    type: string
+    default: ''
+    description: |
+      Optional lookup tables that alias specific mail addresses or
+      domains to other local or remote addresses (use 'MANUAL' to
+      indicate it is managed outside of juju configs).
+
+      http://www.postfix.org/postconf.5.html#virtual_alias_maps
+  virtual_alias_maps_type:
+    type: string
+    default: 'hash'
+    description: |
+      Specify the map type used for virtual aliases.
+
+      https://www.postfix.org/DATABASE_README.html#types

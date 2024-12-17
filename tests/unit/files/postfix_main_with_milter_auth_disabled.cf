@@ -1,0 +1,54 @@
+## This file is Juju managed - do not edit by hand #
+
+
+smtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)
+biff = no
+
+append_dot_mydomain = no
+
+readme_directory = no
+
+# See http://www.postfix.org/COMPATIBILITY_README.html -- default to 2 on
+# fresh installs.
+compatibility_level = 2
+
+# TLS parameters
+tls_preempt_cipherlist = yes
+smtpd_tls_cert_file = /etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file = /etc/ssl/private/ssl-cert-snakeoil.key
+smtpd_tls_dh1024_param_file = /etc/ssl/private/dhparams.pem
+smtpd_tls_ciphers = HIGH
+smtpd_tls_exclude_ciphers = aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA
+smtpd_tls_loglevel = 1
+smtpd_tls_mandatory_ciphers = HIGH
+smtpd_tls_mandatory_protocols = !SSLv2 !SSLv3
+smtpd_tls_protocols = !SSLv2 !SSLv3
+smtpd_tls_received_header = yes
+smtpd_tls_security_level = may
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
+
+smtp_tls_CApath = /etc/ssl/certs
+smtp_tls_loglevel = 1
+smtp_tls_security_level = may
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+
+message_size_limit = 61440000
+strict_rfc821_envelopes = yes
+smtpd_client_connection_count_limit = 100
+smtpd_helo_required = yes
+smtpd_relay_restrictions = permit_mynetworks, defer_unauth_destination
+myhostname = juju-87625f-hloeung-94.openstacklocal
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+mydestination = $myhostname, juju-87625f-hloeung-94, localhost.localdomain, localhost
+relayhost =
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+mailbox_size_limit = 0
+recipient_delimiter = +
+inet_interfaces = all
+inet_protocols = all
+
+smtpd_sender_restrictions = reject_unknown_sender_domain, check_sender_access hash:/etc/postfix/access
+
+smtpd_milters = inet:10.48.129.221:8892
+non_smtpd_milters = inet:10.48.129.221:8892
