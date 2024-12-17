@@ -6,11 +6,9 @@ display-name: SMTP Relay
 summary: SMTP Relay
 maintainers:
   - https://launchpad.net/~canonical-is-devops
-links:
-  contact: https://launchpad.net/~canonical-is-devops
-  documentation: hhttps://discourse.charmhub.io/t/smtp-relay-documentation-overview/16137
-  issues: https://github.com/canonical/smtp-relay-operator/issues
-  source: https://github.com/canonical/smtp-relay-operator
+docs: hhttps://discourse.charmhub.io/t/smtp-relay-documentation-overview/16137
+issues: https://github.com/canonical/smtp-relay-operator/issues
+source: https://github.com/canonical/smtp-relay-operator
 description: |
   Installs an SMTP server and configures it to allow SMTP relaying for
   specific user, hosts, or networks.
