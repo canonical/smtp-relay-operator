@@ -13,6 +13,7 @@ header:
     - '**/*.md'
     - '**/*.txt'
     - '**/tests/unit/files/*'
+    - 'templates/*'
     - '.jujuignore'
     - '.gitignore'
     - '.licenserc.yaml'
