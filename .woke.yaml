@@ -1,0 +1,3 @@
+rules:
+  # Ignore "master" - postfix uses this terminology
+  - name: master
