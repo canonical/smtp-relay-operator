@@ -4,6 +4,8 @@
 name: smtp-relay
 display-name: SMTP Relay
 summary: SMTP Relay
+maintainers:
+  - https://launchpad.net/~canonical-is-devops
 links:
   contact: https://launchpad.net/~canonical-is-devops
   documentation: hhttps://discourse.charmhub.io/t/smtp-relay-documentation-overview/16137
