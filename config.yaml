@@ -80,11 +80,6 @@ options:
       Perform various header checks and action on. See:
 
       http://www.postfix.org/header_checks.5.html
-  log_retention:
-    type: int
-    default: 120
-    description: |
-      Number of days of mail logs to retain during rotation.
   message_size_limit:
     type: int
     default: 61440000
@@ -207,12 +202,6 @@ options:
     description: |
       Set of comma-separated CIDR addresses to skip SPF checks
       (allowlist).
-  syslog_forwarders:
-    type: string
-    default: ''
-    description: |
-      Set of comma-separated label:addresses to forward mail.* logs
-      to. e.g. myhost:192.0.2.1.
   tls_ciphers:
     type: string
     default: 'HIGH'

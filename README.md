@@ -17,7 +17,6 @@ Features include (not limited to):
 - fine-tune TLS settings
 - set up limits (rate, size, connections, ...)
 - set up Nagios monitoring
-- set up rsyslog relaying and log retention
 
 ## Usage
 

@@ -15,8 +15,6 @@ from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
 
-from lib import utils
-
 
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
@@ -28,7 +26,6 @@ def upgrade_charm():
     reactive.clear_flag('smtp-relay.auth.configured')
     reactive.clear_flag('smtp-relay.configured')
     reactive.clear_flag('smtp-relay.installed')
-    reactive.clear_flag('smtp-relay.rsyslog.configured')
 
 
 @reactive.when_not('smtp-relay.installed')
@@ -144,17 +141,6 @@ def configure_smtp_auth(dovecot_config='/etc/dovecot/dovecot.conf', dovecot_user
 )
 def config_changed():
     reactive.clear_flag('smtp-relay.configured')
-
-
-@reactive.when('config.changed.log_retention')
-def update_logrotate(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
-    reactive.clear_flag('smtp-relay.active')
-    status.maintenance('Updating log retention / rotation configs')
-
-    config = hookenv.config()
-    retention = config['log_retention']
-    contents = utils.update_logrotate_conf(logrotate_conf_path, frequency='daily', retention=retention)
-    _write_file(contents, logrotate_conf_path)
 
 
 @reactive.hook('milter-relation-joined', 'milter-relation-changed')
@@ -419,54 +405,6 @@ def _get_milters():
         return ''
 
     return ' '.join(result)
-
-
-@reactive.when('config.changed.syslog_forwarders')
-def config_changed_syslog_forwarders():
-    reactive.clear_flag('smtp-relay.rsyslog.configured')
-
-
-@reactive.when('smtp-relay.installed')
-@reactive.when_not('smtp-relay.rsyslog.configured')
-def configure_syslog_forwarders(rsyslog_conf_d='/etc/rsyslog.d'):
-    reactive.clear_flag('smtp-relay.active')
-    config = hookenv.config()
-    forwarder_config = os.path.join(rsyslog_conf_d, '45-rsyslog-replication.conf')
-
-    # TODO: Add support for relations (cross-model too).
-
-    if not config['syslog_forwarders']:
-        if os.path.exists(forwarder_config):
-            status.maintenance('Disabling syslog forwards')
-            os.unlink(forwarder_config)
-            host.service_restart('rsyslog')
-
-        reactive.set_flag('smtp-relay.rsyslog.configured')
-        return
-
-    status.maintenance('Setting up syslog forwarders')
-
-    changed = False
-    context = {
-        'JUJU_HEADER': JUJU_HEADER,
-        'syslog_forwarders': [i.strip() for i in config['syslog_forwarders'].split(',')],
-    }
-    base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
-    template = env.get_template('templates/syslog_forwarders.tmpl')
-    contents = template.render(context)
-    changed = _write_file(contents, forwarder_config) or changed
-
-    # Work around LP:581360.
-    default_config = os.path.join(rsyslog_conf_d, '50-default.conf')
-    contents = utils.update_rsyslog_default_conf(default_config)
-    changed = _write_file(contents, default_config) or changed
-
-    if changed:
-        status.maintenance('Restarting rsyslog due to config changes')
-        host.service_restart('rsyslog')
-
-    reactive.set_flag('smtp-relay.rsyslog.configured')
 
 
 @reactive.when('smtp-relay.configured')
