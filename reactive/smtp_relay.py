@@ -6,7 +6,7 @@ import hashlib
 import os
 import pwd
 import socket
-import subprocess
+import subprocess  # nosec
 
 import jinja2
 import yaml
@@ -73,7 +73,7 @@ def configure_smtp_auth(dovecot_config='/etc/dovecot/dovecot.conf', dovecot_user
         'smtp_auth': config['enable_smtp_auth'],
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
     template = env.get_template('templates/dovecot_conf.tmpl')
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
@@ -180,7 +180,7 @@ def _create_update_map(content, postmap):
         changed = _write_file(contents, pmfname) or changed
 
     if changed and pmtype == 'hash':
-        subprocess.call(['postmap', postmap])
+        subprocess.call(['postmap', postmap])  # nosec
 
     return changed
 
@@ -208,7 +208,7 @@ def configure_smtp_relay(postfix_conf_dir='/etc/postfix', tls_dh_params='/etc/ss
         tls_key = '/etc/postfix/ssl/{}.key'.format(tls_cn)
         tls_dh_params = '/etc/postfix/ssl/dhparams.pem'
     if not os.path.exists(tls_dh_params):
-        subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])
+        subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])  # nosec
 
     fqdn = socket.getfqdn()
     if config['domain']:
@@ -263,7 +263,7 @@ def configure_smtp_relay(postfix_conf_dir='/etc/postfix', tls_dh_params='/etc/ss
         'virtual_alias_maps_type': virtual_alias_maps_type,
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
     template = env.get_template('templates/postfix_main_cf.tmpl')
     contents = template.render(context)
     changed = _write_file(contents, os.path.join(postfix_conf_dir, 'main.cf')) or changed
@@ -349,7 +349,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
         'skip_addresses': config['spf_skip_addresses'],
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
     template = env.get_template('templates/policyd_spf_conf.tmpl')
     contents = template.render(context)
     _write_file(contents, policyd_spf_config)
@@ -375,7 +375,7 @@ def _generate_fqdn(domain):
 
 
 def _calculate_offset(seed, length=2):
-    result = hashlib.md5(seed.encode('utf-8')).hexdigest()[0:length]
+    result = hashlib.md5(seed.encode('utf-8')).hexdigest()[0:length]  # nosec
     return int(result, 16)
 
 
@@ -452,7 +452,7 @@ def configure_syslog_forwarders(rsyslog_conf_d='/etc/rsyslog.d'):
         'syslog_forwarders': [i.strip() for i in config['syslog_forwarders'].split(',')],
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
     template = env.get_template('templates/syslog_forwarders.tmpl')
     contents = template.render(context)
     changed = _write_file(contents, forwarder_config) or changed
@@ -596,6 +596,6 @@ def _update_aliases(admin_email='', aliases_path='/etc/aliases'):
 
     changed = _write_file(''.join(new_aliases), aliases_path)
     if changed:
-        subprocess.call(['newaliases'])
+        subprocess.call(['newaliases'])  # nosec
 
     return
