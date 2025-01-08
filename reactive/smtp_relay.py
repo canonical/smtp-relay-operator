@@ -145,17 +145,6 @@ def config_changed():
     reactive.clear_flag('smtp-relay.configured')
 
 
-@reactive.when('config.changed.log_retention')
-def update_logrotate(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
-    reactive.clear_flag('smtp-relay.active')
-    status.maintenance('Updating log retention / rotation configs')
-
-    config = hookenv.config()
-    retention = config['log_retention']
-    contents = utils.update_logrotate_conf(logrotate_conf_path, frequency='daily', retention=retention)
-    _write_file(contents, logrotate_conf_path)
-
-
 @reactive.hook('milter-relation-joined', 'milter-relation-changed')
 def milter_relation_changed():
     reactive.clear_flag('smtp-relay.configured')

@@ -80,11 +80,6 @@ options:
       Perform various header checks and action on. See:
 
       http://www.postfix.org/header_checks.5.html
-  log_retention:
-    type: int
-    default: 120
-    description: |
-      Number of days of mail logs to retain during rotation.
   message_size_limit:
     type: int
     default: 61440000

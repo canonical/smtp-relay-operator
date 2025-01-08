@@ -182,16 +182,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
     @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('reactive.smtp_relay._write_file')
-    def test_update_logrotate(self, write_file, clear_flag):
-        self.mock_config.return_value['log_retention'] = 30
-        smtp_relay.update_logrotate()
-        want = [mock.call('smtp-relay.active')]
-        clear_flag.assert_has_calls(want, any_order=True)
-        self.assertEqual(len(want), len(clear_flag.mock_calls))
-        write_file.assert_called()
-
-    @mock.patch('charms.reactive.clear_flag')
     def test_config_changed_smtp_auth(self, clear_flag):
         smtp_relay.config_changed_smtp_auth()
         want = [mock.call('smtp-relay.auth.configured')]
