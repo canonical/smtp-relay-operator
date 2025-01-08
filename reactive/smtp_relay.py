@@ -15,8 +15,6 @@ from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
 
-from lib import utils
-
 
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
