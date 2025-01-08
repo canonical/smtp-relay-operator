@@ -1,46 +1,52 @@
-# SMTP Relay Charm
+[![CharmHub Badge](https://charmhub.io/smtp-relay/badge.svg)](https://charmhub.io/smtp-relay)
+[![Publish to edge](https://github.com/canonical/smtp-relay-operator/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/smtp-relay-operator/actions/workflows/publish_charm.yaml)
+[![Promote charm](https://github.com/canonical/smtp-relay-operator/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/smtp-relay-operator/actions/workflows/promote_charm.yaml)
+[![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-## Description
+# SMTP Relay Operator
 
-The SMTP Relay Charm installs a versatile postfix SMTP relay server.
+A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+deploying and managing a postfix SMTP relay server on bare metal. SMTP
+is an Internet standard communication protocol for email transmission.
 
-It's intended to be highly configurable, setting up Postfix as requested.
+Like any Juju charm, this charm supports one-line deployment, configuration, integration, scaling, and more. For Charmed smtp-relay, this includes:
+  - Scaling
+  - Integration with SSO
+  - Integration with S3 for redundant file storage
 
-Features include (not limited to):
-- set up base Postfix system
-- relay through another MTA
-- set up virtual aliases and transport maps
-- restrict relaying per domain, sender, recipient, headers checks
-- enable SPF subsystem
-- set up authenticated submission service
-- restrict sender address per user
-- fine-tune TLS settings
-- set up limits (rate, size, connections, ...)
-- set up Nagios monitoring
-- set up rsyslog relaying and log retention
+For information about how to deploy, integrate, and manage this charm, see the Official [smtp-relay Operator Documentation](https://charmhub.io/smtp-relay/docs).
 
-## Usage
 
-Provision a Juju environment then deploy 2 units with:
+## Get started
 
-```
-juju deploy -n2 smtp-relay
-```
+You can follow the tutorial [here](https://charmhub.io/smtp-relay/docs/getting-started).
 
-### Scale Out Usage
+### Basic operations
 
-To horizontally scale, adding more read-only standbys:
+The following actions are available for this charm:
+    - refresh-external-resources: refresh the external resources (e.g. S3 bucket)
+    - add-admmin: add an admin user
+    - anonymize-user: anonymize a user
 
-```
-juju add-unit smtp-relay
-```
+You can check out the [full list of actions here](https://charmhub.io/smtp-relay/actions).
 
----
+## Integrations
 
-## Testing
+This charm can be integrated with other Juju charms and services:
 
-Just run `make unittest`.
+    - [Redis](https://charmhub.io/redis-k8s): Redis is an open source (BSD licensed), in-memory data structure store, used as a database, cache and message broker.
+    - [S3](https://charmhub.io/s3-integrator): Amazon Simple Storage Service (Amazon S3) is an object storage service that provides secure, durable, highly available storage with massive scalability and low latency.
+    - [Postgresql](https://charmhub.io/postgresql-k8s): PostgreSQL is a powerful, open source object-relational database system. It has more than 15 years of active development and a proven architecture that has earned it a strong reputation for reliability, data integrity, and correctness.
 
----
+    and much more. You can find the full list of integrations [here](https://charmhub.io/smtp-relay/integrations).
 
-For more details, [see here](https://charmhub.io/smtp-relay/configure).
+## Learn more
+* [Read more](https://charmhub.io/smtp-relay) <!--Link to the charm's official documentation-->
+* [Developer documentation](https://www.postfix.org/documentation.html) <!--Link to any developer documentation-->
+* [Official webpage](https://www.postfix.org/) <!--(Optional) Link to official webpage/blog/marketing content-->
+* [Troubleshooting](https://matrix.to/#/#charmhub-charmdev:ubuntu.com) <!--(Optional) Link to a page or section about troubleshooting/FAQ-->
+## Project and community
+* [Issues](https://github.com/canonical/smtp-relay-operator/issues) <!--Link to GitHub issues (if applicable)-->
+* [Contributing](https://charmhub.io/smtp-relay/docs/how-to-contribute) <!--Link to any contribution guides-->
+* [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com) <!--Link to contact info (if applicable), e.g. Matrix channel-->
+
