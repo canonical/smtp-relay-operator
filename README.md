@@ -9,6 +9,18 @@ A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
 deploying and managing a postfix SMTP relay server on bare metal. SMTP
 is an Internet standard communication protocol for email transmission.
 
+Features include (not limited to):
+- set up base Postfix system
+- relay through another MTA
+- set up virtual aliases and transport maps
+- restrict relaying per domain, sender, recipient, headers checks
+- enable SPF subsystem
+- set up authenticated submission service
+- restrict sender address per user
+- fine-tune TLS settings
+- set up limits (rate, size, connections, ...)
+- set up Nagios monitoring
+
 For information about how to deploy, integrate, and manage this charm, see the Official [smtp-relay Operator Documentation](https://charmhub.io/smtp-relay/docs).
 
 
