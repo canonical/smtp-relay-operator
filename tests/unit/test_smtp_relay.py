@@ -298,16 +298,13 @@ class TestCharm(unittest.TestCase):
     ):
         dovecot_config = os.path.join(self.tmpdir, 'dovecot.conf')
         dovecot_users = os.path.join(self.tmpdir, 'dovecot_users')
-
-        user1 = "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ."
-        user2 = (
-            "myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj"
-            "//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1"
-        )
         self.mock_config.return_value[
             'smtp_auth_users'
-        ] = f"""{user1}
-{user2}"""
+        ] = f"""myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.
+{(
+    'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
+    '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
+)}"""
         smtp_relay.configure_smtp_auth(dovecot_config, dovecot_users)
         with open('tests/unit/files/dovecot_users', 'r', encoding='utf-8') as f:
             want = f.read()
