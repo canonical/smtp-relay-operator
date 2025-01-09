@@ -67,14 +67,14 @@ def configure_smtp_auth(
         'JUJU_HEADER': JUJU_HEADER,
         # TODO: Allow overriding passdb driver.
         'passdb_driver': 'passwd-file',
-        'passdb_args': 'scheme=CRYPT username_format=%u {}'.format(dovecot_users),
+        'passdb_args': f"scheme=CRYPT username_format=%u {dovecot_users}",
         # We need to use /var/spool/postfix/private/auth because
         # by default postfix runs chroot'ed in /var/spool/postfix.
         'path': '/var/spool/postfix/private/auth',
         'smtp_auth': config['enable_smtp_auth'],
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
+    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
     template = env.get_template('templates/dovecot_conf.tmpl')
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
@@ -157,14 +157,14 @@ def _create_update_map(content, postmap):
 
     (pmtype, pmfname) = postmap.split(':')
     if not os.path.exists(pmfname):
-        with open(pmfname, 'a'):
+        with open(pmfname, 'a', encoding="utf-8"):
             os.utime(pmfname, None)
         changed = True
 
     if content.startswith('MANUAL'):
-        hookenv.log('Map {} manually managed'.format(pmfname))
+        hookenv.log(f"Map {pmfname} manually managed")
     elif content.startswith('COMBINED'):
-        hookenv.log('Map {} using combined maps'.format(pmfname))
+        hookenv.log(f"Map {pmfname} using combined maps")
     else:
         contents = JUJU_HEADER + content + '\n'
         changed = _write_file(contents, pmfname) or changed
@@ -194,9 +194,9 @@ def configure_smtp_relay(
         # autocert currently bundles certs with the key at the end which postfix doesn't like:
         # `warning: error loading chain from /etc/postfix/ssl/{...}.pem: key not first`
         # Let's not use the newer `smtpd_tls_chain_files` postfix config for now.
-        # tls_cert_key = '/etc/postfix/ssl/{}.pem'.format(tls_cn)
-        tls_cert = '/etc/postfix/ssl/{}.crt'.format(tls_cn)
-        tls_key = '/etc/postfix/ssl/{}.key'.format(tls_cn)
+        # tls_cert_key = f"/etc/postfix/ssl/{tls_cn}.pem"
+        tls_cert = f"/etc/postfix/ssl/{tls_cn}.crt"
+        tls_key = f"/etc/postfix/ssl/{tls_cn}.key"
         tls_dh_params = '/etc/postfix/ssl/dhparams.pem'
     if not os.path.exists(tls_dh_params):
         subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])  # nosec
@@ -254,7 +254,7 @@ def configure_smtp_relay(
         'virtual_alias_maps_type': virtual_alias_maps_type,
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
+    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
     template = env.get_template('templates/postfix_main_cf.tmpl')
     contents = template.render(context)
     changed = _write_file(contents, os.path.join(postfix_conf_dir, 'main.cf')) or changed
@@ -262,35 +262,28 @@ def configure_smtp_relay(
     contents = template.render(context)
     changed = _write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
     maps = {
-        'append_envelope_to_header': 'regexp:{}'.format(
-            os.path.join(postfix_conf_dir, 'append_envelope_to_header')
+        'append_envelope_to_header': (
+            f"regexp:{os.path.join(postfix_conf_dir, 'append_envelope_to_header')}"
         ),
-        'header_checks': 'regexp:{}'.format(os.path.join(postfix_conf_dir, 'header_checks')),
-        'relay_access_sources': 'cidr:{}'.format(os.path.join(postfix_conf_dir, 'relay_access')),
-        'relay_recipient_maps': 'hash:{}'.format(
-            os.path.join(postfix_conf_dir, 'relay_recipient')
-        ),
-        'restrict_recipients': 'hash:{}'.format(
-            os.path.join(postfix_conf_dir, 'restricted_recipients')
-        ),
-        'restrict_senders': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'restricted_senders')),
-        'sender_access': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'access')),
-        'sender_login_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'sender_login')),
-        'smtp_header_checks': 'regexp:{}'.format(
-            os.path.join(postfix_conf_dir, 'smtp_header_checks')
-        ),
-        'spf_check_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'spf_checks')),
-        'tls_policy_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'tls_policy')),
-        'transport_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'transport')),
-        'virtual_alias_maps': '{}:{}'.format(
-            virtual_alias_maps_type, os.path.join(postfix_conf_dir, 'virtual_alias')
+        'header_checks': f"regexp:{os.path.join(postfix_conf_dir, 'header_checks')}",
+        'relay_access_sources': f"cidr:{os.path.join(postfix_conf_dir, 'relay_access')}",
+        'relay_recipient_maps': f"hash:{os.path.join(postfix_conf_dir, 'relay_recipient')}",
+        'restrict_recipients': f"hash:{os.path.join(postfix_conf_dir, 'restricted_recipients')}",
+        'restrict_senders': f"hash:{os.path.join(postfix_conf_dir, 'restricted_senders')}",
+        'sender_access': f"hash:{os.path.join(postfix_conf_dir, 'access')}",
+        'sender_login_maps': f"hash:{os.path.join(postfix_conf_dir, 'sender_login')}",
+        'smtp_header_checks': f"regexp:{os.path.join(postfix_conf_dir, 'smtp_header_checks')}",
+        'spf_check_maps': f"hash:{os.path.join(postfix_conf_dir, 'spf_checks')}",
+        'tls_policy_maps': f"hash:{os.path.join(postfix_conf_dir, 'tls_policy')}",
+        'transport_maps': f"hash:{os.path.join(postfix_conf_dir, 'transport')}",
+        'virtual_alias_maps': (
+            f"{virtual_alias_maps_type}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
         ),
     }
     sender_access_content = config['restrict_sender_access']
     if sender_access_content and not sender_access_content.startswith('MANUAL'):
-        sender_access_content = ''
-        for domain in ' '.join(config['restrict_sender_access'].split(',')).split():
-            sender_access_content += '{:35s} OK\n'.format(domain)
+        domains = ' '.join(config['restrict_sender_access'].split(',')).split()
+        sender_access_content = "".join([f"{domain:35} OK\n" for domain in domains])
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': config['header_checks'],
@@ -350,7 +343,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
         'skip_addresses': config['spf_skip_addresses'],
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
+    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
     template = env.get_template('templates/policyd_spf_conf.tmpl')
     contents = template.render(context)
     _write_file(contents, policyd_spf_config)
@@ -372,7 +365,7 @@ def _get_autocert_cn(autocert_conf_dir='/etc/autocert/postfix'):
 
 def _generate_fqdn(domain):
     hostname = hookenv.local_unit().replace('/', '-')
-    return '{}.{}'.format(hostname, domain)
+    return f"{hostname}.{domain}"
 
 
 def _calculate_offset(seed, length=2):
@@ -414,7 +407,7 @@ def _get_milters():
         addr = reldata['ingress-address']
         # Default to TCP/8892
         port = reldata.get('port', 8892)
-        result.append('inet:{}:{}'.format(addr, port))
+        result.append(f"inet:{addr}:{port}")
 
     if len(result) == 0:
         return ''
@@ -427,27 +420,27 @@ def _get_milters():
 def set_active(version_file='version'):
     revision = ''
     if os.path.exists(version_file):
-        with open(version_file) as f:
+        with open(version_file, encoding="utf-8") as f:
             line = f.readline().strip()
         # We only want the first 10 characters, that's enough to tell
         # which version of the charm we're using. But include the
         # entire version if it's 'dirty' according to charm build.
         if len(line) > 10 and not line.endswith('-dirty'):
-            revision = ' (source version/commit {}…)'.format(line[:10])
+            revision = f" (source version/commit {line[:10]}…)"
         else:
-            revision = ' (source version/commit {})'.format(line)
+            revision = f" (source version/commit {line})"
 
     # XXX include postfix main.cf hash and dovecot users
     # (maybe first 8 chars too? comes before the revision one)
     postfix_cf_hash = ''
     users_hash = ''
 
-    status.active('Ready{}{}{}'.format(postfix_cf_hash, users_hash, revision))
+    status.active(f"Ready{postfix_cf_hash}{users_hash}{revision}")
     reactive.set_flag('smtp-relay.active')
 
 
 def _copy_file(source_path, dest_path, **kwargs):
-    with open(source_path, 'r') as f:
+    with open(source_path, 'r', encoding="utf-8") as f:
         source = f.read()
     return _write_file(source, dest_path, **kwargs)
 
@@ -458,7 +451,7 @@ def _write_file(source, dest_path, perms=0o644, owner=None, group=None):
     dest = ''
 
     try:
-        with open(dest_path, 'r') as f:
+        with open(dest_path, 'r', encoding="utf-8") as f:
             dest = f.read()
         if source == dest:
             return False
@@ -535,7 +528,7 @@ def _smtpd_sender_restrictions(config):
 def _update_aliases(admin_email='', aliases_path='/etc/aliases'):
     aliases = []
     try:
-        with open(aliases_path, 'r') as f:
+        with open(aliases_path, 'r', encoding="utf-8") as f:
             aliases = f.readlines()
     except FileNotFoundError:
         pass
@@ -552,7 +545,7 @@ def _update_aliases(admin_email='', aliases_path='/etc/aliases'):
     if add_devnull:
         new_aliases.append('devnull:       /dev/null\n')
     if admin_email:
-        new_aliases.append('root:          {}\n'.format(admin_email))
+        new_aliases.append(f"root:          {admin_email}\n")
 
     changed = _write_file(''.join(new_aliases), aliases_path)
     if changed:
