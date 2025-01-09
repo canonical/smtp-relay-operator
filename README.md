@@ -26,8 +26,15 @@ For information about how to deploy, integrate, and manage this charm, see the O
 
 ## Get started
 
-You can follow the tutorial [here](https://charmhub.io/smtp-relay/docs/getting-started).
+Provision a Juju environment then deploy 2 units with:
+```
+juju deploy -n2 smtp-relay
+```
 
+To horizontally scale, adding more read-only standbys:
+```
+juju add-unit smtp-relay
+```
 
 ## Learn more
 * [Read more](https://charmhub.io/smtp-relay) <!--Link to the charm's official documentation-->
