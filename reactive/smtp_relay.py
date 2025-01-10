@@ -1,6 +1,8 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""SMTP Relay charm."""
+
 import grp
 import hashlib
 import os
@@ -51,7 +53,9 @@ def config_changed_smtp_auth():
 
 @reactive.when('smtp-relay.installed')
 @reactive.when_not('smtp-relay.auth.configured')
-def configure_smtp_auth(dovecot_config='/etc/dovecot/dovecot.conf', dovecot_users='/etc/dovecot/users'):
+def configure_smtp_auth(
+    dovecot_config='/etc/dovecot/dovecot.conf', dovecot_users='/etc/dovecot/users'
+):
     reactive.clear_flag('smtp-relay.active')
     reactive.clear_flag('smtp-relay.configured')
     config = hookenv.config()
@@ -174,7 +178,9 @@ def _create_update_map(content, postmap):
 @reactive.when('smtp-relay.installed')
 @reactive.when('smtp-relay.auth.configured')
 @reactive.when_not('smtp-relay.configured')
-def configure_smtp_relay(postfix_conf_dir='/etc/postfix', tls_dh_params='/etc/ssl/private/dhparams.pem'):
+def configure_smtp_relay(
+    postfix_conf_dir='/etc/postfix', tls_dh_params='/etc/ssl/private/dhparams.pem'
+):
     reactive.clear_flag('smtp-relay.active')
     config = hookenv.config()
 
@@ -183,7 +189,6 @@ def configure_smtp_relay(postfix_conf_dir='/etc/postfix', tls_dh_params='/etc/ss
     tls_cert_key = ''
     tls_cert = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
     tls_key = '/etc/ssl/private/ssl-cert-snakeoil.key'
-    tls_dh_params = tls_dh_params
     tls_cn = _get_autocert_cn()
     if tls_cn:
         # autocert currently bundles certs with the key at the end which postfix doesn't like:
@@ -257,19 +262,29 @@ def configure_smtp_relay(postfix_conf_dir='/etc/postfix', tls_dh_params='/etc/ss
     contents = template.render(context)
     changed = _write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
     maps = {
-        'append_envelope_to_header': 'regexp:{}'.format(os.path.join(postfix_conf_dir, 'append_envelope_to_header')),
+        'append_envelope_to_header': 'regexp:{}'.format(
+            os.path.join(postfix_conf_dir, 'append_envelope_to_header')
+        ),
         'header_checks': 'regexp:{}'.format(os.path.join(postfix_conf_dir, 'header_checks')),
         'relay_access_sources': 'cidr:{}'.format(os.path.join(postfix_conf_dir, 'relay_access')),
-        'relay_recipient_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'relay_recipient')),
-        'restrict_recipients': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'restricted_recipients')),
+        'relay_recipient_maps': 'hash:{}'.format(
+            os.path.join(postfix_conf_dir, 'relay_recipient')
+        ),
+        'restrict_recipients': 'hash:{}'.format(
+            os.path.join(postfix_conf_dir, 'restricted_recipients')
+        ),
         'restrict_senders': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'restricted_senders')),
         'sender_access': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'access')),
         'sender_login_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'sender_login')),
-        'smtp_header_checks': 'regexp:{}'.format(os.path.join(postfix_conf_dir, 'smtp_header_checks')),
+        'smtp_header_checks': 'regexp:{}'.format(
+            os.path.join(postfix_conf_dir, 'smtp_header_checks')
+        ),
         'spf_check_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'spf_checks')),
         'tls_policy_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'tls_policy')),
         'transport_maps': 'hash:{}'.format(os.path.join(postfix_conf_dir, 'transport')),
-        'virtual_alias_maps': '{}:{}'.format(virtual_alias_maps_type, os.path.join(postfix_conf_dir, 'virtual_alias')),
+        'virtual_alias_maps': '{}:{}'.format(
+            virtual_alias_maps_type, os.path.join(postfix_conf_dir, 'virtual_alias')
+        ),
     }
     sender_access_content = config['restrict_sender_access']
     if sender_access_content and not sender_access_content.startswith('MANUAL'):
@@ -422,7 +437,8 @@ def set_active(version_file='version'):
         else:
             revision = ' (source version/commit {})'.format(line)
 
-    # XXX include postfix main.cf hash and dovecot users (maybe first 8 chars too? comes before the revision one)
+    # XXX include postfix main.cf hash and dovecot users
+    # (maybe first 8 chars too? comes before the revision one)
     postfix_cf_hash = ''
     users_hash = ''
 
@@ -462,16 +478,22 @@ def _write_file(source, dest_path, perms=0o644, owner=None, group=None):
 def _smtpd_recipient_restrictions(config):
     smtpd_recipient_restrictions = []
     if config['append_x_envelope_to']:
-        smtpd_recipient_restrictions.append('check_recipient_access regexp:/etc/postfix/append_envelope_to_header')
+        smtpd_recipient_restrictions.append(
+            'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
+        )
 
     if config['enable_reject_unknown_recipient_domain']:
         smtpd_recipient_restrictions.append('reject_unknown_recipient_domain')
 
     if config['restrict_senders']:
-        smtpd_recipient_restrictions.append('check_sender_access hash:/etc/postfix/restricted_senders')
+        smtpd_recipient_restrictions.append(
+            'check_sender_access hash:/etc/postfix/restricted_senders'
+        )
 
     if config['additional_smtpd_recipient_restrictions']:
-        smtpd_recipient_restrictions += yaml.safe_load(config['additional_smtpd_recipient_restrictions'])
+        smtpd_recipient_restrictions += yaml.safe_load(
+            config['additional_smtpd_recipient_restrictions']
+        )
 
     if config['enable_spf']:
         if config['spf_check_maps']:
@@ -535,5 +557,3 @@ def _update_aliases(admin_email='', aliases_path='/etc/aliases'):
     changed = _write_file(''.join(new_aliases), aliases_path)
     if changed:
         subprocess.call(['newaliases'])  # nosec
-
-    return
