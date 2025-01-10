@@ -1,6 +1,8 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""SMTP Relay charm unit tests."""
+
 import grp
 import os
 import pwd
@@ -31,7 +33,9 @@ class TestCharm(unittest.TestCase):
         os.environ['UNIT_STATE_DB'] = os.path.join(self.tmpdir, '.unit-state.db')
         unitdata.kv().set('test', {})
 
-        self.charm_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+        self.charm_dir = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        )
 
         patcher = mock.patch('charmhelpers.core.hookenv.log')
         self.mock_log = patcher.start()
@@ -289,14 +293,18 @@ class TestCharm(unittest.TestCase):
     @mock.patch('grp.getgrnam')
     @mock.patch('os.fchown')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_auth_relay_config_auth_users(self, call, fchown, getgrnam, set_flag, clear_flag):
+    def test_configure_smtp_auth_relay_config_auth_users(
+        self, call, fchown, getgrnam, set_flag, clear_flag
+    ):
         dovecot_config = os.path.join(self.tmpdir, 'dovecot.conf')
         dovecot_users = os.path.join(self.tmpdir, 'dovecot_users')
-
         self.mock_config.return_value[
             'smtp_auth_users'
-        ] = """myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.
-myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1"""
+        ] = f"""myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.
+{(
+    'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
+    '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
+)}"""
         smtp_relay.configure_smtp_auth(dovecot_config, dovecot_users)
         with open('tests/unit/files/dovecot_users', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -308,7 +316,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
     @mock.patch('charms.reactive.set_flag')
     @mock.patch('reactive.smtp_relay._write_file')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_auth_relay_config_auth_users_manual(self, call, write_file, set_flag, clear_flag):
+    def test_configure_smtp_auth_relay_config_auth_users_manual(
+        self, call, write_file, set_flag, clear_flag
+    ):
         dovecot_config = os.path.join(self.tmpdir, 'dovecot.conf')
         dovecot_users = os.path.join(self.tmpdir, 'dovecot_users')
 
@@ -392,7 +402,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay(self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag):
+    def test_configure_smtp_relay(
+        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+    ):
         get_cn.return_value = ''
         get_milters.return_value = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
@@ -413,7 +425,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config(self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag):
+    def test_configure_smtp_relay_config(
+        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+    ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_master_cf = os.path.join(self.tmpdir, 'master.cf')
         get_cn.return_value = ''
@@ -472,7 +486,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         self.mock_config.return_value['sender_login_maps'] = 'MANUAL'
         self.mock_config.return_value['smtp_auth_users'] = 'MANUAL'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_auth_sender_login_maps.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_auth_sender_login_maps.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -484,7 +500,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_domain(self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag):
+    def test_configure_smtp_relay_config_domain(
+        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+    ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
@@ -530,7 +548,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         get_milters.return_value = 'inet:10.48.129.221:8892'
         self.mock_config.return_value['enable_smtp_auth'] = False
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_with_milter_auth_disabled.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_with_milter_auth_disabled.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -572,7 +592,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         self.mock_config.return_value['tls_protocols'] = ''
         self.mock_config.return_value['tls_security_level'] = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -587,7 +609,15 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
     @mock.patch('reactive.smtp_relay._write_file')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_tls_dhparam_non_exists(
-        self, call, write_file, update_aliases, get_milters, get_cn, create_update_map, set_flag, clear_flag
+        self,
+        call,
+        write_file,
+        update_aliases,
+        get_milters,
+        get_cn,
+        create_update_map,
+        set_flag,
+        clear_flag,
     ):
         dhparams = os.path.join(self.tmpdir, 'dhparams.pem')
         get_cn.return_value = ''
@@ -606,7 +636,15 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
     @mock.patch('reactive.smtp_relay._write_file')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_tls_dhparam_exists(
-        self, call, write_file, update_aliases, get_milters, get_cn, create_update_map, set_flag, clear_flag
+        self,
+        call,
+        write_file,
+        update_aliases,
+        get_milters,
+        get_cn,
+        create_update_map,
+        set_flag,
+        clear_flag,
     ):
         dhparams = os.path.join(self.tmpdir, 'dhparams.pem')
         with open(dhparams, 'a'):
@@ -651,7 +689,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         self.mock_config.return_value['enable_rate_limits'] = True
         self.mock_config.return_value['enable_smtp_auth'] = False
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_rate_limits_auth_disabled.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_rate_limits_auth_disabled.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -697,7 +737,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         get_milters.return_value = ''
         self.mock_config.return_value['smtp_header_checks'] = '/^Received:/ HOLD'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_smtp_header_checks.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_smtp_header_checks.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -720,7 +762,11 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         get_milters.return_value = ''
         self.mock_config.return_value['enable_reject_unknown_recipient_domain'] = True
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_reject_unknown_recipient_domain.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_reject_unknown_recipient_domain.cf',
+            'r',
+            encoding='utf-8',
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -740,7 +786,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         get_milters.return_value = ''
         self.mock_config.return_value['enable_reject_unknown_sender_domain'] = False
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_reject_unknown_sender_domain.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_reject_unknown_sender_domain.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -766,12 +814,16 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
 10.10.10.0/24 OK
 """
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_relay_access_sources.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_relay_access_sources.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        with open('tests/unit/files/relay_access_relay_access_sources', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/relay_access_relay_access_sources', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_relay_access, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -798,12 +850,18 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
 """
         self.mock_config.return_value['enable_smtp_auth'] = False
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_relay_access_sources_auth_disabled.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_relay_access_sources_auth_disabled.cf',
+            'r',
+            encoding='utf-8',
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        with open('tests/unit/files/relay_access_relay_access_sources', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/relay_access_relay_access_sources', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_relay_access, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -824,7 +882,11 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         self.mock_config.return_value['restrict_recipients'] = 'mydomain.local  OK'
         self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_restrict_both_senders_and_recipients.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_restrict_both_senders_and_recipients.cf',
+            'r',
+            encoding='utf-8',
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -845,7 +907,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_recipients'] = 'mydomain.local  OK'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_restrict_recipients.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_restrict_recipients.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -898,7 +962,10 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         self.mock_config.return_value['enable_reject_unknown_recipient_domain'] = True
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_restrict_senders_with_reject_unknown_recipient_domain.cf',
+            (
+                "tests/unit/files/"
+                "postfix_main_restrict_senders_with_reject_unknown_recipient_domain.cf"
+            ),
             'r',
             encoding='utf-8',
         ) as f:
@@ -924,7 +991,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
             ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_restrict_sender_access.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_restrict_sender_access.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -950,7 +1019,9 @@ myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = 'MANUAL'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_restrict_sender_access.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_restrict_sender_access.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -1056,10 +1127,14 @@ someplace.local encrypt
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
-        self.mock_config.return_value['relay_recipient_maps'] = 'noreply@mydomain.local noreply@mydomain.local'
+        self.mock_config.return_value['relay_recipient_maps'] = (
+            'noreply@mydomain.local noreply@mydomain.local'
+        )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1087,7 +1162,9 @@ someplace.local encrypt
         self.mock_config.return_value['relay_recipient_maps'] = 'MANUAL'
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1113,11 +1190,17 @@ someplace.local encrypt
         get_milters.return_value = ''
         self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
         self.mock_config.return_value['relay_recipient_maps'] = 'COMBINED'
-        self.mock_config.return_value['transport_maps'] = '.mydomain.local  smtp:[smtp.mydomain.local]'
-        self.mock_config.return_value['virtual_alias_maps'] = 'abuse@mydomain.local sysadmin@mydomain.local'
+        self.mock_config.return_value['transport_maps'] = (
+            '.mydomain.local  smtp:[smtp.mydomain.local]'
+        )
+        self.mock_config.return_value['virtual_alias_maps'] = (
+            'abuse@mydomain.local sysadmin@mydomain.local'
+        )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps_combined.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps_combined.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1141,7 +1224,9 @@ someplace.local encrypt
         postfix_transport_maps = os.path.join(self.tmpdir, 'transport')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['transport_maps'] = '.mydomain.local  smtp:[smtp.mydomain.local]'
+        self.mock_config.return_value['transport_maps'] = (
+            '.mydomain.local  smtp:[smtp.mydomain.local]'
+        )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_transport_maps.cf', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -1167,9 +1252,15 @@ someplace.local encrypt
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['header_checks'] = '/^Received:/ HOLD'
-        self.mock_config.return_value['transport_maps'] = '.mydomain.local  smtp:[smtp.mydomain.local]'
+        self.mock_config.return_value['transport_maps'] = (
+            '.mydomain.local  smtp:[smtp.mydomain.local]'
+        )
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_transport_maps_with_header_checks.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_transport_maps_with_header_checks.cf',
+            'r',
+            encoding='utf-8',
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -1193,12 +1284,18 @@ someplace.local encrypt
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
-        self.mock_config.return_value['transport_maps'] = '.mydomain.local  smtp:[smtp.mydomain.local]'
+        self.mock_config.return_value['transport_maps'] = (
+            '.mydomain.local  smtp:[smtp.mydomain.local]'
+        )
         self.mock_config.return_value['virtual_alias_domains'] = 'mydomain.local mydomain2.local'
-        self.mock_config.return_value['virtual_alias_maps'] = 'abuse@mydomain.local sysadmin@mydomain.local'
+        self.mock_config.return_value['virtual_alias_maps'] = (
+            'abuse@mydomain.local sysadmin@mydomain.local'
+        )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_transport_maps_with_virtual_alias_maps.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_transport_maps_with_virtual_alias_maps.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1221,11 +1318,15 @@ someplace.local encrypt
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['virtual_alias_maps'] = 'abuse@mydomain.local sysadmin@mydomain.local'
+        self.mock_config.return_value['virtual_alias_maps'] = (
+            'abuse@mydomain.local sysadmin@mydomain.local'
+        )
         self.mock_config.return_value['virtual_alias_maps_type'] = 'regexp'
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_transport_maps_with_virtual_alias_maps_type.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_transport_maps_with_virtual_alias_maps_type.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1250,7 +1351,9 @@ someplace.local encrypt
         self.mock_config.return_value['enable_reject_unknown_recipient_domain'] = True
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_additional_smtpd_recipient_restrictions.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_additional_smtpd_recipient_restrictions.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1271,7 +1374,9 @@ someplace.local encrypt
         get_milters.return_value = ''
         self.mock_config.return_value['append_x_envelope_to'] = True
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_append_x_envelope_to.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_append_x_envelope_to.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -1283,7 +1388,9 @@ someplace.local encrypt
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_spf(self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag):
+    def test_configure_smtp_relay_config_spf(
+        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+    ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_master_cf = os.path.join(self.tmpdir, 'master.cf')
         get_cn.return_value = ''
@@ -1307,7 +1414,9 @@ someplace.local encrypt
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_policyd_spf(self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag):
+    def test_configure_policyd_spf(
+        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+    ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = True
         self.mock_config.return_value['spf_skip_addresses'] = ''
@@ -1332,7 +1441,9 @@ someplace.local encrypt
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_policyd_spf_disabled(self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag):
+    def test_configure_policyd_spf_disabled(
+        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+    ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = False
         self.mock_config.return_value['spf_skip_addresses'] = ''
@@ -1360,7 +1471,9 @@ someplace.local encrypt
         self.mock_config.return_value['enable_spf'] = True
         self.mock_config.return_value['spf_skip_addresses'] = '10.0.114.0/24,10.1.1.0/24'
         smtp_relay.configure_policyd_spf(policyd_spf_config)
-        with open('tests/unit/files/policyd_spf_config_skip_addresses', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/policyd_spf_config_skip_addresses', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(policyd_spf_config, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -1381,7 +1494,9 @@ someplace.local encrypt
         self.mock_config.return_value['enable_spf'] = True
         self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_spf_with_restrict_senders.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_spf_with_restrict_senders.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -1403,7 +1518,9 @@ someplace.local encrypt
         self.mock_config.return_value['enable_spf'] = True
         self.mock_config.return_value['spf_check_maps'] = 'canonical.com  spfcheck'
         smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_spf_with_spf_check_maps.cf', 'r', encoding='utf-8') as f:
+        with open(
+            'tests/unit/files/postfix_main_spf_with_spf_check_maps.cf', 'r', encoding='utf-8'
+        ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
@@ -1431,7 +1548,9 @@ someplace.local encrypt
         self.mock_config.return_value['spf_check_maps'] = 'canonical.com  spfcheck'
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
-            'tests/unit/files/postfix_main_spf_with_spf_check_maps_and_restrict_senders.cf', 'r', encoding='utf-8'
+            'tests/unit/files/postfix_main_spf_with_spf_check_maps_and_restrict_senders.cf',
+            'r',
+            encoding='utf-8',
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
@@ -1611,7 +1730,9 @@ someplace.local encrypt
     @mock.patch('charmhelpers.core.hookenv.relation_ids')
     @mock.patch('reactive.smtp_relay._calculate_offset')
     @mock.patch('reactive.smtp_relay._get_peers')
-    def test__get_milters_map_offset(self, get_peers, calculate_offset, relation_ids, relation_get, related_units):
+    def test__get_milters_map_offset(
+        self, get_peers, calculate_offset, relation_ids, relation_get, related_units
+    ):
         calculate_offset.return_value = 1
         get_peers.return_value = ['smtp-relay/0', 'smtp-relay/1']
         relation_ids.return_value = ['milter:54']
@@ -1639,7 +1760,9 @@ someplace.local encrypt
     @mock.patch('charmhelpers.core.hookenv.relation_get')
     @mock.patch('charmhelpers.core.hookenv.relation_ids')
     @mock.patch('reactive.smtp_relay._get_peers')
-    def test__get_milters_map_wrap_around(self, get_peers, relation_ids, relation_get, related_units):
+    def test__get_milters_map_wrap_around(
+        self, get_peers, relation_ids, relation_get, related_units
+    ):
         self.mock_local_unit.return_value = 'smtp-relay/2'
         get_peers.return_value = ['smtp-relay/0', 'smtp-relay/1', 'smtp-relay/2']
         relation_ids.return_value = ['milter:54']
@@ -1651,9 +1774,13 @@ someplace.local encrypt
     @mock.patch('charmhelpers.core.hookenv.relation_get')
     @mock.patch('charmhelpers.core.hookenv.relation_ids')
     @mock.patch('reactive.smtp_relay._get_peers')
-    def test__get_milters_map_wrap_around_twice(self, get_peers, relation_ids, relation_get, related_units):
+    def test__get_milters_map_wrap_around_twice(
+        self, get_peers, relation_ids, relation_get, related_units
+    ):
         self.mock_local_unit.return_value = 'smtp-relay/4'
-        get_peers.return_value = ['smtp-relay/0', 'smtp-relay/1', 'smtp-relay/2', 'smtp-relay/3', 'smtp-relay/4']
+        get_peers.return_value = [
+            'smtp-relay/0', 'smtp-relay/1', 'smtp-relay/2', 'smtp-relay/3', 'smtp-relay/4'
+        ]
         relation_ids.return_value = ['milter:54']
         related_units.return_value = ['smtp-dkim-signing-charm/1', 'smtp-dkim-signing-charm/4']
         smtp_relay._get_milters()
@@ -1663,7 +1790,9 @@ someplace.local encrypt
     @mock.patch('charmhelpers.core.hookenv.relation_get')
     @mock.patch('charmhelpers.core.hookenv.relation_ids')
     @mock.patch('reactive.smtp_relay._get_peers')
-    def test__get_milters_no_map_milter_units(self, get_peers, relation_ids, relation_get, related_units):
+    def test__get_milters_no_map_milter_units(
+        self, get_peers, relation_ids, relation_get, related_units
+    ):
         self.mock_local_unit.return_value = 'smtp-relay/1'
         get_peers.return_value = ['smtp-relay/0', 'smtp-relay/1']
         relation_ids.return_value = ['milter:54']
@@ -1738,14 +1867,18 @@ someplace.local encrypt
         dest = os.path.join(self.tmpdir, 'my-test-file')
 
         self.assertTrue(smtp_relay._write_file(source, dest, owner='root', group='root'))
-        want = [mock.call(path=dest + '.new', content=source, perms=420, owner='root', group='root')]
+        want = [
+            mock.call(path=dest + '.new', content=source, perms=420, owner='root', group='root')
+        ]
         write_file.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(write_file.mock_calls))
 
         write_file.reset_mock()
         with mock.patch('builtins.open', side_effect=FileNotFoundError):
             smtp_relay._write_file(source, dest, owner='root', group='root')
-        want = [mock.call(path=dest + '.new', content=source, perms=420, owner='root', group='root')]
+        want = [
+            mock.call(path=dest + '.new', content=source, perms=420, owner='root', group='root')
+        ]
         write_file.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(write_file.mock_calls))
 
@@ -1754,7 +1887,11 @@ someplace.local encrypt
             smtp_relay._write_file(source, dest)
         current_usr = pwd.getpwuid(os.getuid()).pw_name
         current_grp = grp.getgrgid(pwd.getpwnam(current_usr).pw_gid).gr_name
-        want = [mock.call(path=dest + '.new', content=source, perms=420, owner=current_usr, group=current_grp)]
+        want = [
+            mock.call(
+                path=dest + '.new', content=source, perms=420, owner=current_usr, group=current_grp
+            )
+        ]
         write_file.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(write_file.mock_calls))
 
@@ -1762,7 +1899,11 @@ someplace.local encrypt
         with mock.patch('builtins.open', side_effect=FileNotFoundError):
             smtp_relay._write_file(source, dest, owner='nobody')
         current_grp = grp.getgrgid(pwd.getpwnam('nobody').pw_gid).gr_name
-        want = [mock.call(path=dest + '.new', content=source, perms=420, owner='nobody', group=current_grp)]
+        want = [
+            mock.call(
+                path=dest + '.new', content=source, perms=420, owner='nobody', group=current_grp
+            )
+        ]
         write_file.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(write_file.mock_calls))
 
@@ -1808,7 +1949,10 @@ someplace.local encrypt
         with open(dest, 'w') as f:
             f.write(content)
         smtp_relay._update_aliases('root@admin.mydomain.local', dest)
-        want = 'postmaster:    root\ndevnull:       /dev/null\nroot:          root@admin.mydomain.local\n'
+        want = """postmaster:    root
+devnull:       /dev/null
+root:          root@admin.mydomain.local
+"""
         with open(dest, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -1816,7 +1960,10 @@ someplace.local encrypt
 
         # Has admin email, so do nothing and do not call newaliases.
         call.reset_mock()
-        content = 'postmaster:    root\ndevnull:       /dev/null\nroot:          root@admin.mydomain.local\n'
+        content = """postmaster:    root
+devnull:       /dev/null
+root:          root@admin.mydomain.local
+"""
         with open(dest, 'w') as f:
             f.write(content)
         smtp_relay._update_aliases('root@admin.mydomain.local', dest)
