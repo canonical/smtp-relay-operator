@@ -22,6 +22,7 @@ For information about how to deploy, integrate, and manage this charm, see the O
 
 | | |
 |--|--|
+| [How-to guides](https://charmhub.io/smtp-relay/docs/how-to-contribute) </br> Step-by-step guides covering key operations and common tasks | 
 | [Reference](https://charmhub.io/smtp-relay/docs/reference-actions) </br> Technical information - specifications, APIs, architecture | 
 
 ## Contributing to this documentation
@@ -37,7 +38,7 @@ The SMTP Relay Operator is a member of the Ubuntu family. It's an open-source pr
 - [Code of conduct](https://ubuntu.com/community/code-of-conduct)
 - [Get support](https://discourse.charmhub.io/)
 - [Join our online chat](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
-- [Contribute](Contribute)
+- [Contribute](https://github.com/canonical/smtp-relay-operator/blob/main/CONTRIBUTING.md)
 
 Thinking about using the SMTP Relay Operator for your next project? [Get in touch](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)!
 
