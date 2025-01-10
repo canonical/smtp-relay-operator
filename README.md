@@ -1,10 +1,13 @@
-# SMTP Relay Charm
+[![CharmHub Badge](https://charmhub.io/smtp-relay/badge.svg)](https://charmhub.io/smtp-relay)
+[![Publish to edge](https://github.com/canonical/smtp-relay-operator/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/smtp-relay-operator/actions/workflows/publish_charm.yaml)
+[![Promote charm](https://github.com/canonical/smtp-relay-operator/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/smtp-relay-operator/actions/workflows/promote_charm.yaml)
+[![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-## Description
+# SMTP Relay Operator
 
-The SMTP Relay Charm installs a versatile postfix SMTP relay server.
-
-It's intended to be highly configurable, setting up Postfix as requested.
+A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+deploying and managing a postfix SMTP relay server on bare metal. SMTP
+is an Internet standard communication protocol for email transmission.
 
 Features include (not limited to):
 - set up base Postfix system
@@ -17,30 +20,29 @@ Features include (not limited to):
 - fine-tune TLS settings
 - set up limits (rate, size, connections, ...)
 - set up Nagios monitoring
-- set up rsyslog relaying and log retention
 
-## Usage
+For information about how to deploy, integrate, and manage this charm, see the Official [smtp-relay Operator Documentation](https://charmhub.io/smtp-relay/docs).
+
+
+## Get started
 
 Provision a Juju environment then deploy 2 units with:
-
 ```
 juju deploy -n2 smtp-relay
 ```
 
-### Scale Out Usage
-
-To horizontally scale, adding more read-only standbys:
-
+To horizontally scale, add more read-only standbys with:
 ```
 juju add-unit smtp-relay
 ```
 
----
+## Learn more
+* [Read more](https://charmhub.io/smtp-relay) <!--Link to the charm's official documentation-->
+* [Developer documentation](https://www.postfix.org/documentation.html) <!--Link to any developer documentation-->
+* [Official webpage](https://www.postfix.org/) <!--(Optional) Link to official webpage/blog/marketing content-->
+* [Troubleshooting](https://matrix.to/#/#charmhub-charmdev:ubuntu.com) <!--(Optional) Link to a page or section about troubleshooting/FAQ-->
+## Project and community
+* [Issues](https://github.com/canonical/smtp-relay-operator/issues) <!--Link to GitHub issues (if applicable)-->
+* [Contributing](https://charmhub.io/smtp-relay/docs/how-to-contribute) <!--Link to any contribution guides-->
+* [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com) <!--Link to contact info (if applicable), e.g. Matrix channel-->
 
-## Testing
-
-Just run `make unittest`.
-
----
-
-For more details, [see here](https://charmhub.io/smtp-relay/configure).
