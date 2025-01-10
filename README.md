@@ -31,7 +31,7 @@ Provision a Juju environment then deploy 2 units with:
 juju deploy -n2 smtp-relay
 ```
 
-To horizontally scale, adding more read-only standbys:
+To horizontally scale, add more read-only standbys with:
 ```
 juju add-unit smtp-relay
 ```
