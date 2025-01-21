@@ -230,7 +230,7 @@ def configure_smtp_relay(
         'myorigin': False,  # XXX: Configurable when given hostname override
         'mynetworks': " ".join(charm_state.allowed_relay_networks),
         'relayhost': charm_state.relay_host,
-        'relay_domains': config['relay_domains'],
+        'relay_domains': ",".join(charm_state.relay_domains),
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
         'relay_recipient_maps_combined': config['relay_recipient_maps'] == 'COMBINED',
         'restrict_recipients': bool(config['restrict_recipients']),

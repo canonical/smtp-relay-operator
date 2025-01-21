@@ -73,6 +73,7 @@ class State:  # pylint: disable=too-few-public-methods
         admin_email: Administrator's email address where root@ emails will go to
         allowed_relay_networks: List of allowed networks to relay without authenticating.
         domain: Primary domain for hostname generation.
+        relay_domains: List of destination domains to relay mail to.
         relay_host: SMTP relay host to forward mail to.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
         tls_security_level: The TLS security level.
@@ -81,6 +82,7 @@ class State:  # pylint: disable=too-few-public-methods
     admin_email: EmailStr
     allowed_relay_networks: list[IPvAnyNetwork]
     domain: str | None
+    relay_domains: list[str]
     relay_host: str
     tls_ciphers: TLSCiphers
     tls_security_level: TLSSecurityLevel
@@ -100,10 +102,12 @@ class State:  # pylint: disable=too-few-public-methods
         """
         try:
             allowed_relay_networks = config["allowed_relay_networks"].split(",")
+            relay_domains = config["relay_domains"].split(",") if "relay_domains" in config else []
             return cls(
                 admin_email=config["admin_email"],
                 allowed_relay_networks=allowed_relay_networks,
                 domain=config["domain"],
+                relay_domains=relay_domains,
                 relay_host=config["relay_host"],
                 tls_ciphers=TLSCiphers(config["tls_ciphers"]),
                 tls_security_level=TLSSecurityLevel(config["tls_security_level"]),
