@@ -13,6 +13,7 @@ import subprocess  # nosec
 import jinja2
 import yaml
 
+import state
 from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
@@ -183,6 +184,7 @@ def configure_smtp_relay(
 ):
     reactive.clear_flag('smtp-relay.active')
     config = hookenv.config()
+    charm_state = state.State.from_charm(config)
 
     status.maintenance('Setting up SMTP relay')
 
@@ -202,8 +204,8 @@ def configure_smtp_relay(
         subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])  # nosec
 
     fqdn = socket.getfqdn()
-    if config['domain']:
-        fqdn = _generate_fqdn(config['domain'])
+    if charm_state.domain:
+        fqdn = _generate_fqdn(charm_state.domain)
 
     smtpd_recipient_restrictions = _smtpd_recipient_restrictions(config)
     smtpd_relay_restrictions = _smtpd_relay_restrictions(config)
@@ -226,8 +228,8 @@ def configure_smtp_relay(
         'message_size_limit': config['message_size_limit'],
         'milter': _get_milters(),
         'myorigin': False,  # XXX: Configurable when given hostname override
-        'mynetworks': config['allowed_relay_networks'],
-        'relayhost': config['relay_host'],
+        'mynetworks': " ".join(charm_state.allowed_relay_networks),
+        'relayhost': charm_state.relay_host,
         'relay_domains': config['relay_domains'],
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
         'relay_recipient_maps_combined': config['relay_recipient_maps'] == 'COMBINED',
@@ -243,11 +245,11 @@ def configure_smtp_relay(
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
-        'tls_ciphers': config['tls_ciphers'],
+        'tls_ciphers': charm_state.tls_ciphers.value,
         'tls_dh_params': tls_dh_params,
         'tls_exclude_ciphers': config['tls_exclude_ciphers'],
         'tls_protocols': config['tls_protocols'],
-        'tls_security_level': config['tls_security_level'],
+        'tls_security_level': charm_state.tls_security_level.value,
         'transport_maps': bool(config['transport_maps']),
         'virtual_alias_domains': config['virtual_alias_domains'],
         'virtual_alias_maps': bool(config['virtual_alias_maps']),
@@ -304,7 +306,7 @@ def configure_smtp_relay(
     for key, pmap in maps.items():
         changed = _create_update_map(map_contents[key], pmap) or changed
 
-    _update_aliases(config['admin_email'])
+    _update_aliases(charm_state.admin_email)
 
     host.service_start('postfix')
     if changed:

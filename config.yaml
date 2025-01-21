@@ -5,13 +5,11 @@ options:
   admin_email:
     type: string
     default: ''
-    description: |
-      Administrator's email address where root@ emails will go.
+    description: Administrator's email address where root@ emails will go to.
   allowed_relay_networks:
     type: string
     default: ''
-    description: |
-      List of allowed networks to relay without authenticating.
+    description: Comma separated list of allowed networks to relay without authenticating.
   additional_smtpd_recipient_restrictions:
     type: string
     default: ''
@@ -31,8 +29,7 @@ options:
   connection_limit:
     type: int
     default: 100
-    description: |
-      Maximum number of simultaneous SMTP connections allowed.
+    description: Maximum number of simultaneous SMTP connections allowed.
   domain:
     type: string
     default: ''
@@ -66,13 +63,11 @@ options:
   enable_spf:
     type: boolean
     default: false
-    description: |
-      Enable SPF checking.
+    description: Enable SPF checking.
   enable_smtp_auth:
     type: boolean
     default: true
-    description: |
-      Enable SMTP authentication.
+    description: Enable SMTP authentication.
   header_checks:
     type: string
     default: ''
@@ -83,8 +78,7 @@ options:
   message_size_limit:
     type: int
     default: 61440000
-    description: |
-      Maximum size of messages allowed (default 60MBytes).
+    description: Maximum size of messages allowed (default 60MBytes).
   relay_access_sources:
     type: string
     default: ''
@@ -103,8 +97,7 @@ options:
   relay_host:
     type: string
     default: ''
-    description: |
-      SMTP relay host (or smart host) to forward mail to.
+    description: SMTP relay host (or smart host) to forward mail to.
   relay_recipient_maps:
     type: string
     default: ''
@@ -124,8 +117,7 @@ options:
     type: string
     default: ''
     description: |
-      Access map for restrictions by recipient address or domain
-      (default '' to allow all).
+      Access map for restrictions by recipient address or domain (default '' to allow all).
   restrict_senders:
     type: string
     default: ''
@@ -199,9 +191,7 @@ options:
   spf_skip_addresses:
     type: string
     default: ''
-    description: |
-      Set of comma-separated CIDR addresses to skip SPF checks
-      (allowlist).
+    description: Set of comma-separated CIDR addresses to skip SPF checks (allowlist).
   tls_ciphers:
     type: string
     default: 'HIGH'

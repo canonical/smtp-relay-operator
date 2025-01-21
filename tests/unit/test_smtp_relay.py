@@ -587,10 +587,8 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['tls_ciphers'] = ''
         self.mock_config.return_value['tls_exclude_ciphers'] = ''
         self.mock_config.return_value['tls_protocols'] = ''
-        self.mock_config.return_value['tls_security_level'] = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
