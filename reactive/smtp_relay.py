@@ -11,7 +11,6 @@ import socket
 import subprocess  # nosec
 
 import jinja2
-import yaml
 
 import state
 from charms import reactive
@@ -108,7 +107,6 @@ def configure_smtp_auth(
     'config.changed.allowed_relay_networks',
     'config.changed.append_x_envelope_to',
     'config.changed.domain',
-    'config.changed.enable_reject_unknown_recipient_domain',
     'config.changed.enable_smtp_auth',
     'config.changed.enable_spf',
     'config.changed.header_checks',
@@ -459,19 +457,12 @@ def _smtpd_recipient_restrictions(charm_state: state.State, config):
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )
 
-    if config['enable_reject_unknown_recipient_domain']:
-        smtpd_recipient_restrictions.append('reject_unknown_recipient_domain')
-
     if config['restrict_senders']:
         smtpd_recipient_restrictions.append(
             'check_sender_access hash:/etc/postfix/restricted_senders'
         )
 
-    if config['additional_smtpd_recipient_restrictions']:
-        smtpd_recipient_restrictions += yaml.safe_load(
-            config['additional_smtpd_recipient_restrictions']
-        )
-
+    smtpd_recipient_restrictions += charm_state.additional_smtpd_recipient_restrictions
     if charm_state.enable_spf:
         if config['spf_check_maps']:
             smtpd_recipient_restrictions.append('check_sender_access hash:/etc/postfix/spf_checks')

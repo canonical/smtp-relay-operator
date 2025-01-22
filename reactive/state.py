@@ -40,7 +40,7 @@ class SmtpTlsCipherGrade(str, Enum):
         HIGH: "HIGH"
         MEDIUM: "MEDIUM"
         NULL: "NULL"
-        LOW: "LOW"
+        LOW: "LOW"º
         EXPORT: "EXPORT"
     """
 
@@ -65,12 +65,47 @@ class SmtpTlsSecurityLevel(str, Enum):
     ENCRYPT = "encrypt"
 
 
+class SmtpRecipientRestrictions(str, Enum):
+    """SMTPD recipient restrictions.
+
+    Attributes:
+        CHECK_RECIPIENT_ACCESS: "check_recipient_access"
+        CHECK_RECIPIENT_A_ACCESS: "check_recipient_a_access"
+        CHECK_RECIPIENT_MX_ACCESS: "check_recipient_mx_access"
+        CHECK_RECIPIENT_NS_ACCESS: "check_recipient_ns_access"
+        PERMIT_AUTH_DESTINATION: "permit_auth_destination"
+        PERMIT_MX_BACKUP: "permit_mx_backup"
+        REJECT_NON_FQDN_RECIPIENT: "reject_non_fqdn_recipient"
+        REJECT_RHSBL_RECIPIENT: "reject_rhsbl_recipient rbl_domain=d.d.d.d"
+        REJECT_UNAUTH_DESTINATION: "reject_unauth_destination"
+        DEFER_UNAUTH_DESTINATION: "defer_unauth_destination"
+        REJECT_UNKNOWN_RECIPIENT_DOMAIN: "reject_unknown_recipient_domain"
+        REJECT_UNLISTED_RECIPIENT: "reject_unlisted_recipient"
+        REJECT_UNVERIFIED_RECIPIENT: "reject_unverified_recipient"
+    """
+
+    CHECK_RECIPIENT_ACCESS = "check_recipient_access"
+    CHECK_RECIPIENT_A_ACCESS = "check_recipient_a_access"
+    CHECK_RECIPIENT_MX_ACCESS = "check_recipient_mx_access"
+    CHECK_RECIPIENT_NS_ACCESS = "check_recipient_ns_access"
+    PERMIT_AUTH_DESTINATION = "permit_auth_destination"
+    PERMIT_MX_BACKUP = "permit_mx_backup"
+    REJECT_NON_FQDN_RECIPIENT = "reject_non_fqdn_recipient"
+    REJECT_RHSBL_RECIPIENT = "reject_rhsbl_recipient rbl_domain=d.d.d.d"
+    REJECT_UNAUTH_DESTINATION = "reject_unauth_destination"
+    DEFER_UNAUTH_DESTINATION = "defer_unauth_destination"
+    REJECT_UNKNOWN_RECIPIENT_DOMAIN = "reject_unknown_recipient_domain"
+    REJECT_UNLISTED_RECIPIENT = "reject_unlisted_recipient"
+    REJECT_UNVERIFIED_RECIPIENT = "reject_unverified_recipient"
+
+
 @dataclasses.dataclass()
 class State:  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """The Indico operator charm state.
 
     Attributes:
         admin_email: Administrator's email address where root@ emails will go to
+        additional_smtpd_recipient_restrictions: List of additional recipient restrictions.
         allowed_relay_networks: List of allowed networks to relay without authenticating.
         append_x_envelope_to: Append the X-Envelope-To header.
         domain: Primary domain for hostname generation.
@@ -84,6 +119,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     """
 
     admin_email: EmailStr
+    additional_smtpd_recipient_restrictions: list[SmtpRecipientRestrictions]
     allowed_relay_networks: list[IPvAnyNetwork]
     append_x_envelope_to: bool
     domain: str | None
@@ -109,13 +145,25 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
             ConfigurationError: if invalid state values were encountered.
         """
         try:
-            allowed_relay_networks = config["allowed_relay_networks"].split(",")
+            allowed_relay_networks = (
+                config["allowed_relay_networks"].split(",")
+                if "allowed_relay_networks" in config
+                else []
+            )
+            restrictions = (
+                config["additional_smtpd_recipient_restrictions"].split(",")
+                if "additional_smtpd_recipient_restrictions" in config
+                else []
+            )
             relay_domains = config["relay_domains"].split(",") if "relay_domains" in config else []
             tls_exclude_ciphers = (
                 config["tls_exclude_ciphers"].split(",") if "tls_exclude_ciphers" in config else []
             )
             return cls(
                 admin_email=config["admin_email"],
+                additional_smtpd_recipient_restrictions=[
+                    SmtpRecipientRestrictions(restriction) for restriction in restrictions
+                ],
                 allowed_relay_networks=allowed_relay_networks,
                 append_x_envelope_to=config["append_x_envelope_to"],
                 domain=config["domain"],

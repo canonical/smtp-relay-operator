@@ -4,19 +4,16 @@
 options:
   admin_email:
     type: string
-    default: ''
     description: Administrator's email address where root@ emails will go to.
-  allowed_relay_networks:
-    type: string
-    default: ''
-    description: Comma-separated list of allowed networks to relay without authenticating.
   additional_smtpd_recipient_restrictions:
     type: string
-    default: ''
     description: |
-      YAML formatted list of additional smtpd_recipient_restrictions.
+      Comma-separated list of additional smtpd_recipient_restrictions.
 
       http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
+  allowed_relay_networks:
+    type: string
+    description: Comma-separated list of allowed networks to relay without authenticating.
   append_x_envelope_to:
     type: boolean
     default: false
@@ -28,18 +25,10 @@ options:
       receive emails for multiple individual or shared aliases.
   domain:
     type: string
-    default: ''
     description: |
       Primary domain for hostname generation, it will be
       $application-$unit.$domain. Default is '' to use the system
       FQDN.
-  enable_reject_unknown_recipient_domain:
-    type: boolean
-    default: false
-    description: |
-      Reject mail for when recipient's domain cannot be resolved.
-
-      http://www.postfix.org/postconf.5.html#reject_unknown_recipient_domain
   enable_reject_unknown_sender_domain:
     type: boolean
     default: true
