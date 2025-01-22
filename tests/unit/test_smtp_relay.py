@@ -77,7 +77,6 @@ class TestCharm(unittest.TestCase):
             'enable_smtp_auth': True,
             'enable_spf': False,
             'header_checks': '',
-            'message_size_limit': 61440000,
             'relay_access_sources': '',
             'relay_domains': '',
             'relay_host': '',

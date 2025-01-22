@@ -66,10 +66,6 @@ options:
       Perform various header checks and action on. See:
 
       http://www.postfix.org/header_checks.5.html
-  message_size_limit:
-    type: int
-    default: 61440000
-    description: Maximum size of messages allowed in bytes.
   relay_access_sources:
     type: string
     default: ''
