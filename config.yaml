@@ -37,15 +37,6 @@ options:
       Primary domain for hostname generation, it will be
       $application-$unit.$domain. Default is '' to use the system
       FQDN.
-  enable_rate_limits:
-    type: boolean
-    default: false
-    description: |
-      Enable various rate limiting features.
-
-      smtpd_client_auth_rate_limit 8
-      smtpd_client_connection_rate_limit 8
-      smtpd_client_new_tls_session_rate_limit 8
   enable_reject_unknown_recipient_domain:
     type: boolean
     default: false

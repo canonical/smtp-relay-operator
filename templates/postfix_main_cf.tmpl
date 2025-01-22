@@ -46,14 +46,7 @@ smtp_tls_policy_maps = hash:/etc/postfix/tls_policy
 
 message_size_limit = {{message_size_limit}}
 strict_rfc821_envelopes = yes
-{%- if enable_rate_limits and enable_smtp_auth %}
-smtpd_client_auth_rate_limit = 8
-{%- endif %}
 smtpd_client_connection_count_limit = {{connection_limit}}
-{%- if enable_rate_limits %}
-smtpd_client_connection_rate_limit = 8
-smtpd_client_new_tls_session_rate_limit = 8
-{%- endif %}
 smtpd_helo_required = yes
 smtpd_relay_restrictions = {{smtpd_relay_restrictions}}
 myhostname = {{fqdn}}

@@ -115,7 +115,6 @@ def configure_smtp_auth(
     'config.changed.append_x_envelope_to',
     'config.changed.connection_limit',
     'config.changed.domain',
-    'config.changed.enable_rate_limits',
     'config.changed.enable_reject_unknown_recipient_domain',
     'config.changed.enable_smtp_auth',
     'config.changed.enable_spf',
@@ -207,7 +206,7 @@ def configure_smtp_relay(
     if charm_state.domain:
         fqdn = _generate_fqdn(charm_state.domain)
 
-    smtpd_recipient_restrictions = _smtpd_recipient_restrictions(config)
+    smtpd_recipient_restrictions = _smtpd_recipient_restrictions(charm_state, config)
     smtpd_relay_restrictions = _smtpd_relay_restrictions(config)
     smtpd_sender_restrictions = _smtpd_sender_restrictions(config)
 
@@ -219,7 +218,6 @@ def configure_smtp_relay(
         'fqdn': fqdn,
         'hostname': socket.gethostname(),
         'connection_limit': config['connection_limit'],
-        'enable_rate_limits': config['enable_rate_limits'],
         'enable_sender_login_map': bool(config['sender_login_maps']),
         'enable_smtp_auth': config['enable_smtp_auth'],
         'enable_spf': config['enable_spf'],
@@ -470,9 +468,9 @@ def _write_file(source, dest_path, perms=0o644, owner=None, group=None):
     return True
 
 
-def _smtpd_recipient_restrictions(config):
+def _smtpd_recipient_restrictions(charm_state: state.State, config):
     smtpd_recipient_restrictions = []
-    if config['append_x_envelope_to']:
+    if charm_state.append_x_envelope_to:
         smtpd_recipient_restrictions.append(
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )

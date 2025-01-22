@@ -72,7 +72,6 @@ class TestCharm(unittest.TestCase):
             'append_x_envelope_to': False,
             'connection_limit': 100,
             'domain': '',
-            'enable_rate_limits': False,
             'enable_reject_unknown_recipient_domain': False,
             'enable_reject_unknown_sender_domain': True,
             'enable_smtp_auth': True,
@@ -651,49 +650,6 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         smtp_relay.configure_smtp_relay(self.tmpdir, dhparams)
         create_update_map.assert_called()
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_rate_limits(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['enable_rate_limits'] = True
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open('tests/unit/files/postfix_main_rate_limits.cf', 'r', encoding='utf-8') as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_rate_limits_auth_disabled(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['enable_rate_limits'] = True
-        self.mock_config.return_value['enable_smtp_auth'] = False
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_rate_limits_auth_disabled.cf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
