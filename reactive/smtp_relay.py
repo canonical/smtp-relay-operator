@@ -46,7 +46,6 @@ def peer_relation_changed():
 
 @reactive.when_any(
     'config.changed.enable_smtp_auth',
-    'config.changed.smtp_auth_users',
 )
 def config_changed_smtp_auth():
     reactive.clear_flag('smtp-relay.auth.configured')
@@ -79,11 +78,6 @@ def configure_smtp_auth(
     template = env.get_template('templates/dovecot_conf.tmpl')
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
-
-    smtp_auth_users = config['smtp_auth_users']
-    if smtp_auth_users and not smtp_auth_users.startswith('MANUAL'):
-        contents = JUJU_HEADER + smtp_auth_users + '\n'
-        _write_file(contents, dovecot_users, perms=0o640, group='dovecot')
 
     if not config.get('enable_smtp_auth'):
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')

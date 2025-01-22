@@ -85,7 +85,6 @@ class TestCharm(unittest.TestCase):
             'restrict_senders': '',
             'restrict_sender_access': '',
             'sender_login_maps': '',
-            'smtp_auth_users': '',
             'smtp_header_checks': '',
             'smtpd_forbid_bare_newline': '',
             'smtpd_forbid_bare_newline_exclusions': '',
@@ -288,45 +287,6 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('grp.getgrnam')
-    @mock.patch('os.fchown')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_auth_relay_config_auth_users(
-        self, call, fchown, getgrnam, set_flag, clear_flag
-    ):
-        dovecot_config = os.path.join(self.tmpdir, 'dovecot.conf')
-        dovecot_users = os.path.join(self.tmpdir, 'dovecot_users')
-        self.mock_config.return_value[
-            'smtp_auth_users'
-        ] = (
-            "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.\n"
-            'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
-            '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
-        )
-        smtp_relay.configure_smtp_auth(dovecot_config, dovecot_users)
-        with open('tests/unit/files/dovecot_users', 'r', encoding='utf-8') as f:
-            want = f.read()
-        with open(dovecot_users, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._write_file')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_auth_relay_config_auth_users_manual(
-        self, call, write_file, set_flag, clear_flag
-    ):
-        dovecot_config = os.path.join(self.tmpdir, 'dovecot.conf')
-        dovecot_users = os.path.join(self.tmpdir, 'dovecot_users')
-
-        self.mock_config.return_value['smtp_auth_users'] = 'MANUAL'
-        smtp_relay.configure_smtp_auth(dovecot_config, dovecot_users)
-        self.assertFalse(os.path.exists(dovecot_users))
-        self.assertEqual(3, len(write_file.mock_calls))
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
     @mock.patch('reactive.smtp_relay._write_file')
     def test_configure_smtp_auth_relay_flags(self, write_file, set_flag, clear_flag):
         self.mock_config.return_value['enable_smtp_auth'] = True
@@ -482,7 +442,6 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value['enable_smtp_auth'] = True
         self.mock_config.return_value['sender_login_maps'] = 'MANUAL'
-        self.mock_config.return_value['smtp_auth_users'] = 'MANUAL'
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_auth_sender_login_maps.cf', 'r', encoding='utf-8'
