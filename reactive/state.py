@@ -17,7 +17,7 @@ class CharmStateBaseError(Exception):
     """Represents an error with charm state."""
 
 
-class CharmConfigInvalidError(CharmStateBaseError):
+class ConfigurationError(CharmStateBaseError):
     """Exception raised when a charm configuration is found to be invalid.
 
     Attributes:
@@ -25,7 +25,7 @@ class CharmConfigInvalidError(CharmStateBaseError):
     """
 
     def __init__(self, msg: str):
-        """Initialize a new instance of the CharmConfigInvalidError exception.
+        """Initialize a new instance of the ConfigurationError exception.
 
         Args:
             msg: Explanation of the error.
@@ -98,7 +98,7 @@ class State:  # pylint: disable=too-few-public-methods
             Current charm state.
 
         Raises:
-            CharmConfigInvalidError: if invalid state values were encountered.
+            ConfigurationError: if invalid state values were encountered.
         """
         try:
             allowed_relay_networks = config["allowed_relay_networks"].split(",")
@@ -118,4 +118,4 @@ class State:  # pylint: disable=too-few-public-methods
                 itertools.chain.from_iterable(error["loc"] for error in exc.errors())
             )
             error_field_str = " ".join(f"{f}" for f in error_fields)
-            raise CharmConfigInvalidError(f"invalid configuration: {error_field_str}") from exc
+            raise ConfigurationError(f"invalid configuration: {error_field_str}") from exc
