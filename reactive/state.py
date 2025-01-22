@@ -74,6 +74,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         allowed_relay_networks: List of allowed networks to relay without authenticating.
         append_x_envelope_to: Append the X-Envelope-To header.
         domain: Primary domain for hostname generation.
+        enable_smtp_auth: If SMTP authentication is enabled.
+        enable_spf: If SPF checks are enabled.
         relay_domains: List of destination domains to relay mail to.
         relay_host: SMTP relay host to forward mail to.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
@@ -85,6 +87,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     allowed_relay_networks: list[IPvAnyNetwork]
     append_x_envelope_to: bool
     domain: str | None
+    enable_smtp_auth: bool
+    enable_spf: bool
     relay_domains: list[str]
     relay_host: str
     tls_ciphers: SmtpTlsCipherGrade
@@ -115,6 +119,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 allowed_relay_networks=allowed_relay_networks,
                 append_x_envelope_to=config["append_x_envelope_to"],
                 domain=config["domain"],
+                enable_smtp_auth=config["enable_smtp_auth"],
+                enable_spf=config["enable_spf"],
                 relay_domains=relay_domains,
                 relay_host=config["relay_host"],
                 tls_ciphers=SmtpTlsCipherGrade(config["tls_ciphers"]),

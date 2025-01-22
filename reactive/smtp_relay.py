@@ -59,6 +59,7 @@ def configure_smtp_auth(
     reactive.clear_flag('smtp-relay.active')
     reactive.clear_flag('smtp-relay.configured')
     config = hookenv.config()
+    charm_state = state.State.from_charm(config)
 
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
@@ -71,7 +72,7 @@ def configure_smtp_auth(
         # We need to use /var/spool/postfix/private/auth because
         # by default postfix runs chroot'ed in /var/spool/postfix.
         'path': '/var/spool/postfix/private/auth',
-        'smtp_auth': config['enable_smtp_auth'],
+        'smtp_auth': charm_state.enable_smtp_auth,
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
@@ -79,12 +80,11 @@ def configure_smtp_auth(
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
 
-    if not config.get('enable_smtp_auth'):
+    if not charm_state.enable_smtp_auth:
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')
         hookenv.close_port(465, 'TCP')
         hookenv.close_port(587, 'TCP')
         host.service_stop('dovecot')
-        # XXX: mask systemd service disable
 
         reactive.set_flag('smtp-relay.auth.configured')
         return
@@ -196,7 +196,7 @@ def configure_smtp_relay(
         fqdn = _generate_fqdn(charm_state.domain)
 
     smtpd_recipient_restrictions = _smtpd_recipient_restrictions(charm_state, config)
-    smtpd_relay_restrictions = _smtpd_relay_restrictions(config)
+    smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state, config)
     smtpd_sender_restrictions = _smtpd_sender_restrictions(config)
 
     virtual_alias_maps_type = config['virtual_alias_maps_type']
@@ -207,8 +207,8 @@ def configure_smtp_relay(
         'fqdn': fqdn,
         'hostname': socket.gethostname(),
         'enable_sender_login_map': bool(config['sender_login_maps']),
-        'enable_smtp_auth': config['enable_smtp_auth'],
-        'enable_spf': config['enable_spf'],
+        'enable_smtp_auth': charm_state.enable_smtp_auth,
+        'enable_spf': charm_state.enable_spf,
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
         'header_checks': bool(config['header_checks']),
         'milter': _get_milters(),
@@ -314,8 +314,8 @@ def config_changed_policyd_spf():
 def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/policyd-spf.conf'):
     reactive.clear_flag('smtp-relay.active')
     config = hookenv.config()
-
-    if not config['enable_spf']:
+    charm_state = state.State.from_charm(config)
+    if not charm_state.enable_spf:
         status.maintenance('Postfix policy server for SPF checking (policyd-spf) disabled')
         reactive.set_flag('smtp-relay.policyd-spf.configured')
         return
@@ -472,7 +472,7 @@ def _smtpd_recipient_restrictions(charm_state: state.State, config):
             config['additional_smtpd_recipient_restrictions']
         )
 
-    if config['enable_spf']:
+    if charm_state.enable_spf:
         if config['spf_check_maps']:
             smtpd_recipient_restrictions.append('check_sender_access hash:/etc/postfix/spf_checks')
         else:
@@ -481,12 +481,12 @@ def _smtpd_recipient_restrictions(charm_state: state.State, config):
     return smtpd_recipient_restrictions
 
 
-def _smtpd_relay_restrictions(config):
+def _smtpd_relay_restrictions(charm_state: state.State, config):
     smtpd_relay_restrictions = ['permit_mynetworks']
     if bool(config['relay_access_sources']):
         smtpd_relay_restrictions.append('check_client_access cidr:/etc/postfix/relay_access')
 
-    if config['enable_smtp_auth']:
+    if charm_state.enable_smtp_auth:
         if bool(config['sender_login_maps']):
             smtpd_relay_restrictions.append('reject_known_sender_login_mismatch')
         if bool(config['restrict_senders']):

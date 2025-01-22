@@ -47,14 +47,14 @@ options:
       Reject mail for when sender's domain cannot be resolved.
 
       http://www.postfix.org/postconf.5.html#reject_unknown_sender_domain
-  enable_spf:
-    type: boolean
-    default: false
-    description: Enable SPF checking.
   enable_smtp_auth:
     type: boolean
     default: true
     description: Enable SMTP authentication.
+  enable_spf:
+    type: boolean
+    default: false
+    description: Enable SPF checking.
   header_checks:
     type: string
     default: ''
