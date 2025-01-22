@@ -33,7 +33,7 @@ class ConfigurationError(CharmStateBaseError):
         self.msg = msg
 
 
-class TLSCiphers(str, Enum):
+class SmtpTlsCiphers(str, Enum):
     """TLS cipher.
 
     Attributes:
@@ -51,7 +51,7 @@ class TLSCiphers(str, Enum):
     EXPORT = "EXPORT"
 
 
-class TLSSecurityLevel(str, Enum):
+class SmtpTlsSecurityLevel(str, Enum):
     """TLS secutiry level.
 
     Attributes:
@@ -84,8 +84,8 @@ class State:  # pylint: disable=too-few-public-methods
     domain: str | None
     relay_domains: list[str]
     relay_host: str
-    tls_ciphers: TLSCiphers
-    tls_security_level: TLSSecurityLevel
+    tls_ciphers: SmtpTlsCiphers
+    tls_security_level: SmtpTlsSecurityLevel
 
     @classmethod
     def from_charm(cls, config: dict[str, typing.Any]) -> "State":
@@ -109,8 +109,8 @@ class State:  # pylint: disable=too-few-public-methods
                 domain=config["domain"],
                 relay_domains=relay_domains,
                 relay_host=config["relay_host"],
-                tls_ciphers=TLSCiphers(config["tls_ciphers"]),
-                tls_security_level=TLSSecurityLevel(config["tls_security_level"]),
+                tls_ciphers=SmtpTlsCiphers(config["tls_ciphers"]),
+                tls_security_level=SmtpTlsSecurityLevel(config["tls_security_level"]),
             )
 
         except ValidationError as exc:
