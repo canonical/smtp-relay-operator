@@ -9,7 +9,7 @@ options:
   allowed_relay_networks:
     type: string
     default: ''
-    description: Comma separated list of allowed networks to relay without authenticating.
+    description: Comma-separated list of allowed networks to relay without authenticating.
   additional_smtpd_recipient_restrictions:
     type: string
     default: ''
