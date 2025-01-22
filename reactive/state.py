@@ -33,8 +33,8 @@ class ConfigurationError(CharmStateBaseError):
         self.msg = msg
 
 
-class SmtpTlsCiphers(str, Enum):
-    """TLS cipher.
+class SmtpTlsCipherGrade(str, Enum):
+    """TLS cipher grade.
 
     Attributes:
         HIGH: "HIGH"
@@ -77,6 +77,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         relay_domains: List of destination domains to relay mail to.
         relay_host: SMTP relay host to forward mail to.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
+        tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher list.
         tls_security_level: The TLS security level.
     """
 
@@ -86,7 +87,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     domain: str | None
     relay_domains: list[str]
     relay_host: str
-    tls_ciphers: SmtpTlsCiphers
+    tls_ciphers: SmtpTlsCipherGrade
+    tls_exclude_ciphers: list[str]
     tls_security_level: SmtpTlsSecurityLevel
 
     @classmethod
@@ -105,6 +107,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         try:
             allowed_relay_networks = config["allowed_relay_networks"].split(",")
             relay_domains = config["relay_domains"].split(",") if "relay_domains" in config else []
+            tls_exclude_ciphers = (
+                config["tls_exclude_ciphers"].split(",") if "tls_exclude_ciphers" in config else []
+            )
             return cls(
                 admin_email=config["admin_email"],
                 allowed_relay_networks=allowed_relay_networks,
@@ -112,7 +117,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 domain=config["domain"],
                 relay_domains=relay_domains,
                 relay_host=config["relay_host"],
-                tls_ciphers=SmtpTlsCiphers(config["tls_ciphers"]),
+                tls_ciphers=SmtpTlsCipherGrade(config["tls_ciphers"]),
+                tls_exclude_ciphers=tls_exclude_ciphers,
                 tls_security_level=SmtpTlsSecurityLevel(config["tls_security_level"]),
             )
 

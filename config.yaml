@@ -26,10 +26,6 @@ options:
 
       This is useful to allow end users filter by destination when they
       receive emails for multiple individual or shared aliases.
-  connection_limit:
-    type: int
-    default: 100
-    description: Maximum number of simultaneous SMTP connections allowed.
   domain:
     type: string
     default: ''
@@ -156,9 +152,9 @@ options:
       http://www.postfix.org/postconf.5.html#smtpd_tls_ciphers
   tls_exclude_ciphers:
     type: string
-    default: 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA'
+    default: 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA'
     description: |
-      List of ciphers or cipher types to exclude from the SMTP server
+      Comma-separated list of ciphers or cipher types to exclude from the SMTP server
       cipher list at all TLS security levels. Excluding valid ciphers
       can create interoperability problems. DO NOT exclude ciphers
       unless it is essential to do so.
