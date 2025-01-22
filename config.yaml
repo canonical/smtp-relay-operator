@@ -131,15 +131,6 @@ options:
       http://www.postfix.org/header_checks.5.html
 
       NOTE: You almost always want to use `header_checks` instead of this.
-  smtpd_forbid_bare_newline:
-    type: string
-    default: ''
-    description: |
-      Reject or restrict input lines from an SMTP client that end in <LF> instead of the standard <CR><LF>. Such line endings are commonly allowed with UNIX-based SMTP servers, but they violate RFC 5321, and allowing such line endings can make a server vulnerable to SMTP smuggling.
-
-      As of Postfix 3.9, this defaults to "normalize"; formerly "no".
-
-      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline
   smtpd_forbid_bare_newline_exclusions:
     type: string
     default: ''

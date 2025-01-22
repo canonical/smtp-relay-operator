@@ -99,9 +99,6 @@ header_checks = regexp:/etc/postfix/header_checks
 {%- if smtp_header_checks %}
 smtp_header_checks = regexp:/etc/postfix/smtp_header_checks
 {% endif -%}
-{%- if smtpd_forbid_bare_newline != "" %}
-smtpd_forbid_bare_newline = {{smtpd_forbid_bare_newline}}
-{% endif -%}
 {%- if smtpd_forbid_bare_newline_exclusions != "" %}
 smtpd_forbid_bare_newline_exclusions = {{smtpd_forbid_bare_newline_exclusions}}
 {% endif -%}
