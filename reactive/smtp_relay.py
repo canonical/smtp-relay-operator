@@ -11,8 +11,8 @@ import socket
 import subprocess  # nosec
 
 import jinja2
-import yaml
 
+import state
 from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
@@ -45,7 +45,6 @@ def peer_relation_changed():
 
 @reactive.when_any(
     'config.changed.enable_smtp_auth',
-    'config.changed.smtp_auth_users',
 )
 def config_changed_smtp_auth():
     reactive.clear_flag('smtp-relay.auth.configured')
@@ -59,6 +58,7 @@ def configure_smtp_auth(
     reactive.clear_flag('smtp-relay.active')
     reactive.clear_flag('smtp-relay.configured')
     config = hookenv.config()
+    charm_state = state.State.from_charm(config)
 
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
@@ -71,7 +71,7 @@ def configure_smtp_auth(
         # We need to use /var/spool/postfix/private/auth because
         # by default postfix runs chroot'ed in /var/spool/postfix.
         'path': '/var/spool/postfix/private/auth',
-        'smtp_auth': config['enable_smtp_auth'],
+        'smtp_auth': charm_state.enable_smtp_auth,
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
@@ -79,17 +79,11 @@ def configure_smtp_auth(
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
 
-    smtp_auth_users = config['smtp_auth_users']
-    if smtp_auth_users and not smtp_auth_users.startswith('MANUAL'):
-        contents = JUJU_HEADER + smtp_auth_users + '\n'
-        _write_file(contents, dovecot_users, perms=0o640, group='dovecot')
-
-    if not config.get('enable_smtp_auth'):
+    if not charm_state.enable_smtp_auth:
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')
         hookenv.close_port(465, 'TCP')
         hookenv.close_port(587, 'TCP')
         host.service_stop('dovecot')
-        # XXX: mask systemd service disable
 
         reactive.set_flag('smtp-relay.auth.configured')
         return
@@ -112,14 +106,10 @@ def configure_smtp_auth(
     'config.changed.additional_smtpd_recipient_restrictions',
     'config.changed.allowed_relay_networks',
     'config.changed.append_x_envelope_to',
-    'config.changed.connection_limit',
     'config.changed.domain',
-    'config.changed.enable_rate_limits',
-    'config.changed.enable_reject_unknown_recipient_domain',
     'config.changed.enable_smtp_auth',
     'config.changed.enable_spf',
     'config.changed.header_checks',
-    'config.changed.message_size_limit',
     'config.changed.relay_access_sources',
     'config.changed.relay_domains',
     'config.changed.relay_host',
@@ -129,9 +119,6 @@ def configure_smtp_auth(
     'config.changed.restrict_sender_access',
     'config.changed.sender_login_maps',
     'config.changed.smtp_header_checks',
-    'config.changed.smtpd_forbid_bare_newline',
-    'config.changed.smtpd_forbid_bare_newline_exclusions',
-    'config.changed.smtpd_forbid_bare_newline_reject_code',
     'config.changed.spf_check_maps',
     'config.changed.tls_ciphers',
     'config.changed.tls_exclude_ciphers',
@@ -183,6 +170,7 @@ def configure_smtp_relay(
 ):
     reactive.clear_flag('smtp-relay.active')
     config = hookenv.config()
+    charm_state = state.State.from_charm(config)
 
     status.maintenance('Setting up SMTP relay')
 
@@ -202,33 +190,29 @@ def configure_smtp_relay(
         subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])  # nosec
 
     fqdn = socket.getfqdn()
-    if config['domain']:
-        fqdn = _generate_fqdn(config['domain'])
+    if charm_state.domain:
+        fqdn = _generate_fqdn(charm_state.domain)
 
-    smtpd_recipient_restrictions = _smtpd_recipient_restrictions(config)
-    smtpd_relay_restrictions = _smtpd_relay_restrictions(config)
-    smtpd_sender_restrictions = _smtpd_sender_restrictions(config)
+    smtpd_recipient_restrictions = _smtpd_recipient_restrictions(charm_state, config)
+    smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state, config)
+    smtpd_sender_restrictions = _smtpd_sender_restrictions(charm_state, config)
 
-    virtual_alias_maps_type = config['virtual_alias_maps_type']
-
+    virtual_alias_maps_type = charm_state.virtual_alias_maps_type
     changed = False
     context = {
         'JUJU_HEADER': JUJU_HEADER,
         'fqdn': fqdn,
         'hostname': socket.gethostname(),
-        'connection_limit': config['connection_limit'],
-        'enable_rate_limits': config['enable_rate_limits'],
         'enable_sender_login_map': bool(config['sender_login_maps']),
-        'enable_smtp_auth': config['enable_smtp_auth'],
-        'enable_spf': config['enable_spf'],
+        'enable_smtp_auth': charm_state.enable_smtp_auth,
+        'enable_spf': charm_state.enable_spf,
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
         'header_checks': bool(config['header_checks']),
-        'message_size_limit': config['message_size_limit'],
         'milter': _get_milters(),
         'myorigin': False,  # XXX: Configurable when given hostname override
-        'mynetworks': config['allowed_relay_networks'],
-        'relayhost': config['relay_host'],
-        'relay_domains': config['relay_domains'],
+        'mynetworks': ", ".join(charm_state.allowed_relay_networks),
+        'relayhost': charm_state.relay_host,
+        'relay_domains': ",".join(charm_state.relay_domains),
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
         'relay_recipient_maps_combined': config['relay_recipient_maps'] == 'COMBINED',
         'restrict_recipients': bool(config['restrict_recipients']),
@@ -236,20 +220,17 @@ def configure_smtp_relay(
         'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
         'smtpd_relay_restrictions': ', '.join(smtpd_relay_restrictions),
         'smtpd_sender_restrictions': ', '.join(smtpd_sender_restrictions),
-        'smtpd_forbid_bare_newline': config['smtpd_forbid_bare_newline'],
-        'smtpd_forbid_bare_newline_exclusions': config['smtpd_forbid_bare_newline_exclusions'],
-        'smtpd_forbid_bare_newline_reject_code': config['smtpd_forbid_bare_newline_reject_code'],
         'spf_check_maps': bool(config['spf_check_maps']),
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
-        'tls_ciphers': config['tls_ciphers'],
+        'tls_ciphers': charm_state.tls_ciphers,
         'tls_dh_params': tls_dh_params,
-        'tls_exclude_ciphers': config['tls_exclude_ciphers'],
-        'tls_protocols': config['tls_protocols'],
-        'tls_security_level': config['tls_security_level'],
+        'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
+        'tls_protocols': ", ".join(charm_state.tls_protocols),
+        'tls_security_level': charm_state.tls_security_level,
         'transport_maps': bool(config['transport_maps']),
-        'virtual_alias_domains': config['virtual_alias_domains'],
+        'virtual_alias_domains': ", ".join(charm_state.virtual_alias_domains),
         'virtual_alias_maps': bool(config['virtual_alias_maps']),
         'virtual_alias_maps_type': virtual_alias_maps_type,
     }
@@ -280,10 +261,7 @@ def configure_smtp_relay(
             f"{virtual_alias_maps_type}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
         ),
     }
-    sender_access_content = config['restrict_sender_access']
-    if sender_access_content and not sender_access_content.startswith('MANUAL'):
-        domains = ' '.join(config['restrict_sender_access'].split(',')).split()
-        sender_access_content = "".join([f"{domain:35} OK\n" for domain in domains])
+    sender_access_content = [f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': config['header_checks'],
@@ -291,7 +269,7 @@ def configure_smtp_relay(
         'relay_recipient_maps': config['relay_recipient_maps'],
         'restrict_recipients': config['restrict_recipients'],
         'restrict_senders': config['restrict_senders'],
-        'sender_access': sender_access_content,
+        'sender_access': "".join(sender_access_content),
         'sender_login_maps': config['sender_login_maps'],
         'smtp_header_checks': config['smtp_header_checks'],
         'spf_check_maps': config['spf_check_maps'],
@@ -304,7 +282,7 @@ def configure_smtp_relay(
     for key, pmap in maps.items():
         changed = _create_update_map(map_contents[key], pmap) or changed
 
-    _update_aliases(config['admin_email'])
+    _update_aliases(charm_state.admin_email)
 
     host.service_start('postfix')
     if changed:
@@ -330,8 +308,8 @@ def config_changed_policyd_spf():
 def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/policyd-spf.conf'):
     reactive.clear_flag('smtp-relay.active')
     config = hookenv.config()
-
-    if not config['enable_spf']:
+    charm_state = state.State.from_charm(config)
+    if not charm_state.enable_spf:
         status.maintenance('Postfix policy server for SPF checking (policyd-spf) disabled')
         reactive.set_flag('smtp-relay.policyd-spf.configured')
         return
@@ -340,7 +318,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
 
     context = {
         'JUJU_HEADER': JUJU_HEADER,
-        'skip_addresses': config['spf_skip_addresses'],
+        'skip_addresses': ",".join(charm_state.spf_skip_addresses),
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
@@ -468,27 +446,20 @@ def _write_file(source, dest_path, perms=0o644, owner=None, group=None):
     return True
 
 
-def _smtpd_recipient_restrictions(config):
+def _smtpd_recipient_restrictions(charm_state: state.State, config):
     smtpd_recipient_restrictions = []
-    if config['append_x_envelope_to']:
+    if charm_state.append_x_envelope_to:
         smtpd_recipient_restrictions.append(
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )
-
-    if config['enable_reject_unknown_recipient_domain']:
-        smtpd_recipient_restrictions.append('reject_unknown_recipient_domain')
 
     if config['restrict_senders']:
         smtpd_recipient_restrictions.append(
             'check_sender_access hash:/etc/postfix/restricted_senders'
         )
 
-    if config['additional_smtpd_recipient_restrictions']:
-        smtpd_recipient_restrictions += yaml.safe_load(
-            config['additional_smtpd_recipient_restrictions']
-        )
-
-    if config['enable_spf']:
+    smtpd_recipient_restrictions += charm_state.additional_smtpd_recipient_restrictions
+    if charm_state.enable_spf:
         if config['spf_check_maps']:
             smtpd_recipient_restrictions.append('check_sender_access hash:/etc/postfix/spf_checks')
         else:
@@ -497,12 +468,12 @@ def _smtpd_recipient_restrictions(config):
     return smtpd_recipient_restrictions
 
 
-def _smtpd_relay_restrictions(config):
+def _smtpd_relay_restrictions(charm_state: state.State, config):
     smtpd_relay_restrictions = ['permit_mynetworks']
     if bool(config['relay_access_sources']):
         smtpd_relay_restrictions.append('check_client_access cidr:/etc/postfix/relay_access')
 
-    if config['enable_smtp_auth']:
+    if charm_state.enable_smtp_auth:
         if bool(config['sender_login_maps']):
             smtpd_relay_restrictions.append('reject_known_sender_login_mismatch')
         if bool(config['restrict_senders']):
@@ -514,12 +485,12 @@ def _smtpd_relay_restrictions(config):
     return smtpd_relay_restrictions
 
 
-def _smtpd_sender_restrictions(config):
+def _smtpd_sender_restrictions(charm_state, config):
     smtpd_sender_restrictions = []
     if config['enable_reject_unknown_sender_domain']:
         smtpd_sender_restrictions.append('reject_unknown_sender_domain')
     smtpd_sender_restrictions.append('check_sender_access hash:/etc/postfix/access')
-    if bool(config['restrict_sender_access']):
+    if charm_state.restrict_sender_access:
         smtpd_sender_restrictions.append('reject')
 
     return smtpd_sender_restrictions

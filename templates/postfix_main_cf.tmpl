@@ -22,24 +22,18 @@ smtpd_tls_cert_file = {{tls_cert}}
 smtpd_tls_key_file = {{tls_key}}
 {%- endif %}
 smtpd_tls_dh1024_param_file = {{tls_dh_params}}
-{%- if tls_ciphers %}
 smtpd_tls_ciphers = {{tls_ciphers}}
-{%- endif %}
 {%- if tls_exclude_ciphers %}
 smtpd_tls_exclude_ciphers = {{tls_exclude_ciphers}}
 {%- endif %}
 smtpd_tls_loglevel = 1
-{%- if tls_ciphers %}
 smtpd_tls_mandatory_ciphers = {{tls_ciphers}}
-{%- endif %}
 {%- if tls_protocols %}
 smtpd_tls_mandatory_protocols = {{tls_protocols}}
 smtpd_tls_protocols = {{tls_protocols}}
 {%- endif %}
 smtpd_tls_received_header = yes
-{%- if tls_security_level %}
 smtpd_tls_security_level = {{tls_security_level}}
-{%- endif %}
 smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
 
 smtp_tls_CApath = /etc/ssl/certs
@@ -50,16 +44,9 @@ smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
 smtp_tls_policy_maps = hash:/etc/postfix/tls_policy
 {%- endif %}
 
-message_size_limit = {{message_size_limit}}
+message_size_limit = 61440000
 strict_rfc821_envelopes = yes
-{%- if enable_rate_limits and enable_smtp_auth %}
-smtpd_client_auth_rate_limit = 8
-{%- endif %}
-smtpd_client_connection_count_limit = {{connection_limit}}
-{%- if enable_rate_limits %}
-smtpd_client_connection_rate_limit = 8
-smtpd_client_new_tls_session_rate_limit = 8
-{%- endif %}
+smtpd_client_connection_count_limit = 100
 smtpd_helo_required = yes
 smtpd_relay_restrictions = {{smtpd_relay_restrictions}}
 myhostname = {{fqdn}}
@@ -111,15 +98,6 @@ header_checks = regexp:/etc/postfix/header_checks
 {% endif -%}
 {%- if smtp_header_checks %}
 smtp_header_checks = regexp:/etc/postfix/smtp_header_checks
-{% endif -%}
-{%- if smtpd_forbid_bare_newline != "" %}
-smtpd_forbid_bare_newline = {{smtpd_forbid_bare_newline}}
-{% endif -%}
-{%- if smtpd_forbid_bare_newline_exclusions != "" %}
-smtpd_forbid_bare_newline_exclusions = {{smtpd_forbid_bare_newline_exclusions}}
-{% endif -%}
-{%- if smtpd_forbid_bare_newline_reject_code != "" %}
-smtpd_forbid_bare_newline_reject_code = {{smtpd_forbid_bare_newline_reject_code}}
 {% endif -%}
 
 {%- if virtual_alias_domains %}
