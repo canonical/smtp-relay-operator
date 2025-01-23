@@ -86,7 +86,7 @@ class TestCharm(unittest.TestCase):
             'tls_ciphers': 'HIGH',
             'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
             'tls_policy_maps': '',
-            'tls_protocols': '!SSLv2 !SSLv3',
+            'tls_protocols': '!SSLv2,!SSLv3',
             'tls_security_level': 'may',
             'transport_maps': '',
             'virtual_alias_domains': '',
@@ -538,7 +538,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['tls_exclude_ciphers'] = ''
-        self.mock_config.return_value['tls_protocols'] = ''
+        del self.mock_config.return_value['tls_protocols']
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
@@ -1271,7 +1271,6 @@ someplace.local encrypt
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = True
-        self.mock_config.return_value['spf_skip_addresses'] = ''
         smtp_relay.configure_policyd_spf(policyd_spf_config)
         with open('tests/unit/files/policyd_spf_config', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -1298,7 +1297,6 @@ someplace.local encrypt
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = False
-        self.mock_config.return_value['spf_skip_addresses'] = ''
         smtp_relay.configure_policyd_spf(policyd_spf_config)
         self.assertFalse(os.path.exists(policyd_spf_config))
 

@@ -115,8 +115,10 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         relay_domains: List of destination domains to relay mail to.
         relay_host: SMTP relay host to forward mail to.
         restrict_sender_access: List of domains, addresses or hosts to restrict relay from
+        spf_skip_addresses: List of CIDR addresses to skip SPF checks.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
         tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher list.
+        tls_protocols: List of TLS protocols accepted by the Postfix SMTP.
         tls_security_level: The TLS security level.
     """
 
@@ -130,8 +132,10 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     relay_domains: list[Annotated[str, Field(min_length=1)]]
     relay_host: Annotated[str, Field(min_length=1)]
     restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
+    spf_skip_addresses: list[IPvAnyNetwork]
     tls_ciphers: SmtpTlsCipherGrade
     tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]]
+    tls_protocols: list[Annotated[str, Field(min_length=1)]]
     tls_security_level: SmtpTlsSecurityLevel
 
     @classmethod
@@ -159,13 +163,19 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 else []
             )
             relay_domains = config["relay_domains"].split(",") if "relay_domains" in config else []
-            tls_exclude_ciphers = (
-                config["tls_exclude_ciphers"].split(",") if "tls_exclude_ciphers" in config else []
-            )
             restrict_sender_access = (
                 config["restrict_sender_access"].split(",")
                 if "restrict_sender_access" in config
                 else []
+            )
+            spf_skip_addresses = (
+                config["spf_skip_addresses"].split(",") if "spf_skip_addresses" in config else []
+            )
+            tls_exclude_ciphers = (
+                config["tls_exclude_ciphers"].split(",") if "tls_exclude_ciphers" in config else []
+            )
+            tls_protocols = (
+                config["tls_protocols"].split(",") if "tls_protocols" in config else []
             )
 
             return cls(
@@ -181,8 +191,10 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 relay_domains=relay_domains,
                 relay_host=config["relay_host"],
                 restrict_sender_access=restrict_sender_access,
+                spf_skip_addresses=spf_skip_addresses,
                 tls_ciphers=SmtpTlsCipherGrade(config["tls_ciphers"]),
                 tls_exclude_ciphers=tls_exclude_ciphers,
+                tls_protocols=tls_protocols,
                 tls_security_level=SmtpTlsSecurityLevel(config["tls_security_level"]),
             )
 

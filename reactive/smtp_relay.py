@@ -211,7 +211,7 @@ def configure_smtp_relay(
         'header_checks': bool(config['header_checks']),
         'milter': _get_milters(),
         'myorigin': False,  # XXX: Configurable when given hostname override
-        'mynetworks': " ".join(charm_state.allowed_relay_networks),
+        'mynetworks': ", ".join(charm_state.allowed_relay_networks),
         'relayhost': charm_state.relay_host,
         'relay_domains': ",".join(charm_state.relay_domains),
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
@@ -228,7 +228,7 @@ def configure_smtp_relay(
         'tls_ciphers': charm_state.tls_ciphers.value,
         'tls_dh_params': tls_dh_params,
         'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
-        'tls_protocols': config['tls_protocols'],
+        'tls_protocols': ", ".join(charm_state.tls_protocols),
         'tls_security_level': charm_state.tls_security_level.value,
         'transport_maps': bool(config['transport_maps']),
         'virtual_alias_domains': config['virtual_alias_domains'],
@@ -321,7 +321,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
 
     context = {
         'JUJU_HEADER': JUJU_HEADER,
-        'skip_addresses': config['spf_skip_addresses'],
+        'skip_addresses': ",".join(charm_state.spf_skip_addresses),
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
