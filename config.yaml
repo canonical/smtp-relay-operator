@@ -72,8 +72,7 @@ options:
     default: ''
     description: |
       Optional lookup tables that alias specific mail addresses or
-      domains to other local or remote addresses (use 'MANUAL' to
-      indicate it is managed outside of juju configs).
+      domains to other local or remote addresses.
 
       Use 'COMBINED' to use both virtual_alias_maps and transport_maps
       as value for relay_recipient_maps.
@@ -192,9 +191,8 @@ options:
       http://www.postfix.org/postconf.5.html#transport_maps
   virtual_alias_domains:
     type: string
-    default: ''
     description: |
-      Optional list of domains for which all addresses are aliased to
+      Comma-separated list of domains for which all addresses are aliased to
       addresses in other local or remote domains.
 
       http://www.postfix.org/postconf.5.html#virtual_alias_domains

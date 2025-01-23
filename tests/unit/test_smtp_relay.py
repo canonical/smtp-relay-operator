@@ -89,7 +89,6 @@ class TestCharm(unittest.TestCase):
             'tls_protocols': '!SSLv2,!SSLv3',
             'tls_security_level': 'may',
             'transport_maps': '',
-            'virtual_alias_domains': '',
             'virtual_alias_maps': '',
             'virtual_alias_maps_type': 'hash',
         }

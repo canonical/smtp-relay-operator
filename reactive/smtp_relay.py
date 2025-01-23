@@ -197,8 +197,7 @@ def configure_smtp_relay(
     smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state, config)
     smtpd_sender_restrictions = _smtpd_sender_restrictions(charm_state, config)
 
-    virtual_alias_maps_type = config['virtual_alias_maps_type']
-
+    virtual_alias_maps_type = charm_state.virtual_alias_maps_type
     changed = False
     context = {
         'JUJU_HEADER': JUJU_HEADER,
@@ -225,13 +224,13 @@ def configure_smtp_relay(
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
-        'tls_ciphers': charm_state.tls_ciphers.value,
+        'tls_ciphers': charm_state.tls_ciphers,
         'tls_dh_params': tls_dh_params,
         'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
         'tls_protocols': ", ".join(charm_state.tls_protocols),
-        'tls_security_level': charm_state.tls_security_level.value,
+        'tls_security_level': charm_state.tls_security_level,
         'transport_maps': bool(config['transport_maps']),
-        'virtual_alias_domains': config['virtual_alias_domains'],
+        'virtual_alias_domains': ", ".join(charm_state.virtual_alias_domains),
         'virtual_alias_maps': bool(config['virtual_alias_maps']),
         'virtual_alias_maps_type': virtual_alias_maps_type,
     }

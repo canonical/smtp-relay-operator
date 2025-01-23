@@ -100,6 +100,18 @@ class SmtpRecipientRestrictions(str, Enum):
     REJECT_UNVERIFIED_RECIPIENT = "reject_unverified_recipient"
 
 
+class PostfixLookupTableType(str, Enum):
+    """Postfix lookup table types.
+
+    Attributes:
+        HASH: "hash"
+        REGEXP: "regexp"
+    """
+
+    HASH = "hash"
+    REGEXP = "regexp"
+
+
 @dataclasses.dataclass()
 class State:  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """The Indico operator charm state.
@@ -120,6 +132,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher list.
         tls_protocols: List of TLS protocols accepted by the Postfix SMTP.
         tls_security_level: The TLS security level.
+        virtual_alias_domains: List of domains for which all addresses are aliased.
+        virtual_alias_maps_type: The virtual alias map type.
     """
 
     admin_email: EmailStr
@@ -137,6 +151,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]]
     tls_protocols: list[Annotated[str, Field(min_length=1)]]
     tls_security_level: SmtpTlsSecurityLevel
+    virtual_alias_domains: list[Annotated[str, Field(min_length=1)]]
+    virtual_alias_maps_type: PostfixLookupTableType
 
     @classmethod
     def from_charm(cls, config: dict[str, typing.Any]) -> "State":
@@ -157,7 +173,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 if "allowed_relay_networks" in config
                 else []
             )
-            restrictions = (
+            additional_smtpd_recipient_restrictions = (
                 config["additional_smtpd_recipient_restrictions"].split(",")
                 if "additional_smtpd_recipient_restrictions" in config
                 else []
@@ -177,12 +193,15 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
             tls_protocols = (
                 config["tls_protocols"].split(",") if "tls_protocols" in config else []
             )
+            virtual_alias_domains = (
+                config["virtual_alias_domains"].split(",")
+                if "virtual_alias_domains"
+                in config else []
+            )
 
             return cls(
                 admin_email=config["admin_email"],
-                additional_smtpd_recipient_restrictions=[
-                    SmtpRecipientRestrictions(restriction) for restriction in restrictions
-                ],
+                additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
                 allowed_relay_networks=allowed_relay_networks,
                 append_x_envelope_to=config["append_x_envelope_to"],
                 domain=config["domain"],
@@ -192,10 +211,12 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 relay_host=config["relay_host"],
                 restrict_sender_access=restrict_sender_access,
                 spf_skip_addresses=spf_skip_addresses,
-                tls_ciphers=SmtpTlsCipherGrade(config["tls_ciphers"]),
+                tls_ciphers=config["tls_ciphers"],
                 tls_exclude_ciphers=tls_exclude_ciphers,
                 tls_protocols=tls_protocols,
-                tls_security_level=SmtpTlsSecurityLevel(config["tls_security_level"]),
+                tls_security_level=config["tls_security_level"],
+                virtual_alias_domains=virtual_alias_domains,
+                virtual_alias_maps_type=config["virtual_alias_maps_type"],
             )
 
         except ValidationError as exc:
