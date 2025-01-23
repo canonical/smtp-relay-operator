@@ -262,9 +262,7 @@ def configure_smtp_relay(
             f"{virtual_alias_maps_type}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
         ),
     }
-    sender_access_content = charm_state.restrict_sender_access
-    if sender_access_content != ['MANUAL']:
-        sender_access_content = [f"{domain:35} OK\n" for domain in sender_access_content]
+    sender_access_content = [f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': config['header_checks'],
