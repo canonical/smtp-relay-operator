@@ -66,7 +66,6 @@ options:
       http://www.postfix.org/postconf.5.html#relay_domains
   relay_host:
     type: string
-    default: ''
     description: SMTP relay host (or smart host) to forward mail to.
   relay_recipient_maps:
     type: string
@@ -97,10 +96,8 @@ options:
       of juju configs).
   restrict_sender_access:
     type: string
-    default: ''
     description: |
-      Restrict relay only from senders from specified domains,
-      addresses, or hosts (default '' is to allow all).
+      Comma-separated list of domains, addresses or hosts to restrict relay from.
   sender_login_maps:
     type: string
     default: ''

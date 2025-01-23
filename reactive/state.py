@@ -8,7 +8,8 @@ import logging
 import typing
 from enum import Enum
 
-from pydantic import EmailStr, IPvAnyNetwork, ValidationError
+from typing_extensions import Annotated
+from pydantic import EmailStr, Field, IPvAnyNetwork, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         enable_spf: If SPF checks are enabled.
         relay_domains: List of destination domains to relay mail to.
         relay_host: SMTP relay host to forward mail to.
+        restrict_sender_access: List of domains, addresses or hosts to restrict relay from
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
         tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher list.
         tls_security_level: The TLS security level.
@@ -125,10 +127,11 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     domain: str | None
     enable_smtp_auth: bool
     enable_spf: bool
-    relay_domains: list[str]
-    relay_host: str
+    relay_domains: list[Annotated[str, Field(min_length=1)]]
+    relay_host: Annotated[str, Field(min_length=1)]
+    restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
     tls_ciphers: SmtpTlsCipherGrade
-    tls_exclude_ciphers: list[str]
+    tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]]
     tls_security_level: SmtpTlsSecurityLevel
 
     @classmethod
@@ -159,6 +162,12 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
             tls_exclude_ciphers = (
                 config["tls_exclude_ciphers"].split(",") if "tls_exclude_ciphers" in config else []
             )
+            restrict_sender_access = (
+                config["restrict_sender_access"].split(",")
+                if "restrict_sender_access" in config
+                else []
+            )
+
             return cls(
                 admin_email=config["admin_email"],
                 additional_smtpd_recipient_restrictions=[
@@ -171,6 +180,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 enable_spf=config["enable_spf"],
                 relay_domains=relay_domains,
                 relay_host=config["relay_host"],
+                restrict_sender_access=restrict_sender_access,
                 tls_ciphers=SmtpTlsCipherGrade(config["tls_ciphers"]),
                 tls_exclude_ciphers=tls_exclude_ciphers,
                 tls_security_level=SmtpTlsSecurityLevel(config["tls_security_level"]),

@@ -195,7 +195,7 @@ def configure_smtp_relay(
 
     smtpd_recipient_restrictions = _smtpd_recipient_restrictions(charm_state, config)
     smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state, config)
-    smtpd_sender_restrictions = _smtpd_sender_restrictions(config)
+    smtpd_sender_restrictions = _smtpd_sender_restrictions(charm_state, config)
 
     virtual_alias_maps_type = config['virtual_alias_maps_type']
 
@@ -262,10 +262,9 @@ def configure_smtp_relay(
             f"{virtual_alias_maps_type}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
         ),
     }
-    sender_access_content = config['restrict_sender_access']
-    if sender_access_content and not sender_access_content.startswith('MANUAL'):
-        domains = ' '.join(config['restrict_sender_access'].split(',')).split()
-        sender_access_content = "".join([f"{domain:35} OK\n" for domain in domains])
+    sender_access_content = charm_state.restrict_sender_access
+    if sender_access_content != ['MANUAL']:
+        sender_access_content = [f"{domain:35} OK\n" for domain in sender_access_content]
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': config['header_checks'],
@@ -273,7 +272,7 @@ def configure_smtp_relay(
         'relay_recipient_maps': config['relay_recipient_maps'],
         'restrict_recipients': config['restrict_recipients'],
         'restrict_senders': config['restrict_senders'],
-        'sender_access': sender_access_content,
+        'sender_access': "".join(sender_access_content),
         'sender_login_maps': config['sender_login_maps'],
         'smtp_header_checks': config['smtp_header_checks'],
         'spf_check_maps': config['spf_check_maps'],
@@ -489,12 +488,12 @@ def _smtpd_relay_restrictions(charm_state: state.State, config):
     return smtpd_relay_restrictions
 
 
-def _smtpd_sender_restrictions(config):
+def _smtpd_sender_restrictions(charm_state, config):
     smtpd_sender_restrictions = []
     if config['enable_reject_unknown_sender_domain']:
         smtpd_sender_restrictions.append('reject_unknown_sender_domain')
     smtpd_sender_restrictions.append('check_sender_access hash:/etc/postfix/access')
-    if bool(config['restrict_sender_access']):
+    if charm_state.restrict_sender_access:
         smtpd_sender_restrictions.append('reject')
 
     return smtpd_sender_restrictions

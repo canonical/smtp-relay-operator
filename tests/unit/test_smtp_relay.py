@@ -80,7 +80,6 @@ class TestCharm(unittest.TestCase):
             'relay_recipient_maps': '',
             'restrict_recipients': '',
             'restrict_senders': '',
-            'restrict_sender_access': '',
             'sender_login_maps': '',
             'smtp_header_checks': '',
             'spf_check_maps': '',
@@ -842,7 +841,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = (
-            ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
+            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
@@ -898,7 +897,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = (
-            ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
+            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/access_restrict_sender_access', 'r', encoding='utf-8') as f:
@@ -907,7 +906,7 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
-        self.mock_config.return_value['restrict_sender_access'] = ''
+        del self.mock_config.return_value['restrict_sender_access']
         smtp_relay.configure_smtp_relay(self.tmpdir)
         want = smtp_relay.JUJU_HEADER + "\n"
         with open(postfix_access, 'r', encoding='utf-8') as f:
