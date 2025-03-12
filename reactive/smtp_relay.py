@@ -157,7 +157,9 @@ def update_logrotate(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
 
     config = hookenv.config()
     retention = config['log_retention']
-    contents = utils.update_logrotate_conf(logrotate_conf_path, frequency='daily', retention=retention)
+    contents = utils.update_logrotate_conf(
+        logrotate_conf_path, frequency='daily', retention=retention
+    )
     _write_file(contents, logrotate_conf_path)
 
 
