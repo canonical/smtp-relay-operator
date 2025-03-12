@@ -135,7 +135,7 @@ options:
     type: string
     default: ''
     description: |
-      List of user and crypt password hashes (use mkpasswd to
+      Comma-separeted list of user and crypt password hashes (use mkpasswd to
       generate). e.g.
 
       myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.

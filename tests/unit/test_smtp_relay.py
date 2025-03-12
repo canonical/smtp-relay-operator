@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """SMTP Relay charm unit tests."""
-
 import grp
 import os
 import pwd
