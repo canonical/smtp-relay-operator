@@ -152,6 +152,7 @@ class TestCharm(unittest.TestCase):
             mock.call('smtp-relay.auth.configured'),
             mock.call('smtp-relay.configured'),
             mock.call('smtp-relay.installed'),
+            mock.call('smtp-relay.rsyslog.configured'),
         ]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
@@ -186,6 +187,16 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
     @mock.patch('charms.reactive.clear_flag')
+    @mock.patch('reactive.smtp_relay._write_file')
+    def test_update_logrotate(self, write_file, clear_flag):
+        self.mock_config.return_value['log_retention'] = 30
+        smtp_relay.update_logrotate()
+        want = [mock.call('smtp-relay.active')]
+        clear_flag.assert_has_calls(want, any_order=True)
+        self.assertEqual(len(want), len(clear_flag.mock_calls))
+        write_file.assert_called()
+
+    @mock.patch('charms.reactive.clear_flag')
     def test_config_changed_smtp_auth(self, clear_flag):
         smtp_relay.config_changed_smtp_auth()
         want = [mock.call('smtp-relay.auth.configured')]
@@ -196,6 +207,13 @@ class TestCharm(unittest.TestCase):
     def test_config_changed_policyd_spf(self, clear_flag):
         smtp_relay.config_changed_policyd_spf()
         want = [mock.call('smtp-relay.policyd-spf.configured')]
+        clear_flag.assert_has_calls(want, any_order=True)
+        self.assertEqual(len(want), len(clear_flag.mock_calls))
+
+    @mock.patch('charms.reactive.clear_flag')
+    def test_config_changed_syslog_forwarders(self, clear_flag):
+        smtp_relay.config_changed_syslog_forwarders()
+        want = [mock.call('smtp-relay.rsyslog.configured')]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -1560,6 +1578,75 @@ someplace.local encrypt
         with open(postfix_spf_check_maps, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
+
+    @mock.patch('charms.reactive.set_flag')
+    def test_configure_syslog_forwarders(self, set_flag):
+        self.mock_config.return_value['syslog_forwarders'] = 'myunit/0:192.0.2.1, myunit/1:192.0.2.2'
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        want = [mock.call('Setting up syslog forwarders'), mock.call('Restarting rsyslog due to config changes')]
+        status.maintenance.assert_has_calls(want, any_order=True)
+        self.mock_service_restart.assert_called_with('rsyslog')
+        want = [mock.call('smtp-relay.rsyslog.configured')]
+        set_flag.assert_has_calls(want, any_order=True)
+
+        with open('tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8') as f:
+            want = f.read()
+        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+
+        # Call again, no change.
+        status.maintenance.reset_mock()
+        self.mock_service_restart.reset_mock()
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        want = [mock.call('Setting up syslog forwarders')]
+        status.maintenance.assert_has_calls(want, any_order=True)
+        self.mock_service_restart.assert_not_called()
+
+        # Various combinations.
+        self.mock_config.return_value['syslog_forwarders'] = 'myunit/0:192.0.2.1,myunit/1:192.0.2.2'
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        with open('tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8') as f:
+            want = f.read()
+        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        self.mock_config.return_value['syslog_forwarders'] = 'myunit/0:192.0.2.1,  myunit/1:192.0.2.2'
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        with open('tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8') as f:
+            want = f.read()
+        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        self.mock_config.return_value['syslog_forwarders'] = '  myunit/0:192.0.2.1,	myunit/1:192.0.2.2  '
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        with open('tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8') as f:
+            want = f.read()
+        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+
+    @mock.patch('charms.reactive.set_flag')
+    def test_configure_syslog_forwarders_disabled(self, set_flag):
+        self.mock_config.return_value['syslog_forwarders'] = ''
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        status.maintenance.assert_not_called()
+        self.mock_service_restart.assert_not_called()
+        want = [mock.call('smtp-relay.rsyslog.configured')]
+        set_flag.assert_has_calls(want, any_order=True)
+
+        # Was previously enabled.
+        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
+        with open(dest, 'w') as f:
+            f.write('')
+        smtp_relay.configure_syslog_forwarders(self.tmpdir)
+        status.maintenance.assert_called_with('Disabling syslog forwards')
+        self.assertFalse(os.path.exists(dest))
+        self.mock_service_restart.assert_called_with('rsyslog')
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
