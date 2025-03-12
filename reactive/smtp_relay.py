@@ -130,7 +130,6 @@ def configure_smtp_auth(
     'config.changed.restrict_sender_access',
     'config.changed.sender_login_maps',
     'config.changed.smtp_header_checks',
-    'config.changed.spf_check_maps',
     'config.changed.tls_ciphers',
     'config.changed.tls_exclude_ciphers',
     'config.changed.tls_policy_maps',
@@ -246,7 +245,6 @@ def configure_smtp_relay(
         'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
         'smtpd_relay_restrictions': ', '.join(smtpd_relay_restrictions),
         'smtpd_sender_restrictions': ', '.join(smtpd_sender_restrictions),
-        'spf_check_maps': bool(config['spf_check_maps']),
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
@@ -280,7 +278,6 @@ def configure_smtp_relay(
         'sender_access': f"hash:{os.path.join(postfix_conf_dir, 'access')}",
         'sender_login_maps': f"hash:{os.path.join(postfix_conf_dir, 'sender_login')}",
         'smtp_header_checks': f"regexp:{os.path.join(postfix_conf_dir, 'smtp_header_checks')}",
-        'spf_check_maps': f"hash:{os.path.join(postfix_conf_dir, 'spf_checks')}",
         'tls_policy_maps': f"hash:{os.path.join(postfix_conf_dir, 'tls_policy')}",
         'transport_maps': f"hash:{os.path.join(postfix_conf_dir, 'transport')}",
         'virtual_alias_maps': (
@@ -301,7 +298,6 @@ def configure_smtp_relay(
         'sender_access': sender_access_content,
         'sender_login_maps': config['sender_login_maps'],
         'smtp_header_checks': config['smtp_header_checks'],
-        'spf_check_maps': config['spf_check_maps'],
         'tls_policy_maps': config['tls_policy_maps'],
         'transport_maps': config['transport_maps'],
         'virtual_alias_maps': config['virtual_alias_maps'],
@@ -541,10 +537,7 @@ def _smtpd_recipient_restrictions(config):
         )
 
     if config['enable_spf']:
-        if config['spf_check_maps']:
-            smtpd_recipient_restrictions.append('check_sender_access hash:/etc/postfix/spf_checks')
-        else:
-            smtpd_recipient_restrictions.append('check_policy_service unix:private/policyd-spf')
+        smtpd_recipient_restrictions.append('check_policy_service unix:private/policyd-spf')
 
     return smtpd_recipient_restrictions
 

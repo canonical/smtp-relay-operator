@@ -156,12 +156,6 @@ options:
       http://www.postfix.org/header_checks.5.html
 
       NOTE: You almost always want to use `header_checks` instead of this.
-  spf_check_maps:
-    type: string
-    default: ''
-    description: |
-      Only perform SPF checks for specified domains. Otherwise,
-      perform for all. Be sure to set enable_spf.
   spf_skip_addresses:
     type: string
     default: ''

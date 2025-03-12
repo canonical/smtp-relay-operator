@@ -99,10 +99,6 @@ smtpd_milters = {{milter}}
 non_smtpd_milters = {{milter}}
 {% endif -%}
 {% if enable_spf %}
-{% if spf_check_maps -%}
-smtpd_restriction_classes = spfcheck
-spfcheck = check_policy_service unix:private/policyd-spf
-{% endif -%}
 policyd-spf_time_limit = 3600s
 {% endif -%}
 
