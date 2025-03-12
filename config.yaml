@@ -165,15 +165,6 @@ options:
       This defaults to "$mynetworks".
 
       http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline_exclusions
-  smtpd_forbid_bare_newline_reject_code:
-    type: string
-    default: ''
-    description: |
-      The numerical Postfix SMTP server response code when rejecting a request with "smtpd_forbid_bare_newline = reject". Specify a 5XX status code (521 to disconnect).
-
-      This defaults to "550".
-
-      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline_reject_code
   spf_check_maps:
     type: string
     default: ''

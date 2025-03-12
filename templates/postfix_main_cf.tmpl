@@ -115,9 +115,6 @@ smtp_header_checks = regexp:/etc/postfix/smtp_header_checks
 {%- if smtpd_forbid_bare_newline_exclusions != "" %}
 smtpd_forbid_bare_newline_exclusions = {{smtpd_forbid_bare_newline_exclusions}}
 {% endif -%}
-{%- if smtpd_forbid_bare_newline_reject_code != "" %}
-smtpd_forbid_bare_newline_reject_code = {{smtpd_forbid_bare_newline_reject_code}}
-{% endif -%}
 
 {%- if virtual_alias_domains %}
 virtual_alias_domains = {{virtual_alias_domains}}
