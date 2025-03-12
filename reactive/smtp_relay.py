@@ -83,7 +83,7 @@ def configure_smtp_auth(
     changed = _write_file(contents, dovecot_config) or changed
 
     smtp_auth_users = config['smtp_auth_users']
-    if smtp_auth_users and not smtp_auth_users.startswith('MANUAL'):
+    if smtp_auth_users:
         contents = JUJU_HEADER + smtp_auth_users + '\n'
         _write_file(contents, dovecot_users, perms=0o640, group='dovecot')
 
@@ -171,9 +171,7 @@ def _create_update_map(content, postmap):
             os.utime(pmfname, None)
         changed = True
 
-    if content.startswith('MANUAL'):
-        hookenv.log(f"Map {pmfname} manually managed")
-    elif content.startswith('COMBINED'):
+    if content.startswith('COMBINED'):
         hookenv.log(f"Map {pmfname} using combined maps")
     else:
         contents = JUJU_HEADER + content + '\n'
