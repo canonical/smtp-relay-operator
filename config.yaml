@@ -103,8 +103,7 @@ options:
     default: ''
     description: |
       Optional lookup tables that alias specific mail addresses or
-      domains to other local or remote addresses (use 'MANUAL' to
-      indicate it is managed outside of juju configs).
+      domains to other local or remote addresses.
 
       Use 'COMBINED' to use both virtual_alias_maps and transport_maps
       as value for relay_recipient_maps.
@@ -123,9 +122,7 @@ options:
     type: string
     default: ''
     description: |
-      Access map for restrictions by sender address or domain (default
-      '' to allow all, use 'MANUAL' to indicate it is managed outside
-      of juju configs).
+      Access map for restrictions by sender address or domain (default '' to allow all.
   restrict_sender_access:
     type: string
     default: ''
@@ -136,8 +133,7 @@ options:
     type: string
     default: ''
     description: |
-      Restrict sender addresses to authenticated users defined by this
-      map (use 'MANUAL' to indicate it is managed outside of juju configs).
+      Restrict sender addresses to authenticated users defined by this map.
   smtp_auth_users:
     type: string
     default: ''
@@ -232,8 +228,7 @@ options:
     default: ''
     description: |
       Optional lookup tables with mappings from recipient address to
-      message delivery transport or next-hop destination (use 'MANUAL'
-      to indicate it is managed outside of juju configs).
+      message delivery transport or next-hop destination.
 
       http://www.postfix.org/postconf.5.html#transport_maps
   virtual_alias_domains:
@@ -249,8 +244,7 @@ options:
     default: ''
     description: |
       Optional lookup tables that alias specific mail addresses or
-      domains to other local or remote addresses (use 'MANUAL' to
-      indicate it is managed outside of juju configs).
+      domains to other local or remote addresses.
 
       http://www.postfix.org/postconf.5.html#virtual_alias_maps
   virtual_alias_maps_type:
