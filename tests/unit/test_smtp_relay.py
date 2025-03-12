@@ -88,7 +88,6 @@ class TestCharm(unittest.TestCase):
             'sender_login_maps': '',
             'smtp_auth_users': '',
             'smtp_header_checks': '',
-            'smtpd_forbid_bare_newline_exclusions': '',
             'spf_check_maps': '',
             'tls_ciphers': 'HIGH',
             'tls_exclude_ciphers': 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA',
