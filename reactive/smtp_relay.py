@@ -118,7 +118,6 @@ def configure_smtp_auth(
     'config.changed.connection_limit',
     'config.changed.domain',
     'config.changed.enable_rate_limits',
-    'config.changed.enable_reject_unknown_recipient_domain',
     'config.changed.enable_smtp_auth',
     'config.changed.enable_spf',
     'config.changed.header_checks',
@@ -538,9 +537,6 @@ def _smtpd_recipient_restrictions(config):
         smtpd_recipient_restrictions.append(
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )
-
-    if config['enable_reject_unknown_recipient_domain']:
-        smtpd_recipient_restrictions.append('reject_unknown_recipient_domain')
 
     if config['restrict_senders']:
         smtpd_recipient_restrictions.append(
