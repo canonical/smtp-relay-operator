@@ -20,33 +20,53 @@ class TestLibUtils(unittest.TestCase):
     def test_logrotate_frequency(self):
         with open('tests/unit/files/logrotate_frequency', 'r') as f:
             want = f.read()
-        self.assertEqual(utils.update_logrotate_conf('tests/unit/files/logrotate', frequency='daily'), want)
+        self.assertEqual(utils.update_logrotate_conf(
+            'tests/unit/files/logrotate', frequency='daily'), want
+        )
 
     def test_logrotate_non_exists(self):
         self.assertEqual(
-            utils.update_logrotate_conf('tests/unit/files/logrotate_file_does_not_exist', frequency='daily'), ''
+            utils.update_logrotate_conf(
+                'tests/unit/files/logrotate_file_does_not_exist', frequency='daily'
+            ),
+            '',
         )
 
     def test_logrotate_retention(self):
         with open('tests/unit/files/logrotate_retention', 'r') as f:
             want = f.read()
-        self.assertEqual(utils.update_logrotate_conf('tests/unit/files/logrotate', retention=30), want)
+        self.assertEqual(
+            utils.update_logrotate_conf('tests/unit/files/logrotate', retention=30), want
+        )
 
     def test_logrotate_retention_no_dateext(self):
         with open('tests/unit/files/logrotate_retention_no_dateext', 'r') as f:
             want = f.read()
-        self.assertEqual(utils.update_logrotate_conf('tests/unit/files/logrotate', retention=30, dateext=False), want)
+        self.assertEqual(
+            utils.update_logrotate_conf('tests/unit/files/logrotate', retention=30, dateext=False),
+            want,
+        )
 
         with open('tests/unit/files/logrotate_retention_no_dateext', 'r') as f:
             want = f.read()
         self.assertEqual(
-            utils.update_logrotate_conf('tests/unit/files/logrotate_retention', retention=30, dateext=False), want
+            utils.update_logrotate_conf(
+                'tests/unit/files/logrotate_retention', retention=30, dateext=False
+            ),
+            want,
         )
 
     def test_rsyslog_default_conf(self):
         with open('tests/unit/files/rsyslog-50-default_without_mail_kern.conf', 'r') as f:
             want = f.read()
-        self.assertEqual(utils.update_rsyslog_default_conf('tests/unit/files/rsyslog-50-default.conf'), want)
+        self.assertEqual(
+            utils.update_rsyslog_default_conf('tests/unit/files/rsyslog-50-default.conf'), want
+        )
 
     def test_rsyslog_default_conf_non_exists(self):
-        self.assertEqual(utils.update_rsyslog_default_conf('tests/unit/files/rsyslog-50-default_does_not_exist'), '')
+        self.assertEqual(
+            utils.update_rsyslog_default_conf(
+                'tests/unit/files/rsyslog-50-default_does_not_exist'
+            ),
+            '',
+        )
