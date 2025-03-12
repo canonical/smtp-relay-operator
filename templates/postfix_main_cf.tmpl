@@ -50,7 +50,7 @@ smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
 smtp_tls_policy_maps = hash:/etc/postfix/tls_policy
 {%- endif %}
 
-message_size_limit = {{message_size_limit}}
+message_size_limit = 50000000
 strict_rfc821_envelopes = yes
 {%- if enable_rate_limits and enable_smtp_auth %}
 smtpd_client_auth_rate_limit = 8

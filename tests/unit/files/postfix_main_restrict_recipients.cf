@@ -32,7 +32,7 @@ smtp_tls_loglevel = 1
 smtp_tls_security_level = may
 smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
 
-message_size_limit = 61440000
+message_size_limit = 50000000
 strict_rfc821_envelopes = yes
 smtpd_client_connection_count_limit = 100
 smtpd_helo_required = yes

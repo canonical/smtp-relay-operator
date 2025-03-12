@@ -121,7 +121,6 @@ def configure_smtp_auth(
     'config.changed.enable_smtp_auth',
     'config.changed.enable_spf',
     'config.changed.header_checks',
-    'config.changed.message_size_limit',
     'config.changed.relay_access_sources',
     'config.changed.relay_domains',
     'config.changed.relay_host',
@@ -238,7 +237,6 @@ def configure_smtp_relay(
         'enable_spf': config['enable_spf'],
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
         'header_checks': bool(config['header_checks']),
-        'message_size_limit': config['message_size_limit'],
         'milter': _get_milters(),
         'myorigin': False,  # XXX: Configurable when given hostname override
         'mynetworks': config['allowed_relay_networks'],

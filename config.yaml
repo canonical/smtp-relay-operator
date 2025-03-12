@@ -78,11 +78,6 @@ options:
     default: 120
     description: |
       Number of days of mail logs to retain during rotation.
-  message_size_limit:
-    type: int
-    default: 61440000
-    description: |
-      Maximum size of messages allowed (default 60MBytes).
   relay_access_sources:
     type: string
     default: ''
