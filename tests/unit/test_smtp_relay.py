@@ -73,7 +73,6 @@ class TestCharm(unittest.TestCase):
             'connection_limit': 100,
             'domain': '',
             'enable_rate_limits': False,
-            'enable_reject_unknown_recipient_domain': False,
             'enable_reject_unknown_sender_domain': True,
             'enable_smtp_auth': True,
             'enable_spf': False,
@@ -89,10 +88,6 @@ class TestCharm(unittest.TestCase):
             'sender_login_maps': '',
             'smtp_auth_users': '',
             'smtp_header_checks': '',
-            'smtpd_forbid_bare_newline': '',
-            'smtpd_forbid_bare_newline_exclusions': '',
-            'smtpd_forbid_bare_newline_reject_code': '',
-            'spf_check_maps': '',
             'tls_ciphers': 'HIGH',
             'tls_exclude_ciphers': 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA',
             'tls_policy_maps': '',
@@ -772,30 +767,6 @@ class TestCharm(unittest.TestCase):
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_reject_unknown_recipient_domain(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['enable_reject_unknown_recipient_domain'] = True
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_reject_unknown_recipient_domain.cf',
-            'r',
-            encoding='utf-8',
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_reject_unknown_sender_domain(
         self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
     ):
@@ -961,34 +932,6 @@ class TestCharm(unittest.TestCase):
         with open('tests/unit/files/restricted_senders', 'r', encoding='utf-8') as f:
             want = f.read()
         with open(postfix_restricted_senders, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_restrict_senders_with_reject_unknown_recipient_domain(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
-        self.mock_config.return_value['enable_reject_unknown_recipient_domain'] = True
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            (
-                "tests/unit/files/"
-                "postfix_main_restrict_senders_with_reject_unknown_recipient_domain.cf"
-            ),
-            'r',
-            encoding='utf-8',
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
 
@@ -1357,33 +1300,6 @@ someplace.local encrypt
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_additional_smtpd_recipient_restrictions(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['additional_smtpd_recipient_restrictions'] = (
-            '- warn_if_reject reject_non_fqdn_helo_hostname\n- reject_unauth_destination'
-        )
-        self.mock_config.return_value['enable_reject_unknown_recipient_domain'] = True
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_additional_smtpd_recipient_restrictions.cf',
-            'r',
-            encoding='utf-8',
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_append_x_envelope_to(
         self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
     ):
@@ -1517,65 +1433,6 @@ someplace.local encrypt
         ) as f:
             want = f.read()
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_spf_with_spf_check_maps(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        postfix_spf_check_maps = os.path.join(self.tmpdir, 'spf_checks')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['enable_spf'] = True
-        self.mock_config.return_value['spf_check_maps'] = 'canonical.com  spfcheck'
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_spf_with_spf_check_maps.cf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        want = smtp_relay.JUJU_HEADER + 'canonical.com  spfcheck' + '\n'
-        with open(postfix_spf_check_maps, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_spf_with_spf_check_maps_and_restrict_senders(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        postfix_spf_check_maps = os.path.join(self.tmpdir, 'spf_checks')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['enable_spf'] = True
-        self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
-        self.mock_config.return_value['spf_check_maps'] = 'canonical.com  spfcheck'
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_spf_with_spf_check_maps_and_restrict_senders.cf',
-            'r',
-            encoding='utf-8',
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        want = smtp_relay.JUJU_HEADER + 'canonical.com  spfcheck' + '\n'
-        with open(postfix_spf_check_maps, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
 

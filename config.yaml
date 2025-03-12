@@ -49,13 +49,6 @@ options:
       smtpd_client_auth_rate_limit 8
       smtpd_client_connection_rate_limit 8
       smtpd_client_new_tls_session_rate_limit 8
-  enable_reject_unknown_recipient_domain:
-    type: boolean
-    default: false
-    description: |
-      Reject mail for when recipient's domain cannot be resolved.
-
-      http://www.postfix.org/postconf.5.html#reject_unknown_recipient_domain
   enable_reject_unknown_sender_domain:
     type: boolean
     default: true
@@ -85,11 +78,6 @@ options:
     default: 120
     description: |
       Number of days of mail logs to retain during rotation.
-  message_size_limit:
-    type: int
-    default: 61440000
-    description: |
-      Maximum size of messages allowed (default 60MBytes).
   relay_access_sources:
     type: string
     default: ''
@@ -168,39 +156,6 @@ options:
       http://www.postfix.org/header_checks.5.html
 
       NOTE: You almost always want to use `header_checks` instead of this.
-  smtpd_forbid_bare_newline:
-    type: string
-    default: ''
-    description: |
-      Reject or restrict input lines from an SMTP client that end in <LF> instead of the standard <CR><LF>. Such line endings are commonly allowed with UNIX-based SMTP servers, but they violate RFC 5321, and allowing such line endings can make a server vulnerable to SMTP smuggling.
-
-      As of Postfix 3.9, this defaults to "normalize"; formerly "no".
-
-      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline
-  smtpd_forbid_bare_newline_exclusions:
-    type: string
-    default: ''
-    description: |
-      Exclude the specified clients from smtpd_forbid_bare_newline enforcement.
-
-      This defaults to "$mynetworks".
-
-      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline_exclusions
-  smtpd_forbid_bare_newline_reject_code:
-    type: string
-    default: ''
-    description: |
-      The numerical Postfix SMTP server response code when rejecting a request with "smtpd_forbid_bare_newline = reject". Specify a 5XX status code (521 to disconnect).
-
-      This defaults to "550".
-
-      http://www.postfix.org/postconf.5.html#smtpd_forbid_bare_newline_reject_code
-  spf_check_maps:
-    type: string
-    default: ''
-    description: |
-      Only perform SPF checks for specified domains. Otherwise,
-      perform for all. Be sure to set enable_spf.
   spf_skip_addresses:
     type: string
     default: ''

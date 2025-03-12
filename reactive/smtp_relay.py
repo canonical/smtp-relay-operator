@@ -118,11 +118,9 @@ def configure_smtp_auth(
     'config.changed.connection_limit',
     'config.changed.domain',
     'config.changed.enable_rate_limits',
-    'config.changed.enable_reject_unknown_recipient_domain',
     'config.changed.enable_smtp_auth',
     'config.changed.enable_spf',
     'config.changed.header_checks',
-    'config.changed.message_size_limit',
     'config.changed.relay_access_sources',
     'config.changed.relay_domains',
     'config.changed.relay_host',
@@ -132,10 +130,6 @@ def configure_smtp_auth(
     'config.changed.restrict_sender_access',
     'config.changed.sender_login_maps',
     'config.changed.smtp_header_checks',
-    'config.changed.smtpd_forbid_bare_newline',
-    'config.changed.smtpd_forbid_bare_newline_exclusions',
-    'config.changed.smtpd_forbid_bare_newline_reject_code',
-    'config.changed.spf_check_maps',
     'config.changed.tls_ciphers',
     'config.changed.tls_exclude_ciphers',
     'config.changed.tls_policy_maps',
@@ -239,7 +233,6 @@ def configure_smtp_relay(
         'enable_spf': config['enable_spf'],
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
         'header_checks': bool(config['header_checks']),
-        'message_size_limit': config['message_size_limit'],
         'milter': _get_milters(),
         'myorigin': False,  # XXX: Configurable when given hostname override
         'mynetworks': config['allowed_relay_networks'],
@@ -252,10 +245,6 @@ def configure_smtp_relay(
         'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
         'smtpd_relay_restrictions': ', '.join(smtpd_relay_restrictions),
         'smtpd_sender_restrictions': ', '.join(smtpd_sender_restrictions),
-        'smtpd_forbid_bare_newline': config['smtpd_forbid_bare_newline'],
-        'smtpd_forbid_bare_newline_exclusions': config['smtpd_forbid_bare_newline_exclusions'],
-        'smtpd_forbid_bare_newline_reject_code': config['smtpd_forbid_bare_newline_reject_code'],
-        'spf_check_maps': bool(config['spf_check_maps']),
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
@@ -289,7 +278,6 @@ def configure_smtp_relay(
         'sender_access': f"hash:{os.path.join(postfix_conf_dir, 'access')}",
         'sender_login_maps': f"hash:{os.path.join(postfix_conf_dir, 'sender_login')}",
         'smtp_header_checks': f"regexp:{os.path.join(postfix_conf_dir, 'smtp_header_checks')}",
-        'spf_check_maps': f"hash:{os.path.join(postfix_conf_dir, 'spf_checks')}",
         'tls_policy_maps': f"hash:{os.path.join(postfix_conf_dir, 'tls_policy')}",
         'transport_maps': f"hash:{os.path.join(postfix_conf_dir, 'transport')}",
         'virtual_alias_maps': (
@@ -310,7 +298,6 @@ def configure_smtp_relay(
         'sender_access': sender_access_content,
         'sender_login_maps': config['sender_login_maps'],
         'smtp_header_checks': config['smtp_header_checks'],
-        'spf_check_maps': config['spf_check_maps'],
         'tls_policy_maps': config['tls_policy_maps'],
         'transport_maps': config['transport_maps'],
         'virtual_alias_maps': config['virtual_alias_maps'],
@@ -539,9 +526,6 @@ def _smtpd_recipient_restrictions(config):
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )
 
-    if config['enable_reject_unknown_recipient_domain']:
-        smtpd_recipient_restrictions.append('reject_unknown_recipient_domain')
-
     if config['restrict_senders']:
         smtpd_recipient_restrictions.append(
             'check_sender_access hash:/etc/postfix/restricted_senders'
@@ -553,10 +537,7 @@ def _smtpd_recipient_restrictions(config):
         )
 
     if config['enable_spf']:
-        if config['spf_check_maps']:
-            smtpd_recipient_restrictions.append('check_sender_access hash:/etc/postfix/spf_checks')
-        else:
-            smtpd_recipient_restrictions.append('check_policy_service unix:private/policyd-spf')
+        smtpd_recipient_restrictions.append('check_policy_service unix:private/policyd-spf')
 
     return smtpd_recipient_restrictions
 
