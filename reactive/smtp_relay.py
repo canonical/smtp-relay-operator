@@ -285,7 +285,7 @@ def configure_smtp_relay(
         ),
     }
     sender_access_content = config['restrict_sender_access']
-    if sender_access_content and not sender_access_content.startswith('MANUAL'):
+    if sender_access_content:
         domains = ' '.join(config['restrict_sender_access'].split(',')).split()
         sender_access_content = "".join([f"{domain:35} OK\n" for domain in domains])
     map_contents = {

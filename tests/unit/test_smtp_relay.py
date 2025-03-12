@@ -971,33 +971,6 @@ class TestCharm(unittest.TestCase):
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_restrict_sender_manual(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        postfix_access = os.path.join(self.tmpdir, 'access')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['restrict_sender_access'] = 'MANUAL'
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_restrict_sender_access.cf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        want = ''
-        with open(postfix_access, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_restrict_sender_access_reset(
         self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
     ):
