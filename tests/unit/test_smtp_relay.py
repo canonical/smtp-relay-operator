@@ -88,7 +88,6 @@ class TestCharm(unittest.TestCase):
             'sender_login_maps': '',
             'smtp_auth_users': '',
             'smtp_header_checks': '',
-            'smtpd_forbid_bare_newline': '',
             'smtpd_forbid_bare_newline_exclusions': '',
             'smtpd_forbid_bare_newline_reject_code': '',
             'spf_check_maps': '',
