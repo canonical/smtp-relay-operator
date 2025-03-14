@@ -79,7 +79,6 @@ class TestCharm(unittest.TestCase):
             'restrict_recipients': '',
             'restrict_senders': '',
             'sender_login_maps': '',
-            'smtp_auth_users': '',
             'smtp_header_checks': '',
             'tls_ciphers': 'HIGH',
             'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
@@ -292,7 +291,7 @@ class TestCharm(unittest.TestCase):
         self.mock_config.return_value[
             'smtp_auth_users'
         ] = (
-            "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.\n"
+            "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.,"
             'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
             '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
         )

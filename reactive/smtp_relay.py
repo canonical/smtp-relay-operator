@@ -84,7 +84,7 @@ def configure_smtp_auth(
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
 
-    smtp_auth_users = config['smtp_auth_users']
+    smtp_auth_users = charm_state.smtp_auth_users
     if smtp_auth_users:
         contents = JUJU_HEADER + smtp_auth_users + '\n'
         _write_file(contents, dovecot_users, perms=0o640, group='dovecot')

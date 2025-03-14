@@ -89,8 +89,7 @@ options:
       http://www.postfix.org/postconf.5.html#relay_domains
   relay_host:
     type: string
-    description: |
-      SMTP relay host (or smart host) to forward mail to.
+    description: SMTP relay host (or smart host) to forward mail to.
   relay_recipient_maps:
     type: string
     default: ''
@@ -124,7 +123,6 @@ options:
       Restrict sender addresses to authenticated users defined by this map.
   smtp_auth_users:
     type: string
-    default: ''
     description: |
       Comma-separated list of user and crypt password hashes (use mkpasswd to
       generate). e.g.
