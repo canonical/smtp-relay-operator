@@ -78,7 +78,6 @@ class TestCharm(unittest.TestCase):
             'message_size_limit': 61440000,
             'relay_access_sources': '',
             'relay_domains': '',
-            'relay_host': '',
             'relay_recipient_maps': '',
             'restrict_recipients': '',
             'restrict_senders': '',
@@ -87,9 +86,9 @@ class TestCharm(unittest.TestCase):
             'smtp_auth_users': '',
             'smtp_header_checks': '',
             'tls_ciphers': 'HIGH',
-            'tls_exclude_ciphers': 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA',
+            'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
             'tls_policy_maps': '',
-            'tls_protocols': '!SSLv2 !SSLv3',
+            'tls_protocols': '!SSLv2,!SSLv3',
             'tls_security_level': 'may',
             'transport_maps': '',
             'virtual_alias_domains': '',
@@ -566,10 +565,6 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['tls_ciphers'] = ''
-        self.mock_config.return_value['tls_exclude_ciphers'] = ''
-        self.mock_config.return_value['tls_protocols'] = ''
-        self.mock_config.return_value['tls_security_level'] = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
@@ -1121,7 +1116,7 @@ someplace.local encrypt
         self.mock_config.return_value['transport_maps'] = (
             '.mydomain.local  smtp:[smtp.mydomain.local]'
         )
-        self.mock_config.return_value['virtual_alias_domains'] = 'mydomain.local mydomain2.local'
+        self.mock_config.return_value['virtual_alias_domains'] = 'mydomain.local,mydomain2.local'
         self.mock_config.return_value['virtual_alias_maps'] = (
             'abuse@mydomain.local sysadmin@mydomain.local'
         )

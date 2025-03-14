@@ -225,12 +225,12 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                     config["smtp_auth_users"].split(",") if config["smtp_auth_users"] else []
                 ),
                 spf_skip_addresses=spf_skip_addresses,
-                tls_ciphers=config["tls_ciphers"],
+                tls_ciphers=SmtpTlsCipherGrade["tls_ciphers"] or SmtpTlsCipherGrade.NULL,
                 tls_exclude_ciphers=tls_exclude_ciphers,
                 tls_protocols=tls_protocols,
-                tls_security_level=config["tls_security_level"],
+                tls_security_level=SmtpTlsSecurityLevel["tls_security_level"] or SmtpTlsSecurityLevel.NONE,
                 virtual_alias_domains=virtual_alias_domains,
-                virtual_alias_maps_type=config["virtual_alias_maps_type"],
+                virtual_alias_maps_type=PostfixLookupTableType["virtual_alias_maps_type"],
             )
 
         except ValidationError as exc:

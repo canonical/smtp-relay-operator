@@ -216,7 +216,7 @@ def configure_smtp_relay(
     smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state)
     smtpd_sender_restrictions = _smtpd_sender_restrictions(charm_state)
 
-    virtual_alias_maps_type = config['virtual_alias_maps_type']
+    virtual_alias_maps_type = charm_state.virtual_alias_maps_type
 
     changed = False
     context = {
@@ -231,9 +231,8 @@ def configure_smtp_relay(
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
         'header_checks': bool(config['header_checks']),
         'milter': _get_milters(),
-        'myorigin': False,  # XXX: Configurable when given hostname override
-        'mynetworks': config.allowed_relay_networks.join(","),
-        'relayhost': config['relay_host'],
+        'mynetworks': ",".join(charm_state.allowed_relay_networks),
+        'relayhost': charm_state.relay_host,
         'relay_domains': " ".join(charm_state.relay_domains),
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
         'restrict_recipients': bool(config['restrict_recipients']),
@@ -244,15 +243,15 @@ def configure_smtp_relay(
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
-        'tls_ciphers': config['tls_ciphers'],
+        'tls_ciphers': charm_state.tls_ciphers.value,
         'tls_dh_params': tls_dh_params,
         'tls_exclude_ciphers': " ".join(charm_state.tls_exclude_ciphers),
-        'tls_protocols': config['tls_protocols'],
-        'tls_security_level': config['tls_security_level'],
+        'tls_protocols': " ".join(charm_state.tls_protocols),
+        'tls_security_level': charm_state.tls_security_level.value,
         'transport_maps': bool(config['transport_maps']),
-        'virtual_alias_domains': config['virtual_alias_domains'],
+        'virtual_alias_domains': " ".join(charm_state.virtual_alias_domains),
         'virtual_alias_maps': bool(config['virtual_alias_maps']),
-        'virtual_alias_maps_type': virtual_alias_maps_type,
+        'virtual_alias_maps_type': virtual_alias_maps_type.value,
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
@@ -277,7 +276,7 @@ def configure_smtp_relay(
         'tls_policy_maps': f"hash:{os.path.join(postfix_conf_dir, 'tls_policy')}",
         'transport_maps': f"hash:{os.path.join(postfix_conf_dir, 'transport')}",
         'virtual_alias_maps': (
-            f"{virtual_alias_maps_type}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
+            f"{virtual_alias_maps_type.value}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
         ),
     }
     sender_access_content = config['restrict_sender_access']
