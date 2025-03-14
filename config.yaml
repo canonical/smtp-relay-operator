@@ -105,9 +105,6 @@ options:
       Optional lookup tables that alias specific mail addresses or
       domains to other local or remote addresses.
 
-      Use 'COMBINED' to use both virtual_alias_maps and transport_maps
-      as value for relay_recipient_maps.
-
       Allows for all configured aliases and transports to be valid
       recipients for relay_domains.
 
