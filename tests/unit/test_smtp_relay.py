@@ -65,11 +65,9 @@ class TestCharm(unittest.TestCase):
         self.mock_config = patcher.start()
         self.addCleanup(patcher.stop)
         self.mock_config.return_value = {
-            'admin_email': '',
             'additional_smtpd_recipient_restrictions': '',
             'append_x_envelope_to': False,
             'connection_limit': 100,
-            'domain': '',
             'enable_rate_limits': False,
             'enable_reject_unknown_sender_domain': True,
             'enable_smtp_auth': True,
@@ -77,11 +75,9 @@ class TestCharm(unittest.TestCase):
             'header_checks': '',
             'message_size_limit': 61440000,
             'relay_access_sources': '',
-            'relay_domains': '',
             'relay_recipient_maps': '',
             'restrict_recipients': '',
             'restrict_senders': '',
-            'restrict_sender_access': '',
             'sender_login_maps': '',
             'smtp_auth_users': '',
             'smtp_header_checks': '',
@@ -910,7 +906,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = (
-            ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
+            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
@@ -939,7 +935,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = (
-            ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
+            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/access_restrict_sender_access', 'r', encoding='utf-8') as f:
@@ -948,7 +944,6 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
-        self.mock_config.return_value['restrict_sender_access'] = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
         want = smtp_relay.JUJU_HEADER + "\n"
         with open(postfix_access, 'r', encoding='utf-8') as f:

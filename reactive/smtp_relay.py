@@ -279,10 +279,9 @@ def configure_smtp_relay(
             f"{virtual_alias_maps_type.value}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
         ),
     }
-    sender_access_content = config['restrict_sender_access']
-    if sender_access_content:
-        domains = ' '.join(config['restrict_sender_access'].split(',')).split()
-        sender_access_content = "".join([f"{domain:35} OK\n" for domain in domains])
+    sender_access_content = "".join(
+        [f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]
+    )
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': config['header_checks'],
@@ -554,13 +553,13 @@ def _smtpd_sender_restrictions(charm_state: State) -> list[str]:
     if charm_state.enable_reject_unknown_sender_domain:
         smtpd_sender_restrictions.append('reject_unknown_sender_domain')
     smtpd_sender_restrictions.append('check_sender_access hash:/etc/postfix/access')
-    if bool(config['restrict_sender_access']):
+    if charm_state.restrict_sender_access:
         smtpd_sender_restrictions.append('reject')
 
     return smtpd_sender_restrictions
 
 
-def _update_aliases(admin_email=''):
+def _update_aliases(admin_email):
     aliases = []
     try:
         with open(ALIASSES_PATH, 'r', encoding="utf-8") as f:

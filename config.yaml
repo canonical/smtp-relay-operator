@@ -4,9 +4,7 @@
 options:
   admin_email:
     type: string
-    default: ''
-    description: |
-      Administrator's email address where root@ emails will go.
+    description: Administrator's email address where root@ emails will go.
   allowed_relay_networks:
     type: string
     description: |
@@ -117,10 +115,8 @@ options:
       Access map for restrictions by sender address or domain (default '' to allow all.
   restrict_sender_access:
     type: string
-    default: ''
     description: |
-      Restrict relay only from senders from specified domains,
-      addresses, or hosts (default '' is to allow all).
+      Comma-separated list of domains, addresses, or hosts senders to restrict relay from.
   sender_login_maps:
     type: string
     default: ''
