@@ -9,9 +9,8 @@ options:
       Administrator's email address where root@ emails will go.
   allowed_relay_networks:
     type: string
-    default: ''
     description: |
-      List of allowed networks to relay without authenticating.
+      Comma-separated list of allowed networks to relay without authenticating.
   additional_smtpd_recipient_restrictions:
     type: string
     default: ''
@@ -35,7 +34,6 @@ options:
       Maximum number of simultaneous SMTP connections allowed.
   domain:
     type: string
-    default: ''
     description: |
       Primary domain for hostname generation, it will be
       $application-$unit.$domain. Default is '' to use the system
@@ -87,10 +85,8 @@ options:
       http://www.postfix.org/cidr_table.5.html
   relay_domains:
     type: string
-    default: ''
     description: |
-      Optional list of destination domains this system will relay mail
-      to.
+      Comma-separated list of destination domains this system will relay mail to.
 
       http://www.postfix.org/postconf.5.html#relay_domains
   relay_host:
@@ -151,10 +147,8 @@ options:
       NOTE: You almost always want to use `header_checks` instead of this.
   spf_skip_addresses:
     type: string
-    default: ''
     description: |
-      Set of comma-separated CIDR addresses to skip SPF checks
-      (allowlist).
+      Set of comma-separated CIDR addresses to skip SPF checks (allowlist).
   syslog_forwarders:
     type: string
     default: ''
@@ -176,7 +170,7 @@ options:
       http://www.postfix.org/postconf.5.html#smtpd_tls_ciphers
   tls_exclude_ciphers:
     type: string
-    default: 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA'
+    default: 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA'
     description: |
       List of ciphers or cipher types to exclude from the SMTP server
       cipher list at all TLS security levels. Excluding valid ciphers

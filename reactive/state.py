@@ -121,7 +121,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         additional_smtpd_recipient_restrictions: List of additional recipient restrictions.
         allowed_relay_networks: List of allowed networks to relay without authenticating.
         append_x_envelope_to: Append the X-Envelope-To header.
+        connection_limit: Maximum number of SMTP connections allowed.
         domain: Primary domain for hostname generation.
+        enable_rate_limits: Enable default rate limiting features.
         enable_smtp_auth: If SMTP authentication is enabled.
         enable_spf: If SPF checks are enabled.
         log_retention: the log retention period.
@@ -138,11 +140,13 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         virtual_alias_maps_type: The virtual alias map type.
     """
 
-    admin_email: EmailStr
+    admin_email: EmailStr | None
     additional_smtpd_recipient_restrictions: list[SmtpRecipientRestrictions]
     allowed_relay_networks: list[IPvAnyNetwork]
     append_x_envelope_to: bool
-    domain: str | None
+    connection_limit: int = Field(ge=0)
+    domain: str | None = Field(min_length=1)
+    enable_rate_limits: bool
     enable_smtp_auth: bool
     enable_spf: bool
     log_retention: int
@@ -208,7 +212,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
                 allowed_relay_networks=allowed_relay_networks,
                 append_x_envelope_to=config["append_x_envelope_to"],
+                connection_limit=config["connection_limit"],
                 domain=config["domain"],
+                enable_rate_limits=config["enable_rate_limits"],
                 enable_smtp_auth=config["enable_smtp_auth"],
                 enable_spf=config["enable_spf"],
                 log_retention=config["log_retention"],
