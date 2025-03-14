@@ -4,14 +4,11 @@
 options:
   admin_email:
     type: string
-    default: ''
-    description: |
-      Administrator's email address where root@ emails will go.
+    description: Administrator's email address where root@ emails will go.
   allowed_relay_networks:
     type: string
-    default: ''
     description: |
-      List of allowed networks to relay without authenticating.
+      Comma-separated list of allowed networks to relay without authenticating.
   additional_smtpd_recipient_restrictions:
     type: string
     default: ''
@@ -35,7 +32,6 @@ options:
       Maximum number of simultaneous SMTP connections allowed.
   domain:
     type: string
-    default: ''
     description: |
       Primary domain for hostname generation, it will be
       $application-$unit.$domain. Default is '' to use the system
@@ -87,17 +83,13 @@ options:
       http://www.postfix.org/cidr_table.5.html
   relay_domains:
     type: string
-    default: ''
     description: |
-      Optional list of destination domains this system will relay mail
-      to.
+      Comma-separated list of destination domains this system will relay mail to.
 
       http://www.postfix.org/postconf.5.html#relay_domains
   relay_host:
     type: string
-    default: ''
-    description: |
-      SMTP relay host (or smart host) to forward mail to.
+    description: SMTP relay host (or smart host) to forward mail to.
   relay_recipient_maps:
     type: string
     default: ''
@@ -122,10 +114,8 @@ options:
       Access map for restrictions by sender address or domain (default '' to allow all.
   restrict_sender_access:
     type: string
-    default: ''
     description: |
-      Restrict relay only from senders from specified domains,
-      addresses, or hosts (default '' is to allow all).
+      Comma-separated list of domains, addresses, or hosts senders to restrict relay from.
   sender_login_maps:
     type: string
     default: ''
@@ -133,9 +123,8 @@ options:
       Restrict sender addresses to authenticated users defined by this map.
   smtp_auth_users:
     type: string
-    default: ''
     description: |
-      List of user and crypt password hashes (use mkpasswd to
+      Comma-separated list of user and crypt password hashes (use mkpasswd to
       generate). e.g.
 
       myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.
@@ -151,10 +140,8 @@ options:
       NOTE: You almost always want to use `header_checks` instead of this.
   spf_skip_addresses:
     type: string
-    default: ''
     description: |
-      Set of comma-separated CIDR addresses to skip SPF checks
-      (allowlist).
+      Set of comma-separated CIDR addresses to skip SPF checks (allowlist).
   syslog_forwarders:
     type: string
     default: ''
@@ -176,9 +163,9 @@ options:
       http://www.postfix.org/postconf.5.html#smtpd_tls_ciphers
   tls_exclude_ciphers:
     type: string
-    default: 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA'
+    default: 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA'
     description: |
-      List of ciphers or cipher types to exclude from the SMTP server
+      Comma-separated list of ciphers or cipher types to exclude from the SMTP server
       cipher list at all TLS security levels. Excluding valid ciphers
       can create interoperability problems. DO NOT exclude ciphers
       unless it is essential to do so.
@@ -198,7 +185,7 @@ options:
     type: string
     default: '!SSLv2, !SSLv3'
     description: |
-      TLS protocols accepted by the Postfix SMTP server with TLS
+      Comma-separated list of TLS protocols accepted by the Postfix SMTP server with TLS
       encryption. If the list is empty, the server supports all
       available TLS protocol versions. A non-empty value is a list of
       protocol names to include or exclude, separated by whitespace,
@@ -230,9 +217,8 @@ options:
       http://www.postfix.org/postconf.5.html#transport_maps
   virtual_alias_domains:
     type: string
-    default: ''
     description: |
-      Optional list of domains for which all addresses are aliased to
+      Comma-separated list of domains for which all addresses are aliased to
       addresses in other local or remote domains.
 
       http://www.postfix.org/postconf.5.html#virtual_alias_domains

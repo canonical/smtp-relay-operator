@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 """SMTP Relay charm unit tests."""
-
 import grp
 import os
 import pwd
@@ -66,12 +65,9 @@ class TestCharm(unittest.TestCase):
         self.mock_config = patcher.start()
         self.addCleanup(patcher.stop)
         self.mock_config.return_value = {
-            'admin_email': '',
             'additional_smtpd_recipient_restrictions': '',
-            'allowed_relay_networks': '',
             'append_x_envelope_to': False,
             'connection_limit': 100,
-            'domain': '',
             'enable_rate_limits': False,
             'enable_reject_unknown_sender_domain': True,
             'enable_smtp_auth': True,
@@ -79,19 +75,15 @@ class TestCharm(unittest.TestCase):
             'header_checks': '',
             'message_size_limit': 61440000,
             'relay_access_sources': '',
-            'relay_domains': '',
-            'relay_host': '',
             'relay_recipient_maps': '',
             'restrict_recipients': '',
             'restrict_senders': '',
-            'restrict_sender_access': '',
             'sender_login_maps': '',
-            'smtp_auth_users': '',
             'smtp_header_checks': '',
             'tls_ciphers': 'HIGH',
-            'tls_exclude_ciphers': 'aNULL, eNULL, DES, 3DES, MD5, RC4, CAMELLIA',
+            'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
             'tls_policy_maps': '',
-            'tls_protocols': '!SSLv2 !SSLv3',
+            'tls_protocols': '!SSLv2,!SSLv3',
             'tls_security_level': 'may',
             'transport_maps': '',
             'virtual_alias_domains': '',
@@ -299,7 +291,7 @@ class TestCharm(unittest.TestCase):
         self.mock_config.return_value[
             'smtp_auth_users'
         ] = (
-            "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.\n"
+            "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.,"
             'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
             '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
         )
@@ -568,10 +560,6 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['tls_ciphers'] = ''
-        self.mock_config.return_value['tls_exclude_ciphers'] = ''
-        self.mock_config.return_value['tls_protocols'] = ''
-        self.mock_config.return_value['tls_security_level'] = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
@@ -917,7 +905,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = (
-            ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
+            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
@@ -946,7 +934,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = (
-            ' canonical.com ubuntu.com,mydomain.local mydomain2.local'
+            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
         )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/access_restrict_sender_access', 'r', encoding='utf-8') as f:
@@ -955,7 +943,6 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
-        self.mock_config.return_value['restrict_sender_access'] = ''
         smtp_relay.configure_smtp_relay(self.tmpdir)
         want = smtp_relay.JUJU_HEADER + "\n"
         with open(postfix_access, 'r', encoding='utf-8') as f:
@@ -1007,7 +994,7 @@ someplace.local encrypt
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
+        self.mock_config.return_value['relay_domains'] = 'mydomain.local,mydomain2.local'
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_relay_domains.cf', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -1028,7 +1015,7 @@ someplace.local encrypt
         postfix_relay_recipient_maps = os.path.join(self.tmpdir, 'relay_recipient')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
+        self.mock_config.return_value['relay_domains'] = 'mydomain.local,mydomain2.local'
         self.mock_config.return_value['relay_recipient_maps'] = (
             'noreply@mydomain.local noreply@mydomain.local'
         )
@@ -1119,11 +1106,11 @@ someplace.local encrypt
         postfix_virtual_alias_maps = os.path.join(self.tmpdir, 'virtual_alias')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
+        self.mock_config.return_value['relay_domains'] = 'mydomain.local,mydomain2.local'
         self.mock_config.return_value['transport_maps'] = (
             '.mydomain.local  smtp:[smtp.mydomain.local]'
         )
-        self.mock_config.return_value['virtual_alias_domains'] = 'mydomain.local mydomain2.local'
+        self.mock_config.return_value['virtual_alias_domains'] = 'mydomain.local,mydomain2.local'
         self.mock_config.return_value['virtual_alias_maps'] = (
             'abuse@mydomain.local sysadmin@mydomain.local'
         )
@@ -1228,7 +1215,6 @@ someplace.local encrypt
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = True
-        self.mock_config.return_value['spf_skip_addresses'] = ''
         smtp_relay.configure_policyd_spf(policyd_spf_config)
         with open('tests/unit/files/policyd_spf_config', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -1255,7 +1241,6 @@ someplace.local encrypt
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = False
-        self.mock_config.return_value['spf_skip_addresses'] = ''
         smtp_relay.configure_policyd_spf(policyd_spf_config)
         self.assertFalse(os.path.exists(policyd_spf_config))
 
