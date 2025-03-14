@@ -511,7 +511,7 @@ def _write_file(source, dest_path, perms=0o644, owner=None, group=None):
 
 def _smtpd_recipient_restrictions(charm_state: State) -> list[str]:
     smtpd_recipient_restrictions = []
-    if charm_charm_state.append_x_envelope_to:
+    if charm_state.append_x_envelope_to:
         smtpd_recipient_restrictions.append(
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )
@@ -551,7 +551,7 @@ def _smtpd_relay_restrictions(charm_state: State) -> list[str]:
 
 def _smtpd_sender_restrictions(charm_state: State) -> list[str]:
     smtpd_sender_restrictions = []
-    if charm_charm_state.enable_reject_unknown_sender_domain:
+    if charm_state.enable_reject_unknown_sender_domain:
         smtpd_sender_restrictions.append('reject_unknown_sender_domain')
     smtpd_sender_restrictions.append('check_sender_access hash:/etc/postfix/access')
     if bool(config['restrict_sender_access']):
