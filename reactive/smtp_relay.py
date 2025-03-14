@@ -171,11 +171,8 @@ def _create_update_map(content, postmap):
             os.utime(pmfname, None)
         changed = True
 
-    if content.startswith('COMBINED'):
-        hookenv.log(f"Map {pmfname} using combined maps")
-    else:
-        contents = JUJU_HEADER + content + '\n'
-        changed = _write_file(contents, pmfname) or changed
+    contents = JUJU_HEADER + content + '\n'
+    changed = _write_file(contents, pmfname) or changed
 
     if changed and pmtype == 'hash':
         subprocess.call(['postmap', postmap])  # nosec
@@ -237,7 +234,6 @@ def configure_smtp_relay(
         'relayhost': config['relay_host'],
         'relay_domains': config['relay_domains'],
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
-        'relay_recipient_maps_combined': config['relay_recipient_maps'] == 'COMBINED',
         'restrict_recipients': bool(config['restrict_recipients']),
         'smtp_header_checks': bool(config['smtp_header_checks']),
         'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),

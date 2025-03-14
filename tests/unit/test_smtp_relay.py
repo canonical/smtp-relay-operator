@@ -1053,42 +1053,6 @@ someplace.local encrypt
     @mock.patch('reactive.smtp_relay._get_milters')
     @mock.patch('reactive.smtp_relay._update_aliases')
     @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_relay_domains_with_relay_recipient_maps_combined(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
-    ):
-        postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        postfix_relay_recipient_maps = os.path.join(self.tmpdir, 'relay_recipient')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local mydomain2.local'
-        self.mock_config.return_value['relay_recipient_maps'] = 'COMBINED'
-        self.mock_config.return_value['transport_maps'] = (
-            '.mydomain.local  smtp:[smtp.mydomain.local]'
-        )
-        self.mock_config.return_value['virtual_alias_maps'] = (
-            'abuse@mydomain.local sysadmin@mydomain.local'
-        )
-        smtp_relay.configure_smtp_relay(self.tmpdir)
-        with open(
-            'tests/unit/files/postfix_main_relay_domains_with_relay_recipient_maps_combined.cf',
-            'r',
-            encoding='utf-8',
-        ) as f:
-            want = f.read()
-        with open(postfix_main_cf, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        want = ''
-        with open(postfix_relay_recipient_maps, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.smtp_relay._get_autocert_cn')
-    @mock.patch('reactive.smtp_relay._get_milters')
-    @mock.patch('reactive.smtp_relay._update_aliases')
-    @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_transport_maps(
         self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
     ):
