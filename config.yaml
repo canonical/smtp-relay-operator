@@ -103,28 +103,22 @@ options:
       http://www.postfix.org/postconf.5.html#relay_recipient_maps
   restrict_recipients:
     type: string
-    default: ''
-    description: |
-      Access map for restrictions by recipient address or domain
-      (default '' to allow all).
+    description: Access map for restrictions by recipient address or domain.
   restrict_senders:
     type: string
-    default: ''
-    description: |
-      Access map for restrictions by sender address or domain (default '' to allow all.
+    description: Access map for restrictions by sender address or domain.
   restrict_sender_access:
     type: string
     description: |
       Comma-separated list of domains, addresses, or hosts senders to restrict relay from.
   sender_login_maps:
     type: string
-    default: ''
     description: |
       Restrict sender addresses to authenticated users defined by this map.
   smtp_auth_users:
     type: string
     description: |
-      Comma-separated list of user and crypt password hashes (use mkpasswd to
+      List of user and crypt password hashes (use mkpasswd to
       generate). e.g.
 
       myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.

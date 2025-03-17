@@ -112,6 +112,58 @@ class PostfixLookupTableType(str, Enum):
     REGEXP = "regexp"
 
 
+class AccessMapValue(str, Enum):
+    """Postfix access map valid values.
+
+    Attributes:
+        OK: "OK"
+        RESTRICTED: "restricted"
+    """
+
+    OK = "OK"
+    RESTRICTED = "restricted"
+
+
+
+def _parse_access_map(raw_map: str) -> list[(str, AccessMapValue)]:
+    """Parse access map input.
+
+    Returns:
+        a list of tuples with the hostname or address and the value.
+
+    Raises:
+        ConfigurationError: if the map is invalid.
+    """
+    if not raw_map:
+        return []
+    access_map_lines = raw_map.splitlines()
+    access_map = []
+    for line in access_map_lines.split():
+        if len(line) != 2:
+            raise ConfigurationError("Invalid access map")
+        access_map.add((line[0], AccessMapValue(line[1])))
+    return access_map
+
+def _parse_map(raw_map: str) -> list[(str, str)]:
+    """Parse map input.
+
+    Returns:
+        a list of tuples with the map key and value.
+
+    Raises:
+        ConfigurationError: if the map is invalid.
+    """
+    if not raw_map:
+        return []
+    access_map_lines = raw_map.splitlines()
+    access_map = []
+    for line in access_map_lines.split():
+        if len(line) != 2:
+            raise ConfigurationError("Invalid map")
+        access_map.add((line[0], line[1]))
+    return access_map
+
+
 @dataclasses.dataclass()
 class State:  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """The Indico operator charm state.
@@ -129,7 +181,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         log_retention: the log retention period.
         relay_domains: List of destination domains to relay mail to.
         relay_host: SMTP relay host to forward mail to.
-        restrict_sender_access: List of domains, addresses or hosts to restrict relay from
+        restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
+        sender_login_maps: List of authenticated users that can send mail.
         smtp_auth_users: List of user and crypt password hashe pairs separated by ':'.
         spf_skip_addresses: List of CIDR addresses to skip SPF checks.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
@@ -151,8 +204,11 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     enable_spf: bool
     log_retention: int
     relay_domains: list[Annotated[str, Field(min_length=1)]]
+    restrict_recipients: list[(str, AccessMapValue)]
+    restrict_senders: list[(str, AccessMapValue)]
     relay_host: Annotated[str, Field(min_length=1)]
     restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
+    sender_login_maps: list[(str,str)]
     smtp_auth_users: list[str]
     spf_skip_addresses: list[IPvAnyNetwork]
     tls_ciphers: SmtpTlsCipherGrade
@@ -206,31 +262,38 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 if "virtual_alias_domains"
                 in config else []
             )
+            restrict_recipients = _parse_access_map(config.get("restrict_recipients"))
+            restrict_senders = _parse_access_map(config.get("restrict_senders"))
+            sender_login_maps = _parse_map(config.get("sender_login_maps"))
+
 
             return cls(
-                admin_email=config["admin_email"],
+                admin_email=config.get("admin_email"),
                 additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
                 allowed_relay_networks=allowed_relay_networks,
-                append_x_envelope_to=config["append_x_envelope_to"],
-                connection_limit=config["connection_limit"],
-                domain=config["domain"],
-                enable_rate_limits=config["enable_rate_limits"],
-                enable_smtp_auth=config["enable_smtp_auth"],
-                enable_spf=config["enable_spf"],
-                log_retention=config["log_retention"],
+                append_x_envelope_to=config.get("append_x_envelope_to"),
+                connection_limit=config.get("connection_limit"),
+                domain=config.get("domain"),
+                enable_rate_limits=config.get("enable_rate_limits"),
+                enable_smtp_auth=config.get("enable_smtp_auth"),
+                enable_spf=config.get("enable_spf"),
+                log_retention=config.get("log_retention"),
                 relay_domains=relay_domains,
-                relay_host=config["relay_host"],
+                relay_host=config.get("relay_host"),
+                restrict_recipients=restrict_recipients,
+                restrict_senders=restrict_senders,
                 restrict_sender_access=restrict_sender_access,
+                sender_login_maps=sender_login_maps,
                 smtp_auth_users=(
-                    config["smtp_auth_users"].split(",") if config["smtp_auth_users"] else []
+                    config.get("smtp_auth_users").splitlines() if "smtp_auth_users" in config else []
                 ),
                 spf_skip_addresses=spf_skip_addresses,
-                tls_ciphers=SmtpTlsCipherGrade["tls_ciphers"] or SmtpTlsCipherGrade.NULL,
+                tls_ciphers=SmtpTlsCipherGrade[config.get("tls_ciphers")] or SmtpTlsCipherGrade.NULL,
                 tls_exclude_ciphers=tls_exclude_ciphers,
                 tls_protocols=tls_protocols,
-                tls_security_level=SmtpTlsSecurityLevel["tls_security_level"] or SmtpTlsSecurityLevel.NONE,
+                tls_security_level=SmtpTlsSecurityLevel[config.get("tls_security_level")] or SmtpTlsSecurityLevel.NONE,
                 virtual_alias_domains=virtual_alias_domains,
-                virtual_alias_maps_type=PostfixLookupTableType["virtual_alias_maps_type"],
+                virtual_alias_maps_type=PostfixLookupTableType[config.get("virtual_alias_maps_type")],
             )
 
         except ValidationError as exc:
