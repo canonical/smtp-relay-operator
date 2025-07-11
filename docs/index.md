@@ -1,4 +1,4 @@
-# SMTP Relay Operator
+# SMTP relay operator
 
 A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
 deploying and managing a postfix SMTP relay server on bare metal. SMTP
@@ -41,10 +41,3 @@ The SMTP Relay Operator is a member of the Ubuntu family. It's an open-source pr
 - [Contribute](https://github.com/canonical/smtp-relay-operator/blob/main/CONTRIBUTING.md)
 
 Thinking about using the SMTP Relay Operator for your next project? [Get in touch](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)!
-
-# Navigation
-
-| Level | Path | Navlink |
-| --- | --- | --- |
-| 1 | how-to | [How to]() |
-| 1 | reference | [Reference]() |
