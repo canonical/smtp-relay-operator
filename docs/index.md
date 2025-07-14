@@ -41,3 +41,11 @@ The SMTP Relay Operator is a member of the Ubuntu family. It's an open-source pr
 - [Contribute](https://github.com/canonical/smtp-relay-operator/blob/main/CONTRIBUTING.md)
 
 Thinking about using the SMTP Relay Operator for your next project? [Get in touch](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)!
+
+# Contents 
+
+1. [How-to](how-to)
+   1. [Contribute](how-to/contribute.md)
+1. [Reference](reference)
+  1. [Actions](reference/actions.md)
+  1. [External access](reference/external_access.md)
