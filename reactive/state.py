@@ -246,7 +246,11 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 if config.get("additional_smtpd_recipient_restrictions")
                 else []
             )
-            relay_domains = config["relay_domains"].split(",") if config.get("relay_domains") else []
+            relay_domains = (
+                config["relay_domains"].split(",")
+                if config.get("relay_domains")
+                else []
+            )
             restrict_sender_access = (
                 config["restrict_sender_access"].split(",")
                 if config.get("restrict_sender_access")
@@ -256,7 +260,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 config["spf_skip_addresses"].split(",") if config.get("spf_skip_addresses") else []
             )
             tls_exclude_ciphers = (
-                config["tls_exclude_ciphers"].split(",") if config.get("tls_exclude_ciphers") else []
+                config["tls_exclude_ciphers"].split(",")
+                if config.get("tls_exclude_ciphers")
+                else []
             )
             tls_protocols = (
                 config["tls_protocols"].split(",") if config.get("tls_protocols") else []
@@ -278,7 +284,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 connection_limit=config.get("connection_limit"),
                 domain=config.get("domain"),
                 enable_rate_limits=config.get("enable_rate_limits"),
-                enable_reject_unknown_sender_domain=config.get("enable_reject_unknown_sender_domain"),
+                enable_reject_unknown_sender_domain=config.get(
+                    "enable_reject_unknown_sender_domain"
+                ),
                 enable_smtp_auth=config.get("enable_smtp_auth"),
                 enable_spf=config.get("enable_spf"),
                 log_retention=config.get("log_retention"),
@@ -289,7 +297,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 restrict_sender_access=restrict_sender_access,
                 sender_login_maps=sender_login_maps,
                 smtp_auth_users=(
-                    config.get("smtp_auth_users").split(",") if config.get("smtp_auth_users") else []
+                    config.get("smtp_auth_users").split(",")
+                    if config.get("smtp_auth_users")
+                    else []
                 ),
                 spf_skip_addresses=spf_skip_addresses,
                 tls_ciphers=SmtpTlsCipherGrade(config.get("tls_ciphers")),
@@ -297,7 +307,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 tls_protocols=tls_protocols,
                 tls_security_level=SmtpTlsSecurityLevel(config.get("tls_security_level")),
                 virtual_alias_domains=virtual_alias_domains,
-                virtual_alias_maps_type=PostfixLookupTableType(config.get("virtual_alias_maps_type")),
+                virtual_alias_maps_type=PostfixLookupTableType(
+                    config.get("virtual_alias_maps_type")
+                ),
             )
 
         except ValidationError as exc:
