@@ -51,10 +51,6 @@ class SmtpTlsCipherGrade(Enum):
     LOW = "LOW"
     EXPORT = "EXPORT"
 
-    @classmethod
-    def _missing_(cls, _):
-        return None
-
 
 class SmtpTlsSecurityLevel(Enum):
     """TLS secutiry level.
@@ -68,10 +64,6 @@ class SmtpTlsSecurityLevel(Enum):
     NONE = "none"
     MAY = "may"
     ENCRYPT = "encrypt"
-
-    @classmethod
-    def _missing_(cls, _):
-        return None
 
 
 class SmtpRecipientRestrictions(Enum):
@@ -305,10 +297,18 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                     else []
                 ),
                 spf_skip_addresses=spf_skip_addresses,
-                tls_ciphers=SmtpTlsCipherGrade(config.get("tls_ciphers")),
+                tls_ciphers=(
+                    SmtpTlsCipherGrade(config.get("tls_ciphers"))
+                    if config.get("tls_ciphers")
+                    else None
+                ),
                 tls_exclude_ciphers=tls_exclude_ciphers,
                 tls_protocols=tls_protocols,
-                tls_security_level=SmtpTlsSecurityLevel(config.get("tls_security_level")),
+                tls_security_level=(
+                    SmtpTlsSecurityLevel(config.get("tls_security_level"))
+                    if config.get("tls_security_level")
+                    else None
+                ),
                 virtual_alias_domains=virtual_alias_domains,
                 virtual_alias_maps_type=PostfixLookupTableType(
                     config.get("virtual_alias_maps_type")

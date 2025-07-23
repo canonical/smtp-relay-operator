@@ -20,7 +20,6 @@ from state import State
 from lib import utils
 
 
-ALIASSES_PATH = "/etc/aliases"
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
 
@@ -217,6 +216,7 @@ def configure_smtp_relay(
 
     changed = False
     config = hookenv.config()
+    
     context = {
         'JUJU_HEADER': JUJU_HEADER,
         'fqdn': fqdn,
@@ -241,11 +241,13 @@ def configure_smtp_relay(
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
-        'tls_ciphers': charm_state.tls_ciphers.value,
+        'tls_ciphers': charm_state.tls_ciphers.value if charm_state.tls_ciphers else None,
         'tls_dh_params': tls_dh_params,
         'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
         'tls_protocols': " ".join(charm_state.tls_protocols),
-        'tls_security_level': charm_state.tls_security_level.value,
+        'tls_security_level': (
+            charm_state.tls_security_level.value if charm_state.tls_security_level else None
+        ),
         'transport_maps': bool(config['transport_maps']),
         'virtual_alias_domains': " ".join(charm_state.virtual_alias_domains),
         'virtual_alias_maps': bool(config['virtual_alias_maps']),
@@ -506,10 +508,10 @@ def _smtpd_sender_restrictions(charm_state: State) -> list[str]:
     return smtpd_sender_restrictions
 
 
-def _update_aliases(admin_email):
+def _update_aliases(admin_email, aliases_path='/etc/aliases'):
     aliases = []
     try:
-        with open(ALIASSES_PATH, 'r', encoding="utf-8") as f:
+        with open(aliases_path, 'r', encoding="utf-8") as f:
             aliases = f.readlines()
     except FileNotFoundError:
         pass
@@ -528,6 +530,6 @@ def _update_aliases(admin_email):
     if admin_email:
         new_aliases.append(f"root:          {admin_email}\n")
 
-    changed = _write_file(''.join(new_aliases), ALIASSES_PATH)
+    changed = _write_file(''.join(new_aliases), aliases_path)
     if changed:
         subprocess.call(['newaliases'])  # nosec

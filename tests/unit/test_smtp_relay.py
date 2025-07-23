@@ -551,12 +551,12 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value["smtpd_tls_ciphers"] = ""
-        self.mock_config.return_value["smtpd_tls_exclude_ciphers"] = ""
-        self.mock_config.return_value["smtpd_tls_mandatory_ciphers"] = ""
-        self.mock_config.return_value["smtpd_tls_mandatory_protocols"] = ""
-        self.mock_config.return_value["smtpd_tls_protocols"] = ""
-        self.mock_config.return_value["smtpd_tls_security_level"] = ""
+        self.mock_config.return_value["tls_ciphers"] = None
+        self.mock_config.return_value["tls_exclude_ciphers"] = None
+        self.mock_config.return_value["tls_mandatory_ciphers"] = None
+        self.mock_config.return_value["tls_mandatory_protocols"] = None
+        self.mock_config.return_value["tls_protocols"] = None
+        self.mock_config.return_value["tls_security_level"] = None
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
@@ -1643,66 +1643,65 @@ someplace.local encrypt
     def test__update_aliases(self, call):
 
         dest = os.path.join(self.tmpdir, 'aliases')
-        with mock.patch("smtp_relay.ALIASSES_PATH", dest):
+    
+        # Empty, does not exist.
+        smtp_relay._update_aliases('', dest)
+        want = 'devnull:       /dev/null\n'
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        call.assert_called_with(['newaliases'])
 
-            # Empty, does not exist.
-            smtp_relay._update_aliases('')
-            want = 'devnull:       /dev/null\n'
-            with open(dest, 'r', encoding='utf-8') as f:
-                got = f.read()
-            self.assertEqual(want, got)
-            call.assert_called_with(['newaliases'])
+        # Has something prepopulated, but not devnull.
+        call.reset_mock()
+        content = 'postmaster:    root\n'
+        with open(dest, 'w') as f:
+            f.write(content)
+        smtp_relay._update_aliases('', dest)
+        want = content + 'devnull:       /dev/null\n'
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        call.assert_called_with(['newaliases'])
 
-            # Has something prepopulated, but not devnull.
-            call.reset_mock()
-            content = 'postmaster:    root\n'
-            with open(dest, 'w') as f:
-                f.write(content)
-            smtp_relay._update_aliases('')
-            want = content + 'devnull:       /dev/null\n'
-            with open(dest, 'r', encoding='utf-8') as f:
-                got = f.read()
-            self.assertEqual(want, got)
-            call.assert_called_with(['newaliases'])
+        # Has devnull, so do nothing and do not call newaliases.
+        call.reset_mock()
+        content = 'postmaster:    root\ndevnull:       /dev/null\n'
+        with open(dest, 'w') as f:
+            f.write(content)
+        smtp_relay._update_aliases('', dest)
+        want = content
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        call.assert_not_called()
 
-            # Has devnull, so do nothing and do not call newaliases.
-            call.reset_mock()
-            content = 'postmaster:    root\ndevnull:       /dev/null\n'
-            with open(dest, 'w') as f:
-                f.write(content)
-            smtp_relay._update_aliases('')
-            want = content
-            with open(dest, 'r', encoding='utf-8') as f:
-                got = f.read()
-            self.assertEqual(want, got)
-            call.assert_not_called()
+        # Admin email set.
+        call.reset_mock()
+        content = 'postmaster:    root\ndevnull:       /dev/null\n'
+        with open(dest, 'w') as f:
+            f.write(content)
+        smtp_relay._update_aliases('root@admin.mydomain.local', dest)
+        want = """postmaster:    root
+devnull:       /dev/null
+root:          root@admin.mydomain.local
+"""
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        call.assert_called_with(['newaliases'])
 
-            # Admin email set.
-            call.reset_mock()
-            content = 'postmaster:    root\ndevnull:       /dev/null\n'
-            with open(dest, 'w') as f:
-                f.write(content)
-            smtp_relay._update_aliases('root@admin.mydomain.local')
-            want = """postmaster:    root
-    devnull:       /dev/null
-    root:          root@admin.mydomain.local
-    """
-            with open(dest, 'r', encoding='utf-8') as f:
-                got = f.read()
-            self.assertEqual(want, got)
-            call.assert_called_with(['newaliases'])
-
-            # Has admin email, so do nothing and do not call newaliases.
-            call.reset_mock()
-            content = """postmaster:    root
-    devnull:       /dev/null
-    root:          root@admin.mydomain.local
-    """
-            with open(dest, 'w') as f:
-                f.write(content)
-            smtp_relay._update_aliases('root@admin.mydomain.local')
-            want = content
-            with open(dest, 'r', encoding='utf-8') as f:
-                got = f.read()
-            self.assertEqual(want, got)
-            call.assert_not_called()
+        # Has admin email, so do nothing and do not call newaliases.
+        call.reset_mock()
+        content = """postmaster:    root
+devnull:       /dev/null
+root:          root@admin.mydomain.local
+"""
+        with open(dest, 'w') as f:
+            f.write(content)
+        smtp_relay._update_aliases('root@admin.mydomain.local', dest)
+        want = content
+        with open(dest, 'r', encoding='utf-8') as f:
+            got = f.read()
+        self.assertEqual(want, got)
+        call.assert_not_called()
