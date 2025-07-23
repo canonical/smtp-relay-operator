@@ -155,8 +155,8 @@ def _parse_access_map(raw_map: str) -> list[(str, AccessMapValue)]:
     Returns:
         a list of tuples with the hostname or address and the value.
     """
-    map = _parse_map(raw_map)
-    return [(element[0], AccessMapValue(element[1])) for element in map]
+    parsed_map = _parse_map(raw_map)
+    return [(element[0], AccessMapValue(element[1])) for element in parsed_map]
 
 
 @dataclasses.dataclass()
