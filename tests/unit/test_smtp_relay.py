@@ -940,6 +940,7 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
+        self.mock_config.return_value['restrict_sender_access'] = None
         smtp_relay.configure_smtp_relay(self.tmpdir)
         want = smtp_relay.JUJU_HEADER + "\n"
         with open(postfix_access, 'r', encoding='utf-8') as f:
@@ -1643,7 +1644,7 @@ someplace.local encrypt
     def test__update_aliases(self, call):
 
         dest = os.path.join(self.tmpdir, 'aliases')
-    
+
         # Empty, does not exist.
         smtp_relay._update_aliases('', dest)
         want = 'devnull:       /dev/null\n'

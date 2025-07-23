@@ -216,7 +216,7 @@ def configure_smtp_relay(
 
     changed = False
     config = hookenv.config()
-    
+
     context = {
         'JUJU_HEADER': JUJU_HEADER,
         'fqdn': fqdn,
