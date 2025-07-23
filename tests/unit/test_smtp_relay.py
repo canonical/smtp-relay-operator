@@ -139,7 +139,6 @@ class TestCharm(unittest.TestCase):
             mock.call('smtp-relay.auth.configured'),
             mock.call('smtp-relay.configured'),
             mock.call('smtp-relay.installed'),
-            mock.call('smtp-relay.rsyslog.configured'),
         ]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
@@ -176,7 +175,6 @@ class TestCharm(unittest.TestCase):
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('reactive.smtp_relay._write_file')
     def test_update_logrotate(self, write_file, clear_flag):
-        self.mock_config.return_value['log_retention'] = 30
         smtp_relay.update_logrotate()
         want = [mock.call('smtp-relay.active')]
         clear_flag.assert_has_calls(want, any_order=True)
@@ -194,13 +192,6 @@ class TestCharm(unittest.TestCase):
     def test_config_changed_policyd_spf(self, clear_flag):
         smtp_relay.config_changed_policyd_spf()
         want = [mock.call('smtp-relay.policyd-spf.configured')]
-        clear_flag.assert_has_calls(want, any_order=True)
-        self.assertEqual(len(want), len(clear_flag.mock_calls))
-
-    @mock.patch('charms.reactive.clear_flag')
-    def test_config_changed_syslog_forwarders(self, clear_flag):
-        smtp_relay.config_changed_syslog_forwarders()
-        want = [mock.call('smtp-relay.rsyslog.configured')]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -560,6 +551,12 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
+        self.mock_config.return_value["smtpd_tls_ciphers"] = ""
+        self.mock_config.return_value["smtpd_tls_exclude_ciphers"] = ""
+        self.mock_config.return_value["smtpd_tls_mandatory_ciphers"] = ""
+        self.mock_config.return_value["smtpd_tls_mandatory_protocols"] = ""
+        self.mock_config.return_value["smtpd_tls_protocols"] = ""
+        self.mock_config.return_value["smtpd_tls_security_level"] = ""
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_tls_no_ciphers_and_protocols.cf', 'r', encoding='utf-8'
@@ -1296,94 +1293,6 @@ someplace.local encrypt
             got = f.read()
         self.assertEqual(want, got)
 
-    @mock.patch('charms.reactive.set_flag')
-    def test_configure_syslog_forwarders(self, set_flag):
-        self.mock_config.return_value[
-            'syslog_forwarders'
-        ] = 'myunit/0:192.0.2.1, myunit/1:192.0.2.2'
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        want = [
-            mock.call('Setting up syslog forwarders'),
-            mock.call('Restarting rsyslog due to config changes'),
-        ]
-        status.maintenance.assert_has_calls(want, any_order=True)
-        self.mock_service_restart.assert_called_with('rsyslog')
-        want = [mock.call('smtp-relay.rsyslog.configured')]
-        set_flag.assert_has_calls(want, any_order=True)
-
-        with open(
-            'tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-        # Call again, no change.
-        status.maintenance.reset_mock()
-        self.mock_service_restart.reset_mock()
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        want = [mock.call('Setting up syslog forwarders')]
-        status.maintenance.assert_has_calls(want, any_order=True)
-        self.mock_service_restart.assert_not_called()
-
-        # Various combinations.
-        self.mock_config.return_value[
-            'syslog_forwarders'
-        ] = 'myunit/0:192.0.2.1,myunit/1:192.0.2.2'
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        with open(
-            'tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        self.mock_config.return_value[
-            'syslog_forwarders'
-        ] = 'myunit/0:192.0.2.1,  myunit/1:192.0.2.2'
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        with open(
-            'tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        self.mock_config.return_value[
-            'syslog_forwarders'
-        ] = '  myunit/0:192.0.2.1,	myunit/1:192.0.2.2  '
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        with open(
-            'tests/unit/files/rsyslog-45-rsyslog-replication.conf', 'r', encoding='utf-8'
-        ) as f:
-            want = f.read()
-        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-    @mock.patch('charms.reactive.set_flag')
-    def test_configure_syslog_forwarders_disabled(self, set_flag):
-        self.mock_config.return_value['syslog_forwarders'] = ''
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        status.maintenance.assert_not_called()
-        self.mock_service_restart.assert_not_called()
-        want = [mock.call('smtp-relay.rsyslog.configured')]
-        set_flag.assert_has_calls(want, any_order=True)
-
-        # Was previously enabled.
-        dest = os.path.join(self.tmpdir, '45-rsyslog-replication.conf')
-        with open(dest, 'w') as f:
-            f.write('')
-        smtp_relay.configure_syslog_forwarders(self.tmpdir)
-        status.maintenance.assert_called_with('Disabling syslog forwards')
-        self.assertFalse(os.path.exists(dest))
-        self.mock_service_restart.assert_called_with('rsyslog')
-
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
     @mock.patch('reactive.smtp_relay._get_autocert_cn')
@@ -1732,66 +1641,68 @@ someplace.local encrypt
 
     @mock.patch('subprocess.call')
     def test__update_aliases(self, call):
+
         dest = os.path.join(self.tmpdir, 'aliases')
+        with mock.patch("smtp_relay.ALIASSES_PATH", dest):
 
-        # Empty, does not exist.
-        smtp_relay._update_aliases('', dest)
-        want = 'devnull:       /dev/null\n'
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        call.assert_called_with(['newaliases'])
+            # Empty, does not exist.
+            smtp_relay._update_aliases('')
+            want = 'devnull:       /dev/null\n'
+            with open(dest, 'r', encoding='utf-8') as f:
+                got = f.read()
+            self.assertEqual(want, got)
+            call.assert_called_with(['newaliases'])
 
-        # Has something prepopulated, but not devnull.
-        call.reset_mock()
-        content = 'postmaster:    root\n'
-        with open(dest, 'w') as f:
-            f.write(content)
-        smtp_relay._update_aliases('', dest)
-        want = content + 'devnull:       /dev/null\n'
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        call.assert_called_with(['newaliases'])
+            # Has something prepopulated, but not devnull.
+            call.reset_mock()
+            content = 'postmaster:    root\n'
+            with open(dest, 'w') as f:
+                f.write(content)
+            smtp_relay._update_aliases('')
+            want = content + 'devnull:       /dev/null\n'
+            with open(dest, 'r', encoding='utf-8') as f:
+                got = f.read()
+            self.assertEqual(want, got)
+            call.assert_called_with(['newaliases'])
 
-        # Has devnull, so do nothing and do not call newaliases.
-        call.reset_mock()
-        content = 'postmaster:    root\ndevnull:       /dev/null\n'
-        with open(dest, 'w') as f:
-            f.write(content)
-        smtp_relay._update_aliases('', dest)
-        want = content
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        call.assert_not_called()
+            # Has devnull, so do nothing and do not call newaliases.
+            call.reset_mock()
+            content = 'postmaster:    root\ndevnull:       /dev/null\n'
+            with open(dest, 'w') as f:
+                f.write(content)
+            smtp_relay._update_aliases('')
+            want = content
+            with open(dest, 'r', encoding='utf-8') as f:
+                got = f.read()
+            self.assertEqual(want, got)
+            call.assert_not_called()
 
-        # Admin email set.
-        call.reset_mock()
-        content = 'postmaster:    root\ndevnull:       /dev/null\n'
-        with open(dest, 'w') as f:
-            f.write(content)
-        smtp_relay._update_aliases('root@admin.mydomain.local', dest)
-        want = """postmaster:    root
-devnull:       /dev/null
-root:          root@admin.mydomain.local
-"""
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        call.assert_called_with(['newaliases'])
+            # Admin email set.
+            call.reset_mock()
+            content = 'postmaster:    root\ndevnull:       /dev/null\n'
+            with open(dest, 'w') as f:
+                f.write(content)
+            smtp_relay._update_aliases('root@admin.mydomain.local')
+            want = """postmaster:    root
+    devnull:       /dev/null
+    root:          root@admin.mydomain.local
+    """
+            with open(dest, 'r', encoding='utf-8') as f:
+                got = f.read()
+            self.assertEqual(want, got)
+            call.assert_called_with(['newaliases'])
 
-        # Has admin email, so do nothing and do not call newaliases.
-        call.reset_mock()
-        content = """postmaster:    root
-devnull:       /dev/null
-root:          root@admin.mydomain.local
-"""
-        with open(dest, 'w') as f:
-            f.write(content)
-        smtp_relay._update_aliases('root@admin.mydomain.local', dest)
-        want = content
-        with open(dest, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-        call.assert_not_called()
+            # Has admin email, so do nothing and do not call newaliases.
+            call.reset_mock()
+            content = """postmaster:    root
+    devnull:       /dev/null
+    root:          root@admin.mydomain.local
+    """
+            with open(dest, 'w') as f:
+                f.write(content)
+            smtp_relay._update_aliases('root@admin.mydomain.local')
+            want = content
+            with open(dest, 'r', encoding='utf-8') as f:
+                got = f.read()
+            self.assertEqual(want, got)
+            call.assert_not_called()

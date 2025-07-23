@@ -32,7 +32,6 @@ def upgrade_charm():
     reactive.clear_flag('smtp-relay.auth.configured')
     reactive.clear_flag('smtp-relay.configured')
     reactive.clear_flag('smtp-relay.installed')
-    reactive.clear_flag('smtp-relay.rsyslog.configured')
 
 
 @reactive.when_not('smtp-relay.installed')
@@ -84,9 +83,8 @@ def configure_smtp_auth(
     contents = template.render(context)
     changed = _write_file(contents, dovecot_config) or changed
 
-    smtp_auth_users = charm_state.smtp_auth_users
-    if smtp_auth_users:
-        contents = JUJU_HEADER + smtp_auth_users + '\n'
+    if charm_state.smtp_auth_users:
+        contents = JUJU_HEADER + "\n".join(charm_state.smtp_auth_users) + '\n'
         _write_file(contents, dovecot_users, perms=0o640, group='dovecot')
 
     if not charm_state.enable_smtp_auth:
@@ -219,13 +217,14 @@ def configure_smtp_relay(
     virtual_alias_maps_type = charm_state.virtual_alias_maps_type
 
     changed = False
+    config = hookenv.config()
     context = {
         'JUJU_HEADER': JUJU_HEADER,
         'fqdn': fqdn,
         'hostname': socket.gethostname(),
         'connection_limit': charm_state.connection_limit,
         'enable_rate_limits': charm_state.enable_rate_limits,
-        'enable_sender_login_map': bool(config['sender_login_maps']),
+        'enable_sender_login_map': bool(charm_state.sender_login_maps),
         'enable_smtp_auth': charm_state.enable_smtp_auth,
         'enable_spf': charm_state.enable_spf,
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
@@ -235,17 +234,17 @@ def configure_smtp_relay(
         'relayhost': charm_state.relay_host,
         'relay_domains': " ".join(charm_state.relay_domains),
         'relay_recipient_maps': bool(config['relay_recipient_maps']),
-        'restrict_recipients': bool(config['restrict_recipients']),
+        'restrict_recipients': bool(charm_state.restrict_recipients),
         'smtp_header_checks': bool(config['smtp_header_checks']),
-        'smtpd_recipient_restrictions': ' '.join(smtpd_recipient_restrictions),
-        'smtpd_relay_restrictions': ' '.join(smtpd_relay_restrictions),
-        'smtpd_sender_restrictions': ' '.join(smtpd_sender_restrictions),
+        'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
+        'smtpd_relay_restrictions': ', '.join(smtpd_relay_restrictions),
+        'smtpd_sender_restrictions': ', '.join(smtpd_sender_restrictions),
         'tls_cert_key': tls_cert_key,
         'tls_cert': tls_cert,
         'tls_key': tls_key,
         'tls_ciphers': charm_state.tls_ciphers.value,
         'tls_dh_params': tls_dh_params,
-        'tls_exclude_ciphers': " ".join(charm_state.tls_exclude_ciphers),
+        'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
         'tls_protocols': " ".join(charm_state.tls_protocols),
         'tls_security_level': charm_state.tls_security_level.value,
         'transport_maps': bool(config['transport_maps']),
@@ -337,7 +336,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
 
     context = {
         'JUJU_HEADER': JUJU_HEADER,
-        'skip_addresses': " ".join(charm_state.spf_skip_addresses),
+        'skip_addresses': ",".join(charm_state.spf_skip_addresses),
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
@@ -407,54 +406,6 @@ def _get_milters():
     return ' '.join(result)
 
 
-@reactive.when('config.changed.syslog_forwarders')
-def config_changed_syslog_forwarders():
-    reactive.clear_flag('smtp-relay.rsyslog.configured')
-
-
-@reactive.when('smtp-relay.installed')
-@reactive.when_not('smtp-relay.rsyslog.configured')
-def configure_syslog_forwarders(rsyslog_conf_d='/etc/rsyslog.d'):
-    reactive.clear_flag('smtp-relay.active')
-    charm_state = State.from_charm(hookenv.config())
-    forwarder_config = os.path.join(rsyslog_conf_d, '45-rsyslog-replication.conf')
-
-    # TODO: Add support for relations (cross-model too).
-
-    if not config['syslog_forwarders']:
-        if os.path.exists(forwarder_config):
-            status.maintenance('Disabling syslog forwards')
-            os.unlink(forwarder_config)
-            host.service_restart('rsyslog')
-
-        reactive.set_flag('smtp-relay.rsyslog.configured')
-        return
-
-    status.maintenance('Setting up syslog forwarders')
-
-    changed = False
-    context = {
-        'JUJU_HEADER': JUJU_HEADER,
-        'syslog_forwarders': [i.strip() for i in config['syslog_forwarders'].split(',')],
-    }
-    base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
-    template = env.get_template('templates/syslog_forwarders.tmpl')
-    contents = template.render(context)
-    changed = _write_file(contents, forwarder_config) or changed
-
-    # Work around LP:581360.
-    default_config = os.path.join(rsyslog_conf_d, '50-default.conf')
-    contents = utils.update_rsyslog_default_conf(default_config)
-    changed = _write_file(contents, default_config) or changed
-
-    if changed:
-        status.maintenance('Restarting rsyslog due to config changes')
-        host.service_restart('rsyslog')
-
-    reactive.set_flag('smtp-relay.rsyslog.configured')
-
-
 @reactive.when('smtp-relay.configured')
 @reactive.when_not('smtp-relay.active')
 def set_active(version_file='version'):
@@ -515,15 +466,11 @@ def _smtpd_recipient_restrictions(charm_state: State) -> list[str]:
             'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
         )
 
-    if config['restrict_senders']:
+    if charm_state.restrict_senders:
         smtpd_recipient_restrictions.append(
             'check_sender_access hash:/etc/postfix/restricted_senders'
         )
-
-    if config['additional_smtpd_recipient_restrictions']:
-        smtpd_recipient_restrictions += yaml.safe_load(
-            config['additional_smtpd_recipient_restrictions']
-        )
+    smtpd_recipient_restrictions.extend(charm_state.additional_smtpd_recipient_restrictions)
 
     if charm_state.enable_spf:
         smtpd_recipient_restrictions.append('check_policy_service unix:private/policyd-spf')
@@ -532,14 +479,15 @@ def _smtpd_recipient_restrictions(charm_state: State) -> list[str]:
 
 
 def _smtpd_relay_restrictions(charm_state: State) -> list[str]:
+    config = hookenv.config()
     smtpd_relay_restrictions = ['permit_mynetworks']
     if bool(config['relay_access_sources']):
         smtpd_relay_restrictions.append('check_client_access cidr:/etc/postfix/relay_access')
 
-    if config['enable_smtp_auth']:
-        if bool(config['sender_login_maps']):
+    if charm_state.enable_smtp_auth:
+        if charm_state.sender_login_maps:
             smtpd_relay_restrictions.append('reject_known_sender_login_mismatch')
-        if bool(config['restrict_senders']):
+        if charm_state.restrict_senders:
             smtpd_relay_restrictions.append('reject_sender_login_mismatch')
         smtpd_relay_restrictions.append('permit_sasl_authenticated')
 
