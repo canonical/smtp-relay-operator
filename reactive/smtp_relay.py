@@ -11,7 +11,6 @@ import socket
 import subprocess  # nosec
 
 import jinja2
-import yaml
 
 from charms import reactive
 from charms.layer import status

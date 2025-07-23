@@ -179,10 +179,13 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         connection_limit: Maximum number of SMTP connections allowed.
         domain: Primary domain for hostname generation.
         enable_rate_limits: Enable default rate limiting features.
+        enable_reject_unknown_sender_domain: Reject email when sender's domain cannot be resolved.
         enable_smtp_auth: If SMTP authentication is enabled.
         enable_spf: If SPF checks are enabled.
         log_retention: Log retention of mail logs in days.
         relay_domains: List of destination domains to relay mail to.
+        restrict_recipients: Access map for restrictions by recipient address or domain.
+        restrict_senders: Access map for restrictions by sender address or domain.
         relay_host: SMTP relay host to forward mail to.
         restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
         sender_login_maps: List of authenticated users that can send mail.
@@ -210,7 +213,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     restrict_senders: list[(str, AccessMapValue)]
     relay_host: Annotated[str, Field(min_length=1)]
     restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
-    sender_login_maps: list[(str,str)]
+    sender_login_maps: list[(str, str)]
     smtp_auth_users: list[str]
     spf_skip_addresses: list[IPvAnyNetwork]
     tls_ciphers: SmtpTlsCipherGrade | None
