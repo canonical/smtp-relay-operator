@@ -34,11 +34,11 @@ def upgrade_charm():
 
 
 @reactive.when_not('smtp-relay.installed')
-def install(script_dir='/usr/local/bin'):
+def install():
     reactive.set_flag('smtp-relay.installed')
 
-    fgrepmail_logs = os.path.join(script_dir, 'fgrepmail-logs')
-    _copy_file('files/fgrepmail-logs.py', fgrepmail_logs, perms=0o755)
+    _copy_file('files/fgrepmail-logs.py', '/usr/local/bin/fgrepmail-logs', perms=0o755)
+    _copy_file('files/50-default.conf', '/etc/rsyslog.d/50-default.conf', perms=0o644)
 
 
 @reactive.hook('peer-relation-joined', 'peer-relation-changed')
@@ -410,54 +410,6 @@ def _get_milters():
         return ''
 
     return ' '.join(result)
-
-
-@reactive.when('config.changed.syslog_forwarders')
-def config_changed_syslog_forwarders():
-    reactive.clear_flag('smtp-relay.rsyslog.configured')
-
-
-@reactive.when('smtp-relay.installed')
-@reactive.when_not('smtp-relay.rsyslog.configured')
-def configure_syslog_forwarders(rsyslog_conf_d='/etc/rsyslog.d'):
-    reactive.clear_flag('smtp-relay.active')
-    config = hookenv.config()
-    forwarder_config = os.path.join(rsyslog_conf_d, '45-rsyslog-replication.conf')
-
-    # TODO: Add support for relations (cross-model too).
-
-    if not config['syslog_forwarders']:
-        if os.path.exists(forwarder_config):
-            status.maintenance('Disabling syslog forwards')
-            os.unlink(forwarder_config)
-            host.service_restart('rsyslog')
-
-        reactive.set_flag('smtp-relay.rsyslog.configured')
-        return
-
-    status.maintenance('Setting up syslog forwarders')
-
-    changed = False
-    context = {
-        'JUJU_HEADER': JUJU_HEADER,
-        'syslog_forwarders': [i.strip() for i in config['syslog_forwarders'].split(',')],
-    }
-    base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))  # nosec
-    template = env.get_template('templates/syslog_forwarders.tmpl')
-    contents = template.render(context)
-    changed = _write_file(contents, forwarder_config) or changed
-
-    # Work around LP:581360.
-    default_config = os.path.join(rsyslog_conf_d, '50-default.conf')
-    contents = utils.update_rsyslog_default_conf(default_config)
-    changed = _write_file(contents, default_config) or changed
-
-    if changed:
-        status.maintenance('Restarting rsyslog due to config changes')
-        host.service_restart('rsyslog')
-
-    reactive.set_flag('smtp-relay.rsyslog.configured')
 
 
 @reactive.when('smtp-relay.configured')

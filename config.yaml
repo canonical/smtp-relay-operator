@@ -155,12 +155,6 @@ options:
     description: |
       Set of comma-separated CIDR addresses to skip SPF checks
       (allowlist).
-  syslog_forwarders:
-    type: string
-    default: ''
-    description: |
-      Set of comma-separated label:addresses to forward mail.* logs
-      to. e.g. myhost:192.0.2.1.
   tls_ciphers:
     type: string
     default: 'HIGH'
