@@ -125,8 +125,7 @@ options:
       NOTE: You almost always want to use `header_checks` instead of this.
   spf_skip_addresses:
     type: string
-    description: |
-      Comma-separated CIDR addresses to skip SPF checks (allowlist).
+    description:  Set of comma-separated CIDR addresses to skip SPF checks (allowlist).
   tls_ciphers:
     type: string
     default: 'HIGH'
