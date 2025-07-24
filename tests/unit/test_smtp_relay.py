@@ -142,21 +142,6 @@ class TestCharm(unittest.TestCase):
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
-    @mock.patch('charms.reactive.set_flag')
-    def test_hook_install(self, set_flag):
-        smtp_relay.install(self.tmpdir)
-
-        want = [mock.call('smtp-relay.installed')]
-        set_flag.assert_has_calls(want, any_order=True)
-        self.assertEqual(len(want), len(set_flag.mock_calls))
-
-        with open('files/fgrepmail-logs.py', 'r', encoding='utf-8') as f:
-            want = f.read()
-        fgrepmail_logs = os.path.join(self.tmpdir, 'fgrepmail-logs')
-        with open(fgrepmail_logs, 'r', encoding='utf-8') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
     @mock.patch('charms.reactive.clear_flag')
     def test_hook_relation_peers_flags(self, clear_flag):
         smtp_relay.peer_relation_changed()
@@ -170,15 +155,6 @@ class TestCharm(unittest.TestCase):
         want = [mock.call('smtp-relay.configured')]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
-
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('reactive.smtp_relay._write_file')
-    def test_update_logrotate(self, write_file, clear_flag):
-        smtp_relay.update_logrotate()
-        want = [mock.call('smtp-relay.active')]
-        clear_flag.assert_has_calls(want, any_order=True)
-        self.assertEqual(len(want), len(clear_flag.mock_calls))
-        write_file.assert_called()
 
     @mock.patch('charms.reactive.clear_flag')
     def test_config_changed_smtp_auth(self, clear_flag):

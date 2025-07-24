@@ -33,11 +33,11 @@ def upgrade_charm():
 
 
 @reactive.when_not('smtp-relay.installed')
-def install(script_dir='/usr/local/bin'):
+def install():
     reactive.set_flag('smtp-relay.installed')
 
-    fgrepmail_logs = os.path.join(script_dir, 'fgrepmail-logs')
-    _copy_file('files/fgrepmail-logs.py', fgrepmail_logs, perms=0o755)
+    _copy_file('files/fgrepmail-logs.py', "/usr/local/bin/fgrepmail-logs", perms=0o755)
+    _copy_file('files/rsyslog', "/etc/logrotate.d/rsyslog", perms=0o644)
 
 
 @reactive.hook('peer-relation-joined', 'peer-relation-changed')
@@ -140,19 +140,6 @@ def configure_smtp_auth(
 )
 def config_changed():
     reactive.clear_flag('smtp-relay.configured')
-
-
-@reactive.when('config.changed.log_retention')
-def update_logrotate(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
-    reactive.clear_flag('smtp-relay.active')
-    status.maintenance('Updating log retention / rotation configs')
-
-    charm_state = State.from_charm(hookenv.config())
-    retention = charm_state.log_retention
-    contents = utils.update_logrotate_conf(
-        logrotate_conf_path, frequency='daily', retention=retention
-    )
-    _write_file(contents, logrotate_conf_path)
 
 
 @reactive.hook('milter-relation-joined', 'milter-relation-changed')
