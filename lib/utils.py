@@ -5,7 +5,7 @@ import os
 import re
 
 
-def update_logrotate_conf(path, frequency=None, retention=0, dateext=True):
+def update_logrotate_conf(path):
     """Update existing logrotate config with log retention settings."""
 
     if not os.path.exists(path):
@@ -26,15 +26,14 @@ def update_logrotate_conf(path, frequency=None, retention=0, dateext=True):
         indent = m.group(1)
 
         # Rotation frequency.
-        if frequency and conf in ('daily', 'weekly', 'monthly'):
-            new.append('{}{}'.format(indent, frequency))
-        elif retention and conf == 'dateext':
+        if conf in ('daily', 'weekly', 'monthly'):
+            new.append('{}daily'.format(indent))
+        elif conf == 'dateext':
             # Ignore 'dateext', we'll put it back on updating 'rotate'.
             continue
-        elif retention and conf == 'rotate':
-            if dateext:
-                new.append('{}dateext'.format(indent))
-            new.append('{}rotate {}'.format(indent, retention))
+        elif conf == 'rotate':
+            new.append('{}dateext'.format(indent))
+            new.append('{}rotate 730'.format(indent))
         else:
             new.append(line)
 
