@@ -227,7 +227,7 @@ def configure_smtp_relay(
         'enable_smtp_auth': charm_state.enable_smtp_auth,
         'enable_spf': charm_state.enable_spf,
         'enable_tls_policy_map': bool(config['tls_policy_maps']),
-        'header_checks': bool(config['header_checks']),
+        'header_checks': bool(charm_state.header_checks),
         'milter': _get_milters(),
         'mynetworks': ",".join(charm_state.allowed_relay_networks),
         'relayhost': charm_state.relay_host,
@@ -284,7 +284,7 @@ def configure_smtp_relay(
     )
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
-        'header_checks': config['header_checks'],
+        'header_checks': ";".join(charm_state.header_checks),
         'relay_access_sources': config['relay_access_sources'],
         'relay_recipient_maps': config['relay_recipient_maps'],
         'restrict_recipients': config['restrict_recipients'],

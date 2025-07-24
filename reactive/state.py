@@ -174,6 +174,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         enable_reject_unknown_sender_domain: Reject email when sender's domain cannot be resolved.
         enable_smtp_auth: If SMTP authentication is enabled.
         enable_spf: If SPF checks are enabled.
+        header_checks: Header checks to perform.
         log_retention: Log retention of mail logs in days.
         relay_domains: List of destination domains to relay mail to.
         restrict_recipients: Access map for restrictions by recipient address or domain.
@@ -199,6 +200,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     enable_reject_unknown_sender_domain: bool
     enable_smtp_auth: bool
     enable_spf: bool
+    header_checks: list[str]
     log_retention: int
     relay_domains: list[Annotated[str, Field(min_length=1)]]
     restrict_recipients: list[(str, AccessMapValue)]
@@ -284,6 +286,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 ),
                 enable_smtp_auth=config.get("enable_smtp_auth"),
                 enable_spf=config.get("enable_spf"),
+                header_checks=(
+                    config.get("header_checks").split(",") if config.get("header_checks") else []
+                ),
                 log_retention=config.get("log_retention"),
                 relay_domains=relay_domains,
                 relay_host=config.get("relay_host"),
