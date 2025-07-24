@@ -1289,7 +1289,6 @@ someplace.local encrypt
             got = f.read()
         self.assertEqual(want, got)
 
-
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
     @mock.patch('reactive.smtp_relay._get_autocert_cn')
