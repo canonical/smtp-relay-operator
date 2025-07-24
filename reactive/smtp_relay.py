@@ -17,8 +17,6 @@ from charms.layer import status
 from charmhelpers.core import hookenv, host
 from state import State
 
-from lib import utils
-
 
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
@@ -38,6 +36,7 @@ def install():
 
     _copy_file('files/fgrepmail-logs.py', "/usr/local/bin/fgrepmail-logs", perms=0o755)
     _copy_file('files/rsyslog', "/etc/logrotate.d/rsyslog", perms=0o644)
+    _copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
 
 
 @reactive.hook('peer-relation-joined', 'peer-relation-changed')
