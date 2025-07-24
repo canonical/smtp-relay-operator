@@ -174,7 +174,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         enable_reject_unknown_sender_domain: Reject email when sender's domain cannot be resolved.
         enable_smtp_auth: If SMTP authentication is enabled.
         enable_spf: If SPF checks are enabled.
-        header_checks: Header checks to perform.
+        header_checks: Header checks to perform on inbound email.
         log_retention: Log retention of mail logs in days.
         relay_domains: List of destination domains to relay mail to.
         restrict_recipients: Access map for restrictions by recipient address or domain.
@@ -183,6 +183,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
         sender_login_maps: List of authenticated users that can send mail.
         smtp_auth_users: List of user and crypt password hashe pairs separated by ':'.
+        smtp_header_checks: List of header checks to perform on outbound email.
         spf_skip_addresses: List of CIDR addresses to skip SPF checks.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
         tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher list.
@@ -209,6 +210,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
     sender_login_maps: list[(str, str)]
     smtp_auth_users: list[str]
+    smtp_header_checks: list[str]
     spf_skip_addresses: list[IPvAnyNetwork]
     tls_ciphers: SmtpTlsCipherGrade | None
     tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]]
@@ -300,6 +302,9 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                     config.get("smtp_auth_users").split(",")
                     if config.get("smtp_auth_users")
                     else []
+                ),
+                smtp_header_checks=(
+                    config.get("smtp_header_checks").split(",") if config.get("smtp_header_checks") else []
                 ),
                 spf_skip_addresses=spf_skip_addresses,
                 tls_ciphers=(

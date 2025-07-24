@@ -27,8 +27,7 @@ options:
   connection_limit:
     type: int
     default: 100
-    description: |
-      Maximum number of simultaneous SMTP connections allowed.
+    description: Maximum number of simultaneous SMTP connections allowed.
   domain:
     type: string
     description: |
@@ -54,13 +53,11 @@ options:
   enable_spf:
     type: boolean
     default: false
-    description: |
-      Enable SPF checking.
+    description: Enable SPF checking.
   enable_smtp_auth:
     type: boolean
     default: true
-    description: |
-      Enable SMTP authentication.
+    description: Enable SMTP authentication.
   log_retention:
      type: int
      default: 120
@@ -68,7 +65,7 @@ options:
   header_checks:
     type: string
     description: |
-      Perform various header checks and action on. See:
+      Perform various header checks on incoming emails and action on. See:
 
       http://www.postfix.org/header_checks.5.html
   relay_access_sources:
@@ -110,8 +107,7 @@ options:
       Comma-separated list of domains, addresses, or hosts senders to restrict relay from.
   sender_login_maps:
     type: string
-    description: |
-      Restrict sender addresses to authenticated users defined by this map.
+    description: Restrict sender addresses to authenticated users defined by this map.
   smtp_auth_users:
     type: string
     description: |
@@ -121,9 +117,8 @@ options:
       myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.,myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1
   smtp_header_checks:
     type: string
-    default: ''
     description: |
-      Comma-separated list of header checks to perform and action on. See:
+      Comma-separated list of header checks for outgoing email to perform and action on. See:
 
       http://www.postfix.org/header_checks.5.html
 
@@ -131,7 +126,7 @@ options:
   spf_skip_addresses:
     type: string
     description: |
-      Set of comma-separated CIDR addresses to skip SPF checks (allowlist).
+      Comma-separated CIDR addresses to skip SPF checks (allowlist).
   tls_ciphers:
     type: string
     default: 'HIGH'
