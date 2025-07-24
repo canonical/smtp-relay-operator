@@ -41,7 +41,6 @@ source .tox/unit/bin/activate
 * `tox -e static`: Runs other checks such as `bandit` for security issues.
 * `tox -e unit`: Runs the unit tests.
 * `tox -e integration`: Runs the integration tests.
-```
 
 ## Build charm
 
