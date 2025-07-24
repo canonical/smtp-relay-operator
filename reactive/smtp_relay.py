@@ -17,6 +17,8 @@ from charms.layer import status
 from charmhelpers.core import hookenv, host
 from state import State
 
+from lib import utils
+
 
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
@@ -31,12 +33,13 @@ def upgrade_charm():
 
 
 @reactive.when_not('smtp-relay.installed')
-def install():
+def install(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
     reactive.set_flag('smtp-relay.installed')
 
-    _copy_file('files/fgrepmail-logs.py', "/usr/local/bin/fgrepmail-logs", perms=0o755)
-    _copy_file('files/rsyslog', "/etc/logrotate.d/rsyslog", perms=0o644)
-    _copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
+    _copy_file('files/fgrepmail-logs.py', '/usr/local/bin/fgrepmail-logs', perms=0o755)
+    _copy_file('files/50-default.conf', '/etc/rsyslog.d/50-default.conf', perms=0o644)
+    contents = utils.update_logrotate_conf(logrotate_conf_path)
+    _write_file(contents, logrotate_conf_path)
 
 
 @reactive.hook('peer-relation-joined', 'peer-relation-changed')
