@@ -191,7 +191,6 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         enable_spf: If SPF checks are enabled.
         header_checks: Header checks to perform on inbound email.
         relay_access_sources: List of  entries to restrict access based on CIDR source.
-        log_retention: Log retention of mail logs in days.
         relay_domains: List of destination domains to relay mail to.
         restrict_recipients: Access map for restrictions by recipient address or domain.
         restrict_senders: Access map for restrictions by sender address or domain.
@@ -226,7 +225,6 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     enable_spf: bool
     header_checks: list[str]
     relay_access_sources: list[str]
-    log_retention: int
     relay_domains: list[Annotated[str, Field(min_length=1)]]
     restrict_recipients: list[(str, AccessMapValue)]
     restrict_senders: list[(str, AccessMapValue)]
@@ -299,7 +297,6 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
                 enable_smtp_auth=config.get("enable_smtp_auth"),
                 enable_spf=config.get("enable_spf"),
                 header_checks=header_checks,
-                log_retention=config.get("log_retention"),
                 relay_access_sources=relay_access_sources,
                 relay_domains=relay_domains,
                 relay_host=config.get("relay_host"),

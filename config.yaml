@@ -58,10 +58,6 @@ options:
     type: boolean
     default: true
     description: Enable SMTP authentication.
-  log_retention:
-     type: int
-     default: 120
-     description: Number of days of mail logs to retain during rotation.
   header_checks:
     type: string
     description: |
