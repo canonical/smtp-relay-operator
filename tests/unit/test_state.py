@@ -8,6 +8,7 @@ from pydantic import IPvAnyNetwork
 
 from reactive import state
 
+
 def test_state():
     """
     arrange: do nothing.

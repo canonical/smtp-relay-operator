@@ -211,7 +211,6 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     virtual_alias_maps_type: PostfixLookupTableType
     connection_limit: int = Field(ge=0)
 
-
     def __init__(  # pylint: disable=too-many-arguments, too-many-positional-arguments
         self,
         additional_smtpd_recipient_restrictions: list[str],
