@@ -407,6 +407,8 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
                 ),
             )
 
+        except ValueError as exc:
+            raise ConfigurationError(f"Invalid configuration") from exc
         except ValidationError as exc:
             error_fields = set(
                 itertools.chain.from_iterable(error["loc"] for error in exc.errors())

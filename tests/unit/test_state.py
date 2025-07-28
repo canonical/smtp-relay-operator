@@ -201,3 +201,199 @@ def test_state_with_invalid_admin_email():
     }
     with pytest.raises(state.ConfigurationError):
         state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_allowed_relay_networks():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "allowed_relay_networks": "192.0.0.0/33",
+        "connection_limit": 100,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_connection_limit():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_restrict_recipients():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "restrict_recipients": "recipient invalid_value",
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_restrict_senders():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "restrict_senders": "sender invalid_value",
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_restrict_senders():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "spf_skip_addresses": "192.0.0.0/33",
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_tls_ciphers():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "tls_ciphers": "invalid",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_tls_security_level():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "invalid",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
+
+
+def test_state_with_invalid_virtual_alias_maps_type():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": -1,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "invalid",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)
