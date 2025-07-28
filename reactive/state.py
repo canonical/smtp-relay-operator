@@ -267,7 +267,7 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
             additional_smtpd_recipient_restrictions = _parse_list(
                 config.get("additional_smtpd_recipient_restrictions")
             )
-            header_checks=_parse_list(config.get("header_checks"))
+            header_checks = _parse_list(config.get("header_checks"))
             relay_access_sources = _parse_list(config.get("relay_access_sources"))
             relay_domains = _parse_list(config.get("relay_domains"))
             relay_recipient_maps = _parse_list(config.get("relay_recipient_maps"))
