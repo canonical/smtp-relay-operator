@@ -96,7 +96,7 @@ def _parse_map(raw_map: str) -> dict[str, str]:
     """Parse map input.
 
     Returns:
-        a list of tuples with the map key and value.
+        the parsed map.
 
     Raises:
         ConfigurationError: if the map is invalid.
@@ -120,7 +120,7 @@ def _parse_access_map(raw_map: str) -> dict[str, AccessMapValue]:
         raw_map: the raw map content.
 
     Returns:
-        a list of tuples with the key and the value.
+        the parsed map.
     """
     parsed_map = _parse_map(raw_map)
     return {key: AccessMapValue(value) for key, value in parsed_map.items()}
