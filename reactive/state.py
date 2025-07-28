@@ -196,7 +196,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         restrict_recipients: Access map for restrictions by recipient address or domain.
         restrict_senders: Access map for restrictions by sender address or domain.
         relay_host: SMTP relay host to forward mail to.
-        relay_recipient_maps: List of of mappings  that alias specific mail addresses or domains to addresses.
+        relay_recipient_maps: List of of mappings that alias mail addresses or domains to
+            addresses.
         restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
         sender_login_maps: List of authenticated users that can send mail.
         smtp_auth_users: List of user and crypt password hashe pairs separated by ':'.
@@ -207,9 +208,11 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         tls_policy_maps: List of of mappings for TLS policy.
         tls_protocols: List of TLS protocols accepted by the Postfix SMTP.
         tls_security_level: The TLS security level.
-        transport_maps: List of mappings from recipient address to message delivery transport or next-hop destination.
+        transport_maps: List of mappings from recipient address to message delivery transport
+            or next-hop destination.
         virtual_alias_domains: List of domains for which all addresses are aliased.
-        virtual_alias_maps: List of aliases of specific mail addresses or domains to other local or remote addresses.
+        virtual_alias_maps: List of aliases of mail addresses or domains to other local or
+            remote addresses.
         virtual_alias_maps_type: The virtual alias map type.
     """
 
