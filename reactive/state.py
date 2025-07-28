@@ -319,7 +319,6 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             connection_limit=connection_limit
         )
 
-
     @classmethod
     def from_charm(cls, config: dict[str, typing.Any]) -> "State":
         """Initialize the state from charm.
@@ -407,7 +406,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             )
 
         except ValueError as exc:
-            raise ConfigurationError(f"Invalid configuration") from exc
+            raise ConfigurationError("Invalid configuration") from exc
         except ValidationError as exc:
             error_fields = set(
                 itertools.chain.from_iterable(error["loc"] for error in exc.errors())

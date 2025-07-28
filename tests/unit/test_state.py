@@ -303,7 +303,7 @@ def test_state_with_invalid_restrict_senders():
         state.State.from_charm(config=charm_config)
 
 
-def test_state_with_invalid_restrict_senders():
+def test_state_with_invalid_spf_skip_addresses():
     """
     arrange: do nothing.
     act: initialize a charm state from invalid configuration.
