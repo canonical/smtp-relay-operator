@@ -5,4 +5,3 @@ gapps.mydomain.local secure match=mx.google.com
 # Some place enforce encryption
 someplace.local encrypt
 .someplace.local encrypt
-

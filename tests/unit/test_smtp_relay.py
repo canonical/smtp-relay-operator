@@ -73,20 +73,16 @@ class TestCharm(unittest.TestCase):
             'enable_smtp_auth': True,
             'enable_spf': False,
             'message_size_limit': 61440000,
-            'relay_access_sources': '',
             'relay_recipient_maps': '',
             'restrict_recipients': '',
             'restrict_senders': '',
-            'sender_login_maps': '',
             'smtp_header_checks': '',
             'tls_ciphers': 'HIGH',
             'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
-            'tls_policy_maps': '',
             'tls_protocols': '!SSLv2,!SSLv3',
             'tls_security_level': 'may',
             'transport_maps': '',
             'virtual_alias_domains': '',
-            'virtual_alias_maps': '',
             'virtual_alias_maps_type': 'hash',
         }
 
@@ -726,10 +722,7 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value[
             'relay_access_sources'
-        ] = """# Reject some made user.
-10.10.10.5    REJECT
-10.10.10.0/24 OK
-"""
+        ] = "# Reject some made user.,10.10.10.5    REJECT,10.10.10.0/24 OK"
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_relay_access_sources.cf', 'r', encoding='utf-8'
@@ -761,10 +754,7 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value[
             'relay_access_sources'
-        ] = """# Reject some made user.
-10.10.10.5    REJECT
-10.10.10.0/24 OK
-"""
+        ] = "# Reject some made user.,10.10.10.5    REJECT,10.10.10.0/24 OK"
         self.mock_config.return_value['enable_smtp_auth'] = False
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open(
@@ -937,12 +927,10 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value[
             'tls_policy_maps'
-        ] = """# Google hosted
-gapps.mydomain.local secure match=mx.google.com
-# Some place enforce encryption
-someplace.local encrypt
-.someplace.local encrypt
-"""
+        ] = (
+            "# Google hosted,gapps.mydomain.local secure match=mx.google.com,"
+            "# Some place enforce encryption,someplace.local encrypt,.someplace.local encrypt"
+        )
         smtp_relay.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_tls_policy.cf', 'r', encoding='utf-8') as f:
             want = f.read()

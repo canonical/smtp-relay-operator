@@ -204,7 +204,6 @@ def configure_smtp_relay(
     virtual_alias_maps_type = charm_state.virtual_alias_maps_type
 
     changed = False
-    config = hookenv.config()
 
     context = {
         'JUJU_HEADER': JUJU_HEADER,
@@ -215,13 +214,13 @@ def configure_smtp_relay(
         'enable_sender_login_map': bool(charm_state.sender_login_maps),
         'enable_smtp_auth': charm_state.enable_smtp_auth,
         'enable_spf': charm_state.enable_spf,
-        'enable_tls_policy_map': bool(config['tls_policy_maps']),
+        'enable_tls_policy_map': bool(charm_state.tls_policy_maps),
         'header_checks': bool(charm_state.header_checks),
         'milter': _get_milters(),
         'mynetworks': ",".join(charm_state.allowed_relay_networks),
         'relayhost': charm_state.relay_host,
         'relay_domains': " ".join(charm_state.relay_domains),
-        'relay_recipient_maps': bool(config['relay_recipient_maps']),
+        'relay_recipient_maps': bool(charm_state.relay_recipient_maps),
         'restrict_recipients': bool(charm_state.restrict_recipients),
         'smtp_header_checks': bool(charm_state.smtp_header_checks),
         'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
@@ -237,9 +236,9 @@ def configure_smtp_relay(
         'tls_security_level': (
             charm_state.tls_security_level.value if charm_state.tls_security_level else None
         ),
-        'transport_maps': bool(config['transport_maps']),
+        'transport_maps': bool(charm_state.transport_maps),
         'virtual_alias_domains': " ".join(charm_state.virtual_alias_domains),
-        'virtual_alias_maps': bool(config['virtual_alias_maps']),
+        'virtual_alias_maps': bool(charm_state.virtual_alias_maps),
         'virtual_alias_maps_type': virtual_alias_maps_type.value,
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -274,16 +273,20 @@ def configure_smtp_relay(
     map_contents = {
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': ";".join(charm_state.header_checks),
-        'relay_access_sources': config['relay_access_sources'],
-        'relay_recipient_maps': config['relay_recipient_maps'],
-        'restrict_recipients': config['restrict_recipients'],
-        'restrict_senders': config['restrict_senders'],
+        'relay_access_sources': "\n".join(charm_state.relay_access_sources),
+        'relay_recipient_maps': "\n".join(charm_state.relay_recipient_maps),
+        'restrict_recipients': "\n".join(
+            [f"{key} {value.value}" for key, value in charm_state.restrict_recipients]
+        ),
+        'restrict_senders': "\n".join(
+            [f"{key} {value.value}" for key, value in charm_state.restrict_senders]
+        ),
         'sender_access': sender_access_content,
-        'sender_login_maps': config['sender_login_maps'],
+        'sender_login_maps': "\n".join(charm_state.sender_login_maps),
         'smtp_header_checks': ";".join(charm_state.smtp_header_checks),
-        'tls_policy_maps': config['tls_policy_maps'],
-        'transport_maps': config['transport_maps'],
-        'virtual_alias_maps': config['virtual_alias_maps'],
+        'tls_policy_maps': "\n".join(charm_state.tls_policy_maps),
+        'transport_maps': "\n".join(charm_state.transport_maps),
+        'virtual_alias_maps': "\n".join(charm_state.virtual_alias_maps),
     }
 
     # Ensure various maps exists before starting/restarting postfix.
@@ -469,9 +472,8 @@ def _smtpd_recipient_restrictions(charm_state: State) -> list[str]:
 
 
 def _smtpd_relay_restrictions(charm_state: State) -> list[str]:
-    config = hookenv.config()
     smtpd_relay_restrictions = ['permit_mynetworks']
-    if bool(config['relay_access_sources']):
+    if bool(charm_state.relay_access_sources):
         smtpd_relay_restrictions.append('check_client_access cidr:/etc/postfix/relay_access')
 
     if charm_state.enable_smtp_auth:
