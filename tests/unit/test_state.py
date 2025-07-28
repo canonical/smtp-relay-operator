@@ -3,9 +3,6 @@
 
 """State unit tests."""
 
-
-from pydantic import IPvAnyAddress
-
 from reactive import state
 
 def test_state():
