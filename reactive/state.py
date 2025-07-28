@@ -111,24 +111,22 @@ class PostfixLookupTableType(Enum):
     HASH = "hash"
     REGEXP = "regexp"
 
-    @classmethod
-    def _missing_(cls, _):
-        return cls.HASH
-
 
 class AccessMapValue(Enum):
     """Postfix access map valid values.
 
     Attributes:
         OK: "OK"
+        REJECT: "REJECT"
         RESTRICTED: "restricted"
     """
 
     OK = "OK"
+    REJECT = "REJECT"
     RESTRICTED = "restricted"
 
 
-def _parse_map(raw_map: str) -> list[(str, str)]:
+def _parse_map(raw_map: str) -> dict[str, str]:
     """Parse map input.
 
     Returns:
@@ -138,18 +136,18 @@ def _parse_map(raw_map: str) -> list[(str, str)]:
         ConfigurationError: if the map is invalid.
     """
     if not raw_map:
-        return []
-    access_map_lines = raw_map.splitlines()
-    access_map = []
+        return {}
+    access_map_lines = raw_map.split(",")
+    access_map = {}
     for raw_line in access_map_lines:
         line = raw_line.split()
         if len(line) != 2:
-            raise ConfigurationError("Invalid map")
-        access_map.append((line[0], line[1]))
+            raise ConfigurationError(f"Invalid map {raw_map}")
+        access_map.update({line[0]: line[1]})
     return access_map
 
 
-def _parse_access_map(raw_map: str) -> list[(str, AccessMapValue)]:
+def _parse_access_map(raw_map: str) -> dict[str, AccessMapValue]:
     """Parse access map input.
 
     Args:
@@ -159,7 +157,7 @@ def _parse_access_map(raw_map: str) -> list[(str, AccessMapValue)]:
         a list of tuples with the key and the value.
     """
     parsed_map = _parse_map(raw_map)
-    return [(element[0], AccessMapValue(element[1])) for element in parsed_map]
+    return {key: AccessMapValue(parsed_map[key]) for key in parsed_map.keys()}
 
 
 def _parse_list(raw_list: str) -> list[str]:
@@ -179,8 +177,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     """The Indico operator charm state.
 
     Attributes:
-        admin_email: Administrator's email address where root@ emails will go to
         additional_smtpd_recipient_restrictions: List of additional recipient restrictions.
+        admin_email: Administrator's email address where root@ emails will go to.
         allowed_relay_networks: List of allowed networks to relay without authenticating.
         append_x_envelope_to: Append the X-Envelope-To header.
         connection_limit: Maximum number of SMTP connections allowed.
@@ -215,8 +213,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
         virtual_alias_maps_type: The virtual alias map type.
     """
 
-    admin_email: EmailStr | None
     additional_smtpd_recipient_restrictions: list[SmtpRecipientRestrictions]
+    admin_email: EmailStr | None
     allowed_relay_networks: list[IPvAnyNetwork]
     append_x_envelope_to: bool
     enable_rate_limits: bool
@@ -226,12 +224,12 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     header_checks: list[str]
     relay_access_sources: list[str]
     relay_domains: list[Annotated[str, Field(min_length=1)]]
-    restrict_recipients: list[(str, AccessMapValue)]
-    restrict_senders: list[(str, AccessMapValue)]
+    restrict_recipients: dict[str, AccessMapValue]
+    restrict_senders: dict[str, AccessMapValue]
     relay_host: Annotated[str, Field(min_length=1)]
     relay_recipient_maps: list[str]
     restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
-    sender_login_maps: list[str]
+    sender_login_maps: dict[str, str]
     smtp_auth_users: list[str]
     smtp_header_checks: list[str]
     spf_skip_addresses: list[IPvAnyNetwork]
@@ -242,10 +240,10 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
     tls_security_level: SmtpTlsSecurityLevel | None
     transport_maps: list[str]
     virtual_alias_domains: list[Annotated[str, Field(min_length=1)]]
-    virtual_alias_maps: list[(str, str)]
+    virtual_alias_maps: dict[str, str]
     virtual_alias_maps_type: PostfixLookupTableType
     connection_limit: int = Field(ge=0)
-    domain: str | None = Field(min_length=1)
+    domain: str = Field(min_length=1)
 
     @classmethod
     def from_charm(cls, config: dict[str, typing.Any]) -> "State":
@@ -284,8 +282,8 @@ class State:  # pylint: disable=too-few-public-methods,too-many-instance-attribu
             virtual_alias_maps = _parse_list(config.get("virtual_alias_maps"))
 
             return cls(
-                admin_email=config.get("admin_email"),
                 additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
+                admin_email=config.get("admin_email"),
                 allowed_relay_networks=allowed_relay_networks,
                 append_x_envelope_to=config.get("append_x_envelope_to"),
                 connection_limit=config.get("connection_limit"),

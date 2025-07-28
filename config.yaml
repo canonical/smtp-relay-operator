@@ -2,6 +2,12 @@
 # See LICENSE file for licensing details.
 
 options:
+  additional_smtpd_recipient_restrictions:
+    type: string
+    description: |
+      Comma-separated list of additional smtpd_recipient_restrictions.
+
+      http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
   admin_email:
     type: string
     description: Administrator's email address where root@ emails will go.
@@ -9,12 +15,6 @@ options:
     type: string
     description: |
       Comma-separated list of allowed networks to relay without authenticating.
-  additional_smtpd_recipient_restrictions:
-    type: string
-    description: |
-      Comma-separated list of additional smtpd_recipient_restrictions.
-
-      http://www.postfix.org/postconf.5.html#smtpd_recipient_restrictions
   append_x_envelope_to:
     type: boolean
     default: false
@@ -30,10 +30,10 @@ options:
     description: Maximum number of simultaneous SMTP connections allowed.
   domain:
     type: string
+    default: ""
     description: |
       Primary domain for hostname generation, it will be
-      $application-$unit.$domain. Default is '' to use the system
-      FQDN.
+      $application-$unit.$domain. Set to '' to use the system FQDN.
   enable_rate_limits:
     type: boolean
     default: false
@@ -119,7 +119,7 @@ options:
       NOTE: You almost always want to use `header_checks` instead of this.
   spf_skip_addresses:
     type: string
-    description:  Set of comma-separated CIDR addresses to skip SPF checks (allowlist).
+    description:  Comma-separated list of CIDR addresses to skip SPF checks (allowlist).
   tls_ciphers:
     type: string
     default: 'HIGH'
@@ -154,7 +154,7 @@ options:
       http://www.postfix.org/postconf.5.html#smtp_tls_policy_maps
   tls_protocols:
     type: string
-    default: '!SSLv2, !SSLv3'
+    default: '!SSLv2,!SSLv3'
     description: |
       Comma-separated list of TLS protocols accepted by the Postfix SMTP server with TLS
       encryption. If the list is empty, the server supports all
@@ -194,7 +194,6 @@ options:
       http://www.postfix.org/postconf.5.html#virtual_alias_domains
   virtual_alias_maps:
     type: string
-    default: ''
     description: |
       Comma-separated list of lookup table entries that alias specific mail addresses or
       domains to other local or remote addresses.
