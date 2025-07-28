@@ -67,6 +67,7 @@ class TestCharm(unittest.TestCase):
         self.mock_config.return_value = {
             'append_x_envelope_to': False,
             'connection_limit': 100,
+            'domain': '',
             'enable_rate_limits': False,
             'enable_reject_unknown_sender_domain': True,
             'enable_smtp_auth': True,

@@ -3,18 +3,23 @@
 
 """State unit tests."""
 
+import pytest
+from pydantic import IPvAnyNetwork
+
 from reactive import state
 
 def test_state():
     """
     arrange: do nothing.
-    act: initialize a charm state from the valid configuration.
+    act: initialize a charm state from valid configuration.
     assert: the state values are parsed correctly.
     """
     charm_config = {
-        "additional_smtpd_recipient_restrictions": "reject_non_fqdn_helo_hostname,reject_unknown_helo_hostname",
-        "admin_email": "example.domain.com",
-        "allowed_relay_networks":"10.0.0.1/16,10.1.0.1/16",
+        "additional_smtpd_recipient_restrictions": (
+            "reject_non_fqdn_helo_hostname,reject_unknown_helo_hostname"
+        ),
+        "admin_email": "example@domain.com",
+        "allowed_relay_networks": "192.168.252.0/24,192.168.253.0/24",
         "append_x_envelope_to": True,
         "connection_limit": 200,
         "domain": "somain.example.com",
@@ -45,7 +50,7 @@ def test_state():
         ),
         "tls_protocols": "!SSLv2, !SSLv3",
         "tls_security_level": "may",
-        "transport_maps":(
+        "transport_maps": (
             "example.com smtp:[mx.example.com],admin.example1.com smtp:[mx.example.com]"
         ),
         "virtual_alias_domains": "mydomain.local,mydomain2.local",
@@ -54,16 +59,17 @@ def test_state():
         ),
         "virtual_alias_maps_type": "hash",
     }
-
     charm_state = state.State.from_charm(config=charm_config)
 
     assert charm_state.additional_smtpd_recipient_restrictions == (
         charm_config["additional_smtpd_recipient_restrictions"].split(",")
     )
     assert charm_state.admin_email == charm_config["admin_email"]
-    assert charm_state.allowed_relay_networks == (
-        charm_config["allowed_relay_networks"].split(",")
-    )
+    assert charm_state.allowed_relay_networks == [
+        IPvAnyNetwork(value)
+        for value
+        in charm_config["allowed_relay_networks"].split(",")
+    ]
     assert charm_state.append_x_envelope_to
     assert charm_state.connection_limit == charm_config["connection_limit"]
     assert charm_state.domain == charm_config["domain"]
@@ -102,7 +108,9 @@ def test_state():
     assert charm_state.sender_login_maps == sender_login_maps
     assert charm_state.smtp_auth_users == charm_config["smtp_auth_users"].split(",")
     assert charm_state.smtp_header_checks == charm_config["smtp_header_checks"].split(",")
-    assert charm_state.spf_skip_addresses == charm_config["spf_skip_addresses"].split(",")
+    assert charm_state.spf_skip_addresses == [
+        IPvAnyNetwork(address) for address in charm_config["spf_skip_addresses"].split(",")
+    ]
     assert charm_state.tls_ciphers == state.SmtpTlsCipherGrade.HIGH
     assert charm_state.tls_exclude_ciphers == charm_config["tls_exclude_ciphers"].split(",")
     assert charm_state.tls_policy_maps == charm_config["tls_policy_maps"].split(",")
@@ -117,7 +125,7 @@ def test_state():
 def test_state_defaults():
     """
     arrange: do nothing.
-    act: initialize a charm state with default configuration.
+    act: initialize a charm state from default configuration.
     assert: the state values are parsed correctly.
     """
     charm_config = {
@@ -134,7 +142,6 @@ def test_state_defaults():
         "tls_security_level": "may",
         "virtual_alias_maps_type": "hash",
     }
-
     charm_state = state.State.from_charm(config=charm_config)
 
     assert charm_state.additional_smtpd_recipient_restrictions == []
@@ -169,3 +176,28 @@ def test_state_defaults():
     assert charm_state.virtual_alias_domains == []
     assert charm_state.virtual_alias_maps == []
     assert charm_state.virtual_alias_maps_type == state.PostfixLookupTableType.HASH
+
+
+def test_state_with_invalid_admin_email():
+    """
+    arrange: do nothing.
+    act: initialize a charm state from invalid configuration.
+    assert: an InvalidStateError is raised.
+    """
+    charm_config = {
+        "admin_email": "example.domain.com",
+        "append_x_envelope_to": False,
+        "connection_limit": 100,
+        "domain": "",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "tls_ciphers": "HIGH",
+        "tls_exclude_ciphers": "aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA",
+        "tls_protocols": "!SSLv2,!SSLv3",
+        "tls_security_level": "may",
+        "virtual_alias_maps_type": "hash",
+    }
+    with pytest.raises(state.ConfigurationError):
+        state.State.from_charm(config=charm_config)

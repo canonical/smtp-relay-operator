@@ -340,7 +340,9 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
 
     context = {
         'JUJU_HEADER': JUJU_HEADER,
-        'skip_addresses': ",".join(charm_state.spf_skip_addresses),
+        'skip_addresses': ",".join(
+            [str(address) for address in charm_state.spf_skip_addresses]
+        ),
     }
     base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
