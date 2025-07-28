@@ -123,7 +123,7 @@ def _parse_access_map(raw_map: str) -> dict[str, AccessMapValue]:
         a list of tuples with the key and the value.
     """
     parsed_map = _parse_map(raw_map)
-    return {key: AccessMapValue(parsed_map[key]) for key in parsed_map.keys()}
+    return {key: AccessMapValue(value) for key, value in parsed_map.items()}
 
 
 def _parse_list(raw_list: str) -> list[str]:

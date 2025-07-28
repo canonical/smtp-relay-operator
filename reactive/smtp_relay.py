@@ -277,21 +277,18 @@ def configure_smtp_relay(
         'relay_recipient_maps': "\n".join(charm_state.relay_recipient_maps),
         'restrict_recipients': "\n".join(
             [
-                f"{key} {charm_state.restrict_recipients[key].value}"
-                for key in charm_state.restrict_recipients.keys()
+                f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()
             ]
         ),
         'restrict_senders': "\n".join(
             [
-                f"{key} {charm_state.restrict_senders[key].value}"
-                for key in charm_state.restrict_senders.keys()
+                f"{key} {value.value}" for key, value in charm_state.restrict_senders.items()
             ]
         ),
         'sender_access': sender_access_content,
         'sender_login_maps': "\n".join(
             [
-                f"{key} {charm_state.sender_login_maps[key]}"
-                for key in charm_state.sender_login_maps.keys()
+                f"{key} {value.value}" for key, value in charm_state.sender_login_maps.items()
             ]
         ),
         'smtp_header_checks': ";".join(charm_state.smtp_header_checks),
