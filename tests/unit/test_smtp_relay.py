@@ -65,7 +65,6 @@ class TestCharm(unittest.TestCase):
         self.mock_config = patcher.start()
         self.addCleanup(patcher.stop)
         self.mock_config.return_value = {
-            'additional_smtpd_recipient_restrictions': '',
             'append_x_envelope_to': False,
             'connection_limit': 100,
             'enable_rate_limits': False,
@@ -73,16 +72,10 @@ class TestCharm(unittest.TestCase):
             'enable_smtp_auth': True,
             'enable_spf': False,
             'message_size_limit': 61440000,
-            'relay_recipient_maps': '',
-            'restrict_recipients': '',
-            'restrict_senders': '',
-            'smtp_header_checks': '',
             'tls_ciphers': 'HIGH',
             'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
             'tls_protocols': '!SSLv2,!SSLv3',
             'tls_security_level': 'may',
-            'transport_maps': '',
-            'virtual_alias_domains': '',
             'virtual_alias_maps_type': 'hash',
         }
 
