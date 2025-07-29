@@ -108,7 +108,7 @@ options:
   smtp_auth_users:
     type: string
     description: |
-      Comma-serapated list of user and crypt password hashes (use mkpasswd to
+      Comma-separated list of user and crypt password hashes (use mkpasswd to
       generate). e.g.
 
       myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.,myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1
