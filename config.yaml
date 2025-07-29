@@ -61,7 +61,7 @@ options:
   header_checks:
     type: string
     description: |
-      Perform various header checks on incoming emails and action on. See:
+      Comma-separated list of header checks to perform on incoming emails and action on. See:
 
       http://www.postfix.org/header_checks.5.html
   relay_access_sources:
