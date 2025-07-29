@@ -5,14 +5,21 @@
 import dataclasses
 import itertools
 import logging
+import re
 import typing
 from enum import Enum
 
 from typing_extensions import Annotated
-from pydantic import BaseModel, EmailStr, Field, IPvAnyNetwork, ValidationError
+from pydantic import BaseModel, EmailStr, Field, field_validator, IPvAnyNetwork, ValidationError
 
 logger = logging.getLogger(__name__)
 
+
+# RFC-1034 and RFC-2181 compliance REGEX for validating FQDNs
+HOSTNAME_REGEX = (
+    r"(?=.{1,253})(?!.*--.*)(?:(?!-)(?![0-9])[a-zA-Z0-9-]"
+    r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))"
+)
 
 class CharmStateBaseError(Exception):
     """Represents an error with charm state."""
@@ -318,6 +325,19 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             virtual_alias_maps_type=virtual_alias_maps_type,
             connection_limit=connection_limit
         )
+
+    # Validation is done in this method instead of using a pydantic model because
+    # regex is not fully supported.
+    @field_validator("domain", mode="before")
+    @classmethod
+    def validate(cls, value: str) -> None:
+        """Validate the precondition to initialize this state component."""
+        if not value == "" and not re.match(HOSTNAME_REGEX, value):
+            logger.error(
+                "The domain (%s) does not match regex: %s", value, HOSTNAME_REGEX
+            )
+            raise ValueError("The domain is invalid.")
+        return value
 
     @classmethod
     def from_charm(cls, config: dict[str, typing.Any]) -> "State":
