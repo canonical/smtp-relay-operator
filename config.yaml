@@ -91,7 +91,7 @@ options:
       http://www.postfix.org/postconf.5.html#relay_recipient_maps
   restrict_recipients:
     type: string
-    description: Comma-separated list of access entries map for restrictions by recipient address or domain.
+    description: Comma-separated list of access map entries for restrictions by recipient address or domain.
   restrict_senders:
     type: string
     description: Comma-separated list of access map entries for restrictions by sender address or domain.
