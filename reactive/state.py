@@ -227,7 +227,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         relay_domains: list[Annotated[str, Field(min_length=1)]],
         restrict_recipients: dict[str, AccessMapValue],
         restrict_senders: dict[str, AccessMapValue],
-        relay_host: Annotated[str, Field(min_length=1)],
+        relay_host: Annotated[str, Field(min_length=1)] | None,
         relay_recipient_maps: list[str],
         restrict_sender_access: list[Annotated[str, Field(min_length=1)]],
         sender_login_maps: dict[str, str],
