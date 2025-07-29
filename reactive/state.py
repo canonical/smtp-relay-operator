@@ -21,6 +21,7 @@ HOSTNAME_REGEX = (
     r"{1,63}(?<!-)\.){1,}(?:(?!-)[a-zA-Z0-9-]{1,63}(?<!-))"
 )
 
+
 class CharmStateBaseError(Exception):
     """Represents an error with charm state."""
 
@@ -331,7 +332,11 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     @field_validator("domain", mode="before")
     @classmethod
     def validate(cls, value: str) -> None:
-        """Validate the precondition to initialize this state component."""
+        """Validate the precondition to initialize this state component.
+
+        Raises:
+            ValueError: if the value is invalid.
+        """
         if not value == "" and not re.match(HOSTNAME_REGEX, value):
             logger.error(
                 "The domain (%s) does not match regex: %s", value, HOSTNAME_REGEX
