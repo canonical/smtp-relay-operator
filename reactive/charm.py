@@ -3,10 +3,8 @@
 
 """SMTP Relay charm."""
 
-import grp
 import hashlib
 import os
-import pwd
 import socket
 import subprocess  # nosec
 
@@ -15,9 +13,8 @@ import jinja2
 from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
+import utils
 from state import State
-
-from lib import utils
 
 
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
@@ -36,10 +33,10 @@ def upgrade_charm():
 def install(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
     reactive.set_flag('smtp-relay.installed')
 
-    _copy_file('files/fgrepmail-logs.py', '/usr/local/bin/fgrepmail-logs', perms=0o755)
-    _copy_file('files/50-default.conf', '/etc/rsyslog.d/50-default.conf', perms=0o644)
+    utils.copy_file('files/fgrepmail-logs.py', '/usr/local/bin/fgrepmail-logs', perms=0o755)
+    utils.copy_file('files/50-default.conf', '/etc/rsyslog.d/50-default.conf', perms=0o644)
     contents = utils.update_logrotate_conf(logrotate_conf_path)
-    _write_file(contents, logrotate_conf_path)
+    utils.write_file(contents, logrotate_conf_path)
 
 
 @reactive.hook('peer-relation-joined', 'peer-relation-changed')
@@ -66,7 +63,6 @@ def configure_smtp_auth(
 
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
-    changed = False
     context = {
         'JUJU_HEADER': JUJU_HEADER,
         # TODO: Allow overriding passdb driver.
@@ -81,11 +77,11 @@ def configure_smtp_auth(
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
     template = env.get_template('templates/dovecot_conf.tmpl')
     contents = template.render(context)
-    changed = _write_file(contents, dovecot_config) or changed
+    changed = utils.write_file(contents, dovecot_config)
 
     if charm_state.smtp_auth_users:
         contents = JUJU_HEADER + "\n".join(charm_state.smtp_auth_users) + '\n'
-        _write_file(contents, dovecot_users, perms=0o640, group='dovecot')
+        utils.write_file(contents, dovecot_users, perms=0o640, group='dovecot')
 
     if not charm_state.enable_smtp_auth:
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')
@@ -159,7 +155,7 @@ def _create_update_map(content, postmap):
         changed = True
 
     contents = JUJU_HEADER + content + '\n'
-    changed = _write_file(contents, pmfname) or changed
+    changed = utils.write_file(contents, pmfname) or changed
 
     if changed and pmtype == 'hash':
         subprocess.call(['postmap', postmap])  # nosec
@@ -203,8 +199,6 @@ def configure_smtp_relay(
 
     virtual_alias_maps_type = charm_state.virtual_alias_maps_type
 
-    changed = False
-
     context = {
         'JUJU_HEADER': JUJU_HEADER,
         'fqdn': fqdn,
@@ -245,10 +239,10 @@ def configure_smtp_relay(
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
     template = env.get_template('templates/postfix_main_cf.tmpl')
     contents = template.render(context)
-    changed = _write_file(contents, os.path.join(postfix_conf_dir, 'main.cf')) or changed
+    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'main.cf'))
     template = env.get_template('templates/postfix_master_cf.tmpl')
     contents = template.render(context)
-    changed = _write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
+    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
     maps = {
         'append_envelope_to_header': (
             f"regexp:{os.path.join(postfix_conf_dir, 'append_envelope_to_header')}"
@@ -345,7 +339,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
     env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
     template = env.get_template('templates/policyd_spf_conf.tmpl')
     contents = template.render(context)
-    _write_file(contents, policyd_spf_config)
+    utils.write_file(contents, policyd_spf_config)
 
     reactive.set_flag('smtp-relay.policyd-spf.configured')
 
@@ -433,35 +427,6 @@ def set_active(version_file='version'):
     reactive.set_flag('smtp-relay.active')
 
 
-def _copy_file(source_path, dest_path, **kwargs):
-    with open(source_path, 'r', encoding="utf-8") as f:
-        source = f.read()
-    return _write_file(source, dest_path, **kwargs)
-
-
-def _write_file(source, dest_path, perms=0o644, owner=None, group=None):
-    """Write file only on changes and return True if changes written."""
-    # Compare and only write out file on change.
-    dest = ''
-
-    try:
-        with open(dest_path, 'r', encoding="utf-8") as f:
-            dest = f.read()
-        if source == dest:
-            return False
-    except FileNotFoundError:
-        pass
-
-    if owner is None:
-        owner = pwd.getpwuid(os.getuid()).pw_name
-    if group is None:
-        group = grp.getgrgid(pwd.getpwnam(owner).pw_gid).gr_name
-
-    host.write_file(path=dest_path + '.new', content=source, perms=perms, owner=owner, group=group)
-    os.rename(dest_path + '.new', dest_path)
-    return True
-
-
 def _smtpd_recipient_restrictions(charm_state: State) -> list[str]:
     smtpd_recipient_restrictions = []
     if charm_state.append_x_envelope_to:
@@ -531,6 +496,6 @@ def _update_aliases(admin_email, aliases_path='/etc/aliases'):
     if admin_email:
         new_aliases.append(f"root:          {admin_email}\n")
 
-    changed = _write_file(''.join(new_aliases), aliases_path)
+    changed = utils.write_file(''.join(new_aliases), aliases_path)
     if changed:
         subprocess.call(['newaliases'])  # nosec
