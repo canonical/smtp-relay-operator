@@ -1,0 +1,8 @@
+pydantic==2.6.3
+typing_extensions==4.13.2
+email-validator==2.3.0
+pydantic==2.6.3
+pydantic_core==2.16.3
+hatchling==1.27.0
+maturin==1.9.4
+setuptools==77.0.3
