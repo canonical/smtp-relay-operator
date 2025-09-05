@@ -16,7 +16,6 @@ This document explains the processes and practices recommended for contributing 
   - test coverage
   - user experience for Juju operators of this charm.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto the `main` branch. This also avoids merge commits and creates a linear Git commit history.
-- Please generate src documentation for every commit. See the section below for more details.
 
 ## Developing
 
@@ -62,6 +61,6 @@ juju model-config logging-config="<root>=INFO;unit=DEBUG"
 juju deploy ./smtp_relay_ubuntu-24.04-amd64.charm
 ```
 
-## Canonical Contributor Agreement
+## Canonical contributor agreement
 
-Canonical welcomes contributions to the SMTP Relay Operator. Please check out our [contributor agreement](https://ubuntu.com/legal/contributors) if you're interested in contributing to the solution.
+Canonical welcomes contributions to the SMTP Relay Operator. Please check out our [contributor agreement](https://canonical.com/legal/contributors) if you're interested in contributing to the solution.
