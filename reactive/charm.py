@@ -9,10 +9,11 @@ import socket
 import subprocess  # nosec
 
 import jinja2
-from reactive import utils
 from charmhelpers.core import hookenv, host
 from charms import reactive
 from charms.layer import status
+
+from reactive import utils
 from reactive.state import State
 
 JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"

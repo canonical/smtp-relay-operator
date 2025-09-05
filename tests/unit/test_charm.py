@@ -256,7 +256,7 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch("charms.reactive.clear_flag")
     @mock.patch("charms.reactive.set_flag")
-    @mock.patch("utils.write_file")
+    @mock.patch("reactive.utils.write_file")
     def test_configure_smtp_auth_relay_flags(self, write_file, set_flag, clear_flag):
         self.mock_config.return_value["enable_smtp_auth"] = True
         charm.configure_smtp_auth()
@@ -287,7 +287,7 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch("charms.reactive.clear_flag")
     @mock.patch("charms.reactive.set_flag")
-    @mock.patch("utils.write_file")
+    @mock.patch("reactive.utils.write_file")
     def test_configure_smtp_auth_relay_ports(self, write_file, set_flag, clear_flag):
         self.mock_config.return_value["enable_smtp_auth"] = True
         charm.configure_smtp_auth()
