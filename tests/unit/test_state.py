@@ -39,8 +39,8 @@ def test_state():
         "sender_login_maps": "group@example.com group,group2@example.com group2",
         "smtp_auth_users": (
             "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.,"
-            'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
-            '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
+            "myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj"
+            "//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1"
         ),
         "smtp_header_checks": "/^Received:/ PREPEND X-Launchpad-Original-To: $1",
         "spf_skip_addresses": "10.0.114.0/24,10.1.1.0/24",
@@ -67,9 +67,7 @@ def test_state():
     )
     assert charm_state.admin_email == charm_config["admin_email"]
     assert charm_state.allowed_relay_networks == [
-        IPvAnyNetwork(value)
-        for value
-        in charm_config["allowed_relay_networks"].split(",")
+        IPvAnyNetwork(value) for value in charm_config["allowed_relay_networks"].split(",")
     ]
     assert charm_state.append_x_envelope_to
     assert charm_state.connection_limit == charm_config["connection_limit"]
@@ -86,18 +84,16 @@ def test_state():
     for restrict_recipient_raw in charm_config["restrict_recipients"].split(","):
         restrict_recipients.update(
             {
-                restrict_recipient_raw.split()[0]:
-                state.AccessMapValue(restrict_recipient_raw.split()[1])
+                restrict_recipient_raw.split()[0]: state.AccessMapValue(
+                    restrict_recipient_raw.split()[1]
+                )
             }
         )
     assert charm_state.restrict_recipients == restrict_recipients
     restrict_senders = {}
     for restrict_sender_raw in charm_config["restrict_senders"].split(","):
         restrict_senders.update(
-            {
-                restrict_sender_raw.split()[0]:
-                state.AccessMapValue(restrict_sender_raw.split()[1])
-            }
+            {restrict_sender_raw.split()[0]: state.AccessMapValue(restrict_sender_raw.split()[1])}
         )
     assert charm_state.restrict_senders == restrict_senders
     assert charm_state.restrict_sender_access == charm_config["restrict_sender_access"].split(",")
@@ -168,7 +164,13 @@ def test_state_defaults():
     assert charm_state.spf_skip_addresses == []
     assert charm_state.tls_ciphers == state.SmtpTlsCipherGrade.HIGH
     assert charm_state.tls_exclude_ciphers == [
-        "aNULL", "eNULL", "DES", "3DES", "MD5", "RC4", "CAMELLIA"
+        "aNULL",
+        "eNULL",
+        "DES",
+        "3DES",
+        "MD5",
+        "RC4",
+        "CAMELLIA",
     ]
     assert charm_state.tls_policy_maps == []
     assert charm_state.tls_protocols == ["!SSLv2", "!SSLv3"]
