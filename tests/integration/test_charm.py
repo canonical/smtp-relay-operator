@@ -44,6 +44,13 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
     )
     juju.exec(machine=unit.machine, command=command_to_put_domain)
 
+    juju.config(smtp_relay_app, {"relay_domains": "- testrelay.internal"})
+    juju.wait(
+        lambda status: status.apps[smtp_relay_app].is_active,
+        error=jubilant.any_blocked,
+        timeout=6 * 60,
+    )
+
     mailcatcher_url = "http://127.0.0.1:1080/messages"
     messages = requests.get(mailcatcher_url, timeout=5).json()
     # There should not be any message in mailcatcher before the test.

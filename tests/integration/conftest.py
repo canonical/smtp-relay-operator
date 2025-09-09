@@ -30,7 +30,6 @@ def deploy_smtp_relay_fixture(
         juju.deploy(
             f"./{smtp_relay_charm}",
             smtp_relay_app_name,
-            config={"relay_domains": "- testrelay.internal"},
         )
     juju.wait(
         lambda status: status.apps[smtp_relay_app_name].is_active,
