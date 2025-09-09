@@ -268,7 +268,11 @@ def configure_smtp_relay(
         'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
         'header_checks': ";".join(charm_state.header_checks),
         'relay_access_sources': "\n".join(charm_state.relay_access_sources),
-        'relay_recipient_maps': "\n".join(charm_state.relay_recipient_maps),
+        'relay_recipient_maps': "\n".join(
+            [
+                f"{key} {value}" for key, value in charm_state.relay_recipient_maps.items()
+            ]
+        ),
         'restrict_recipients': "\n".join(
             [
                 f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()
@@ -282,13 +286,19 @@ def configure_smtp_relay(
         'sender_access': sender_access_content,
         'sender_login_maps': "\n".join(
             [
-                f"{key} {value.value}" for key, value in charm_state.sender_login_maps.items()
+                f"{key} {value}" for key, value in charm_state.sender_login_maps.items()
             ]
         ),
         'smtp_header_checks': ";".join(charm_state.smtp_header_checks),
-        'tls_policy_maps': "\n".join(charm_state.tls_policy_maps),
-        'transport_maps': "\n".join(charm_state.transport_maps),
-        'virtual_alias_maps': "\n".join(charm_state.virtual_alias_maps),
+        'tls_policy_maps': "\n".join([
+            f"{key} {value}" for key, value in charm_state.tls_policy_maps.items()
+        ]),
+        'transport_maps': "\n".join([
+            f"{key} {value}" for key, value in charm_state.transport_maps.items()
+        ]),
+        'virtual_alias_maps': "\n".join([
+            f"{key} {value}" for key, value in charm_state.virtual_alias_maps.items()
+        ]),
     }
 
     # Ensure various maps exists before starting/restarting postfix.
