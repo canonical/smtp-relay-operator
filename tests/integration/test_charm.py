@@ -6,21 +6,21 @@
 """Integration tests."""
 
 import datetime
-import requests
+import logging
 import smtplib
 import socket
-import logging
 import time
 
 import jubilant
 import pytest
-
+import requests
 
 logger = logging.getLogger(__name__)
 
+
 @pytest.fixture(scope="session", name="machine_ip_address")
 def machine_ip_address_fixture() -> str:
-    """IP address for the jobmanager tests."""
+    """IP address for the machine running the tests."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     ip_address = s.getsockname()[0]
@@ -29,12 +29,16 @@ def machine_ip_address_fixture() -> str:
     return ip_address
 
 
-
 @pytest.mark.abort_on_fail
-def test_build_and_deploy(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
-    """TODO"""
+def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
+    """
+    arrange: Deploy smtp-relay charm with the testrelay.internal domain in relay domains.
+    act: Send an email to an address with the testrelay.internal domain.
+    assert: The email is correctly relayed to the mailcatcher local test smtp server.
+    """
     mailcatcher_url = "http://127.0.0.1:1080/messages"
     messages = requests.get(mailcatcher_url, timeout=5).json()
+    # There should not be any message in mailcatcher before the test.
     assert len(messages) == 0
     status = juju.status()
 
@@ -42,22 +46,23 @@ def test_build_and_deploy(juju: jubilant.Juju, smtp_relay_app, machine_ip_addres
     unit_ip = unit.public_address
     port = 25
 
-    command_to_put_domain = f'echo {machine_ip_address} testrelay.internal | sudo tee -a /etc/hosts'
+    command_to_put_domain = (
+        f"echo {machine_ip_address} testrelay.internal | sudo tee -a /etc/hosts"
+    )
     juju.exec(machine=unit.machine, command=command_to_put_domain)
 
     with smtplib.SMTP(unit_ip) as server:
         server.set_debuglevel(2)
         from_addr = "Some One <someone@testrelay.internal>"
         to_addrs = ["otherone@testrelay.internal"]
-        msg = "Hello World!"
-        server.sendmail(from_addr, to_addrs, msg)
+        server.sendmail(from_addr=from_addr, to_addrs=to_addrs, msg="Hello World!")
 
     for _ in range(5):
         messages = requests.get(mailcatcher_url, timeout=5).json()
-        logger.info("Messages: %s", messages)
         if messages:
             break
         time.sleep(1)
     assert len(messages) == 1
-    # clean up.
+
+    # Clean up mailcatcher
     requests.delete(f"{mailcatcher_url}/{messages[0]['id']}", timeout=5)

@@ -27,7 +27,11 @@ def deploy_smtp_relay_fixture(
     smtp_relay_app_name = "smtp-relay"
 
     if not juju.status().apps.get(smtp_relay_app_name):
-        juju.deploy(f"./{smtp_relay_charm}", smtp_relay_app_name , config={"relay_domains" : "testrelay.internal"})
+        juju.deploy(
+            f"./{smtp_relay_charm}",
+            smtp_relay_app_name,
+            config={"relay_domains": "testrelay.internal"},
+        )
     juju.wait(
         lambda status: status.apps[smtp_relay_app_name].is_active,
         error=jubilant.any_blocked,
