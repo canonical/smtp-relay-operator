@@ -3,6 +3,7 @@
 
 """SMTP Relay charm."""
 
+from collections import namedtuple
 import hashlib
 import os
 from pathlib import Path
@@ -151,7 +152,7 @@ def milter_relation_changed():
     reactive.clear_flag('smtp-relay.configured')
 
 
-def _create_update_map(content, postmap):
+def _create_update_map(content, postmap: str) -> bool:
     changed = False
 
     (pmtype, pmfname) = postmap.split(':')
@@ -235,57 +236,8 @@ def configure_smtp_relay(
     changed = utils.render_template_and_write_to_file(
         context, 'templates/postfix_master_cf.tmpl', os.path.join(postfix_conf_dir, 'master.cf')
     ) or changed
-    maps = {
-        'append_envelope_to_header': (
-            f"regexp:{os.path.join(postfix_conf_dir, 'append_envelope_to_header')}"
-        ),
-        'header_checks': f"regexp:{os.path.join(postfix_conf_dir, 'header_checks')}",
-        'relay_access_sources': f"cidr:{os.path.join(postfix_conf_dir, 'relay_access')}",
-        'relay_recipient_maps': f"hash:{os.path.join(postfix_conf_dir, 'relay_recipient')}",
-        'restrict_recipients': f"hash:{os.path.join(postfix_conf_dir, 'restricted_recipients')}",
-        'restrict_senders': f"hash:{os.path.join(postfix_conf_dir, 'restricted_senders')}",
-        'sender_access': f"hash:{os.path.join(postfix_conf_dir, 'access')}",
-        'sender_login_maps': f"hash:{os.path.join(postfix_conf_dir, 'sender_login')}",
-        'smtp_header_checks': f"regexp:{os.path.join(postfix_conf_dir, 'smtp_header_checks')}",
-        'tls_policy_maps': f"hash:{os.path.join(postfix_conf_dir, 'tls_policy')}",
-        'transport_maps': f"hash:{os.path.join(postfix_conf_dir, 'transport')}",
-        'virtual_alias_maps': (
-            f"{virtual_alias_maps_type.value}:{os.path.join(postfix_conf_dir, 'virtual_alias')}"
-        ),
-    }
-    sender_access_content = "".join(
-        [f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]
-    )
-    map_contents = {
-        'append_envelope_to_header': '/^(.*)$/ PREPEND X-Envelope-To: $1',
-        'header_checks': ";".join(charm_state.header_checks),
-        'relay_access_sources': "\n".join(charm_state.relay_access_sources),
-        'relay_recipient_maps': "\n".join(charm_state.relay_recipient_maps),
-        'restrict_recipients': "\n".join(
-            [
-                f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()
-            ]
-        ),
-        'restrict_senders': "\n".join(
-            [
-                f"{key} {value.value}" for key, value in charm_state.restrict_senders.items()
-            ]
-        ),
-        'sender_access': sender_access_content,
-        'sender_login_maps': "\n".join(
-            [
-                f"{key} {value.value}" for key, value in charm_state.sender_login_maps.items()
-            ]
-        ),
-        'smtp_header_checks': ";".join(charm_state.smtp_header_checks),
-        'tls_policy_maps': "\n".join(charm_state.tls_policy_maps),
-        'transport_maps': "\n".join(charm_state.transport_maps),
-        'virtual_alias_maps': "\n".join(charm_state.virtual_alias_maps),
-    }
 
-    # Ensure various maps exists before starting/restarting postfix.
-    for key, pmap in maps.items():
-        changed = _create_update_map(map_contents[key], pmap) or changed
+    changed = _ensure_postmap_files(postfix_conf_dir, charm_state) or changed
 
     _update_aliases(charm_state.admin_email)
 
@@ -298,6 +250,83 @@ def configure_smtp_relay(
     host.service_start('postfix')
 
     reactive.set_flag('smtp-relay.configured')
+
+def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
+    """Ensure various postfix files exist and are up-to-date with the current charm state.
+
+    Args:
+        postfix_conf_dir: directory where postfix config files are stored.
+        charm_state: current charm state.
+
+    Returns:
+        True if any map was created or updated.
+    """
+    PostmapSpecEntry = namedtuple("Postmap", ["map_type", "content"])
+    def postmap_spec(pmap_type: str, pmap_name: str) -> str:
+        return f"{pmap_type}:{os.path.join(postfix_conf_dir, pmap_name)}"
+
+    maps = {
+        "append_envelope_to_header": PostmapSpecEntry(
+            postmap_spec("regexp", "append_envelope_to_header"),
+            "/^(.*)$/ PREPEND X-Envelope-To: $1",
+        ),
+        "header_checks": PostmapSpecEntry(
+            postmap_spec("regexp", "header_checks"),
+            ";".join(charm_state.header_checks),
+        ),
+        "relay_access_sources": PostmapSpecEntry(
+            postmap_spec("cidr", "relay_access"),
+            "\n".join(charm_state.relay_access_sources),
+        ),
+        "relay_recipient_maps": PostmapSpecEntry(
+            postmap_spec("hash", "relay_recipient"),
+            "\n".join(charm_state.relay_recipient_maps),
+        ),
+        "restrict_recipients": PostmapSpecEntry(
+            postmap_spec("hash", "restricted_recipients"),
+            "\n".join(
+                [f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()]
+            ),
+        ),
+        "restrict_senders": PostmapSpecEntry(
+            postmap_spec("hash", "restricted_senders"),
+            "\n".join(
+                [f"{key} {value.value}" for key, value in charm_state.restrict_senders.items()]
+            ),
+        ),
+        "sender_access": PostmapSpecEntry(
+            postmap_spec("hash", "access"),
+            "".join([f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]),
+        ),
+        "sender_login_maps": PostmapSpecEntry(
+            postmap_spec("hash", "sender_login"),
+            "\n".join(
+                [f"{key} {value.value}" for key, value in charm_state.sender_login_maps.items()]
+            ),
+        ),
+        "smtp_header_checks": PostmapSpecEntry(
+            postmap_spec("regexp", "smtp_header_checks"),
+            ";".join(charm_state.smtp_header_checks),
+        ),
+        "tls_policy_maps": PostmapSpecEntry(
+            postmap_spec("hash", "tls_policy"),
+            "\n".join(charm_state.tls_policy_maps),
+        ),
+        "transport_maps": PostmapSpecEntry(
+            postmap_spec("hash", "transport"),
+            "\n".join(charm_state.transport_maps),
+        ),
+        "virtual_alias_maps": PostmapSpecEntry(
+            postmap_spec(charm_state.virtual_alias_maps_type.value, "virtual_alias"),
+            "\n".join(charm_state.virtual_alias_maps),
+        ),
+    }
+
+    # Ensure various maps exists before starting/restarting postfix.
+    changed = False
+    for item in maps.values():
+        changed = _create_update_map(item.content, item.map_type) or changed
+    return changed
 
 
 @reactive.when_any(
