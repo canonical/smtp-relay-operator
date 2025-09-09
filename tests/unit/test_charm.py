@@ -72,8 +72,19 @@ class TestCharm(unittest.TestCase):
             'enable_spf': False,
             'message_size_limit': 61440000,
             'tls_ciphers': 'HIGH',
-            'tls_exclude_ciphers': 'aNULL,eNULL,DES,3DES,MD5,RC4,CAMELLIA',
-            'tls_protocols': '!SSLv2,!SSLv3',
+            "tls_exclude_ciphers": """
+                - aNULL
+                - eNULL
+                - DES
+                - 3DES
+                - MD5
+                - RC4
+                - CAMELLIA
+            """,
+            "tls_protocols": """
+                - '!SSLv2'
+                - '!SSLv3'
+            """,
             'tls_security_level': 'may',
             'virtual_alias_maps_type': 'hash',
         }
@@ -244,11 +255,10 @@ class TestCharm(unittest.TestCase):
         dovecot_users = os.path.join(self.tmpdir, 'dovecot_users')
         self.mock_config.return_value[
             'smtp_auth_users'
-        ] = (
-            "myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.,"
-            'myuser2:$6$3rGBbaMbEiGhnGKz$KLGFv8kDTjqa3xeUgA6A1Rie1zGSf3sLT85vF1s59Yj'
-            '//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1'
-        )
+        ] = """
+            - myuser1:$1$bPb0IPiM$kmrSMZkZvICKKHXu66daQ.
+            - myuser2:$6$3r//F36qLB/J8rUfIIndaDtkxeb5iR3gs1uBn9fNyJDD1
+        """
         charm.configure_smtp_auth(dovecot_config, dovecot_users)
         with open('tests/unit/files/dovecot_users', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -639,7 +649,7 @@ class TestCharm(unittest.TestCase):
         postfix_header_checks = os.path.join(self.tmpdir, 'header_checks')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['header_checks'] = '/^Received:/ HOLD'
+        self.mock_config.return_value['header_checks'] = '- /^Received:/ HOLD'
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_header_checks.cf', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -664,7 +674,7 @@ class TestCharm(unittest.TestCase):
         postfix_smtp_header_checks = os.path.join(self.tmpdir, 'smtp_header_checks')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['smtp_header_checks'] = '/^Received:/ HOLD'
+        self.mock_config.return_value['smtp_header_checks'] = '- /^Received:/ HOLD'
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_smtp_header_checks.cf', 'r', encoding='utf-8'
@@ -714,7 +724,11 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value[
             'relay_access_sources'
-        ] = "# Reject some made user.,10.10.10.5    REJECT,10.10.10.0/24 OK"
+        ] = """
+            # Reject some made user.
+            - 10.10.10.5    REJECT
+            - 10.10.10.0/24 OK
+        """
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_relay_access_sources.cf', 'r', encoding='utf-8'
@@ -746,7 +760,11 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value[
             'relay_access_sources'
-        ] = "# Reject some made user.,10.10.10.5    REJECT,10.10.10.0/24 OK"
+        ] = """
+            # Reject some made user.
+            - 10.10.10.5    REJECT
+            - 10.10.10.0/24 OK
+        """
         self.mock_config.return_value['enable_smtp_auth'] = False
         charm.configure_smtp_relay(self.tmpdir)
         with open(
@@ -778,8 +796,8 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['restrict_recipients'] = 'mydomain.local  OK'
-        self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
+        self.mock_config.return_value['restrict_recipients'] = '- mydomain.local  OK'
+        self.mock_config.return_value['restrict_senders'] = '- noreply@mydomain.local  OK'
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_restrict_both_senders_and_recipients.cf',
@@ -804,7 +822,7 @@ class TestCharm(unittest.TestCase):
         postfix_restricted_recipients = os.path.join(self.tmpdir, 'restricted_recipients')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['restrict_recipients'] = 'mydomain.local  OK'
+        self.mock_config.return_value['restrict_recipients'] = '- mydomain.local  OK'
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_restrict_recipients.cf', 'r', encoding='utf-8'
@@ -832,7 +850,7 @@ class TestCharm(unittest.TestCase):
         postfix_restricted_senders = os.path.join(self.tmpdir, 'restricted_senders')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
+        self.mock_config.return_value['restrict_senders'] = '- noreply@mydomain.local  OK'
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_restrict_senders.cf', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -858,9 +876,12 @@ class TestCharm(unittest.TestCase):
         postfix_access = os.path.join(self.tmpdir, 'access')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['restrict_sender_access'] = (
-            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
-        )
+        self.mock_config.return_value['restrict_sender_access'] = """
+            - canonical.com
+            - ubuntu.com
+            - mydomain.local
+            - mydomain2.local
+        """
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_restrict_sender_access.cf', 'r', encoding='utf-8'
@@ -887,9 +908,12 @@ class TestCharm(unittest.TestCase):
         postfix_access = os.path.join(self.tmpdir, 'access')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['restrict_sender_access'] = (
-            'canonical.com,ubuntu.com,mydomain.local,mydomain2.local'
-        )
+        self.mock_config.return_value['restrict_sender_access'] = """
+            - canonical.com
+            - ubuntu.com
+            - mydomain.local
+            - mydomain2.local
+        """
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/access_restrict_sender_access', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -919,10 +943,13 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ''
         self.mock_config.return_value[
             'tls_policy_maps'
-        ] = (
-            "# Google hosted,gapps.mydomain.local secure match=mx.google.com,"
-            "# Some place enforce encryption,someplace.local encrypt,.someplace.local encrypt"
-        )
+        ] = """
+            # Google hosted
+            - gapps.mydomain.local secure match=mx.google.com
+            # Some place enforce encryption
+            - someplace.local encrypt
+            - .someplace.local encrypt
+        """
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_tls_policy.cf', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -947,7 +974,10 @@ class TestCharm(unittest.TestCase):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local,mydomain2.local'
+        self.mock_config.return_value['relay_domains'] = """
+            - mydomain.local
+            - mydomain2.local
+        """
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_relay_domains.cf', 'r', encoding='utf-8') as f:
             want = f.read()
@@ -968,9 +998,12 @@ class TestCharm(unittest.TestCase):
         postfix_relay_recipient_maps = os.path.join(self.tmpdir, 'relay_recipient')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local,mydomain2.local'
+        self.mock_config.return_value['relay_domains'] = """
+            - mydomain.local
+            - mydomain2.local
+        """
         self.mock_config.return_value['relay_recipient_maps'] = (
-            'noreply@mydomain.local noreply@mydomain.local'
+            '- noreply@mydomain.local noreply@mydomain.local'
         )
         charm.configure_smtp_relay(self.tmpdir)
         with open(
@@ -1001,7 +1034,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['transport_maps'] = (
-            '.mydomain.local  smtp:[smtp.mydomain.local]'
+            '- .mydomain.local  smtp:[smtp.mydomain.local]'
         )
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_transport_maps.cf', 'r', encoding='utf-8') as f:
@@ -1027,9 +1060,9 @@ class TestCharm(unittest.TestCase):
         postfix_transport_maps = os.path.join(self.tmpdir, 'transport')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['header_checks'] = '/^Received:/ HOLD'
+        self.mock_config.return_value['header_checks'] = '- /^Received:/ HOLD'
         self.mock_config.return_value['transport_maps'] = (
-            '.mydomain.local  smtp:[smtp.mydomain.local]'
+            '- .mydomain.local  smtp:[smtp.mydomain.local]'
         )
         charm.configure_smtp_relay(self.tmpdir)
         with open(
@@ -1059,14 +1092,20 @@ class TestCharm(unittest.TestCase):
         postfix_virtual_alias_maps = os.path.join(self.tmpdir, 'virtual_alias')
         get_cn.return_value = ''
         get_milters.return_value = ''
-        self.mock_config.return_value['relay_domains'] = 'mydomain.local,mydomain2.local'
-        self.mock_config.return_value['transport_maps'] = (
-            '.mydomain.local  smtp:[smtp.mydomain.local]'
-        )
-        self.mock_config.return_value['virtual_alias_domains'] = 'mydomain.local,mydomain2.local'
-        self.mock_config.return_value['virtual_alias_maps'] = (
-            'abuse@mydomain.local sysadmin@mydomain.local'
-        )
+        self.mock_config.return_value['relay_domains'] = """
+            - mydomain.local
+            - mydomain2.local
+        """
+        self.mock_config.return_value['transport_maps'] = """
+            - .mydomain.local  smtp:[smtp.mydomain.local]
+        """
+        self.mock_config.return_value['virtual_alias_domains'] = """
+            - mydomain.local
+            - mydomain2.local
+        """
+        self.mock_config.return_value['virtual_alias_maps'] = """
+            - abuse@mydomain.local sysadmin@mydomain.local
+        """
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_transport_maps_with_virtual_alias_maps.cf',
@@ -1095,7 +1134,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['virtual_alias_maps'] = (
-            'abuse@mydomain.local sysadmin@mydomain.local'
+            '- abuse@mydomain.local sysadmin@mydomain.local'
         )
         self.mock_config.return_value['virtual_alias_maps_type'] = 'regexp'
         charm.configure_smtp_relay(self.tmpdir)
@@ -1216,7 +1255,10 @@ class TestCharm(unittest.TestCase):
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = True
-        self.mock_config.return_value['spf_skip_addresses'] = '10.0.114.0/24,10.1.1.0/24'
+        self.mock_config.return_value['spf_skip_addresses'] = """
+            - 10.0.114.0/24
+            - 10.1.1.0/24
+        """
         charm.configure_policyd_spf(policyd_spf_config)
         with open(
             'tests/unit/files/policyd_spf_config_skip_addresses', 'r', encoding='utf-8'
@@ -1239,7 +1281,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         self.mock_config.return_value['enable_spf'] = True
-        self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local  OK'
+        self.mock_config.return_value['restrict_senders'] = '- noreply@mydomain.local  OK'
         charm.configure_smtp_relay(self.tmpdir)
         with open(
             'tests/unit/files/postfix_main_spf_with_restrict_senders.cf', 'r', encoding='utf-8'
