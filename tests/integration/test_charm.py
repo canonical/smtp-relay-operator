@@ -35,6 +35,7 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
     act: Send an email to an address with the testrelay.internal domain.
     assert: The email is correctly relayed to the mailcatcher local test smtp server.
     """
+    status = juju.status()
     unit = list(status.apps[smtp_relay_app].units.values())[0]
     unit_ip = unit.public_address
 
@@ -47,7 +48,6 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
     messages = requests.get(mailcatcher_url, timeout=5).json()
     # There should not be any message in mailcatcher before the test.
     assert len(messages) == 0
-    status = juju.status()
 
     with smtplib.SMTP(unit_ip) as server:
         server.set_debuglevel(2)
