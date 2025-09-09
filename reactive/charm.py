@@ -69,10 +69,15 @@ def configure_smtp_auth(
 
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
-    changed = _render_and_write_dovecot_config(
-        dovecot_config=dovecot_config,
-        dovecot_users=dovecot_users,
-        enable_smtp_auth=charm_state.enable_smtp_auth,
+    context = {
+        "JUJU_HEADER": JUJU_HEADER,
+        "passdb_driver": "passwd-file",
+        "passdb_args": f"scheme=CRYPT username_format=%u {dovecot_users}",
+        "path": "/var/spool/postfix/private/auth",
+        "smtp_auth": charm_state.enable_smtp_auth,
+    }
+    changed = utils.render_template_and_write_to_file(
+        context, "templates/dovecot_conf.tmpl", dovecot_config
     )
 
     if charm_state.smtp_auth_users:
@@ -99,27 +104,6 @@ def configure_smtp_auth(
     host.service_start('dovecot')
 
     reactive.set_flag('smtp-relay.auth.configured')
-
-
-def _render_and_write_dovecot_config(
-    dovecot_config: str,
-    dovecot_users: str,
-    *,
-    enable_smtp_auth: bool,
-) -> bool:
-    context = {
-        "JUJU_HEADER": JUJU_HEADER,
-        "passdb_driver": "passwd-file",
-        "passdb_args": f"scheme=CRYPT username_format=%u {dovecot_users}",
-        "path": "/var/spool/postfix/private/auth",
-        "smtp_auth": enable_smtp_auth,
-    }
-    base = Path(__file__).resolve().parent.parent
-    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
-    template = env.get_template("templates/dovecot_conf.tmpl")
-    contents = template.render(context)
-    changed = utils.write_file(contents, dovecot_config)
-    return changed
 
 
 def _write_dovecot_users(dovecot_users: str, smtp_auth_users: list[str]) -> None:
@@ -244,14 +228,13 @@ def configure_smtp_relay(
         'virtual_alias_maps': bool(charm_state.virtual_alias_maps),
         'virtual_alias_maps_type': virtual_alias_maps_type.value,
     }
-    base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
-    template = env.get_template('templates/postfix_main_cf.tmpl')
-    contents = template.render(context)
-    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'main.cf'))
-    template = env.get_template('templates/postfix_master_cf.tmpl')
-    contents = template.render(context)
-    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
+
+    changed = utils.render_template_and_write_to_file(
+        context, 'templates/postfix_main_cf.tmpl', os.path.join(postfix_conf_dir, 'main.cf')
+    )
+    changed = utils.render_template_and_write_to_file(
+        context, 'templates/postfix_master_cf.tmpl', os.path.join(postfix_conf_dir, 'master.cf')
+    ) or changed
     maps = {
         'append_envelope_to_header': (
             f"regexp:{os.path.join(postfix_conf_dir, 'append_envelope_to_header')}"
@@ -344,11 +327,9 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
             [str(address) for address in charm_state.spf_skip_addresses]
         ),
     }
-    base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
-    template = env.get_template('templates/policyd_spf_conf.tmpl')
-    contents = template.render(context)
-    utils.write_file(contents, policyd_spf_config)
+    utils.render_template_and_write_to_file(
+        context, 'templates/policyd_spf_conf.tmpl', policyd_spf_config
+    )
 
     reactive.set_flag('smtp-relay.policyd-spf.configured')
 

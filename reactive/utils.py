@@ -8,6 +8,9 @@ import os
 import pwd
 import re
 from pathlib import Path
+from typing import Any
+
+import jinja2
 from charmhelpers.core import host
 
 
@@ -88,3 +91,28 @@ def write_file(content, destination_path, perms=0o644, group=None):
     )
     Path(f"{destination_path}.new").rename(destination_path)
     return True
+
+
+def render_template_and_write_to_file(
+    context: dict[str, Any],
+    template_path: str,
+    destination_path: str,
+    base_path: str | None = None,
+    perms: int = 0o644,
+    group: str | None = None,
+) -> bool:
+    """Render jinja2 template and write to file only on changes.
+    
+    Args:
+        context: Variables to render into the template.
+        template_path: path of the Jinja2 template (relative to base_path).
+        destination_path: destination path.
+        base_path: base path to the template, defaults to the project root.
+        perms: permissions.
+        group: file group.
+    """
+    base = Path(base_path) if base_path else Path(__file__).resolve().parent.parent
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    template = env.get_template(template_path)
+    content = template.render(context)
+    return write_file(content, destination_path, perms=perms, group=group)
