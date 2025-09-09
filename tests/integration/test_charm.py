@@ -5,7 +5,6 @@
 
 """Integration tests."""
 
-import datetime
 import logging
 import smtplib
 import socket
@@ -44,7 +43,6 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
 
     unit = list(status.apps[smtp_relay_app].units.values())[0]
     unit_ip = unit.public_address
-    port = 25
 
     command_to_put_domain = (
         f"echo {machine_ip_address} testrelay.internal | sudo tee -a /etc/hosts"
