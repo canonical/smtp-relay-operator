@@ -1,5 +1,4 @@
 # This file is Juju managed - do not edit by hand #
 
-# Reject some made user.
 10.10.10.5    REJECT
 10.10.10.0/24 OK

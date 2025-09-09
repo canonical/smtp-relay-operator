@@ -7,6 +7,7 @@ import itertools
 import logging
 import re
 import typing
+import yaml
 from enum import Enum
 
 from typing_extensions import Annotated
@@ -109,9 +110,7 @@ def _parse_map(raw_map: str) -> dict[str, str]:
     Raises:
         ConfigurationError: if the map is invalid.
     """
-    if not raw_map:
-        return {}
-    access_map_lines = raw_map.split(",")
+    access_map_lines = _parse_list(raw_map)
     access_map = {}
     for raw_line in access_map_lines:
         line = raw_line.split()
@@ -143,7 +142,7 @@ def _parse_list(raw_list: str) -> list[str]:
     Returns:
         a list of strings.
     """
-    return raw_list.split(",") if raw_list else []
+    return yaml.safe_load(raw_list) if raw_list else []
 
 
 @dataclasses.dataclass()
