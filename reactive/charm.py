@@ -33,8 +33,12 @@ def upgrade_charm():
 def install(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
     reactive.set_flag('smtp-relay.installed')
 
-    utils.copy_file('files/fgrepmail-logs.py', '/usr/local/bin/fgrepmail-logs', perms=0o755)
-    utils.copy_file('files/50-default.conf', '/etc/rsyslog.d/50-default.conf', perms=0o644)
+    _configure_smtp_relay_logging(logrotate_conf_path)
+
+def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
+    """Configure logging for the SMTP relay."""
+    utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
+    utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
     contents = utils.update_logrotate_conf(logrotate_conf_path)
     utils.write_file(contents, logrotate_conf_path)
 
