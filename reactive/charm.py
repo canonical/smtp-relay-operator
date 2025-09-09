@@ -5,6 +5,7 @@
 
 import hashlib
 import os
+from pathlib import Path
 import socket
 import subprocess  # nosec
 
@@ -67,25 +68,14 @@ def configure_smtp_auth(
 
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
-    context = {
-        'JUJU_HEADER': JUJU_HEADER,
-        # TODO: Allow overriding passdb driver.
-        'passdb_driver': 'passwd-file',
-        'passdb_args': f"scheme=CRYPT username_format=%u {dovecot_users}",
-        # We need to use /var/spool/postfix/private/auth because
-        # by default postfix runs chroot'ed in /var/spool/postfix.
-        'path': '/var/spool/postfix/private/auth',
-        'smtp_auth': charm_state.enable_smtp_auth,
-    }
-    base = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
-    template = env.get_template('templates/dovecot_conf.tmpl')
-    contents = template.render(context)
-    changed = utils.write_file(contents, dovecot_config)
+    changed = _render_and_write_dovecot_config(
+        dovecot_config=dovecot_config,
+        dovecot_users=dovecot_users,
+        enable_smtp_auth=charm_state.enable_smtp_auth,
+    )
 
     if charm_state.smtp_auth_users:
-        contents = JUJU_HEADER + "\n".join(charm_state.smtp_auth_users) + '\n'
-        utils.write_file(contents, dovecot_users, perms=0o640, group='dovecot')
+        _write_dovecot_users(dovecot_users, charm_state.smtp_auth_users)
 
     if not charm_state.enable_smtp_auth:
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')
@@ -108,6 +98,33 @@ def configure_smtp_auth(
     host.service_start('dovecot')
 
     reactive.set_flag('smtp-relay.auth.configured')
+
+
+def _render_and_write_dovecot_config(
+    dovecot_config: str,
+    dovecot_users: str,
+    *,
+    enable_smtp_auth: bool,
+) -> bool:
+    context = {
+        "JUJU_HEADER": JUJU_HEADER,
+        "passdb_driver": "passwd-file",
+        "passdb_args": f"scheme=CRYPT username_format=%u {dovecot_users}",
+        "path": "/var/spool/postfix/private/auth",
+        "smtp_auth": enable_smtp_auth,
+    }
+    base = Path(__file__).resolve().parent.parent
+    env = jinja2.Environment(autoescape=True, loader=jinja2.FileSystemLoader(base))
+    template = env.get_template("templates/dovecot_conf.tmpl")
+    contents = template.render(context)
+    changed = utils.write_file(contents, dovecot_config)
+    return changed
+
+
+def _write_dovecot_users(dovecot_users: str, smtp_auth_users: list[str]) -> None:
+    """Write Dovecot users file."""
+    contents = f"{JUJU_HEADER}{'\n'.join(smtp_auth_users)}\n"
+    utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
 
 
 @reactive.when_any(
