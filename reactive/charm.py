@@ -280,7 +280,9 @@ def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
         ),
         "relay_recipient_maps": PostmapSpecEntry(
             postmap_spec("hash", "relay_recipient"),
-            "\n".join(charm_state.relay_recipient_maps),
+            "\n".join(
+                [f"{key} {value}" for key, value in charm_state.relay_recipient_maps.items()]
+            ),
         ),
         "restrict_recipients": PostmapSpecEntry(
             postmap_spec("hash", "restricted_recipients"),
@@ -300,9 +302,7 @@ def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
         ),
         "sender_login_maps": PostmapSpecEntry(
             postmap_spec("hash", "sender_login"),
-            "\n".join(
-                [f"{key} {value.value}" for key, value in charm_state.sender_login_maps.items()]
-            ),
+            "\n".join([f"{key} {value}" for key, value in charm_state.sender_login_maps.items()]),
         ),
         "smtp_header_checks": PostmapSpecEntry(
             postmap_spec("regexp", "smtp_header_checks"),
@@ -310,15 +310,15 @@ def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
         ),
         "tls_policy_maps": PostmapSpecEntry(
             postmap_spec("hash", "tls_policy"),
-            "\n".join(charm_state.tls_policy_maps),
+            "\n".join([f"{key} {value}" for key, value in charm_state.tls_policy_maps.items()]),
         ),
         "transport_maps": PostmapSpecEntry(
             postmap_spec("hash", "transport"),
-            "\n".join(charm_state.transport_maps),
+            "\n".join([f"{key} {value}" for key, value in charm_state.transport_maps.items()]),
         ),
         "virtual_alias_maps": PostmapSpecEntry(
             postmap_spec(charm_state.virtual_alias_maps_type.value, "virtual_alias"),
-            "\n".join(charm_state.virtual_alias_maps),
+            "\n".join([f"{key} {value}" for key, value in charm_state.virtual_alias_maps.items()]),
         ),
     }
 

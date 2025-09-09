@@ -106,18 +106,8 @@ def _parse_map(raw_map: str) -> dict[str, str]:
 
     Returns:
         the parsed map.
-
-    Raises:
-        ConfigurationError: if the map is invalid.
     """
-    access_map_lines = _parse_list(raw_map)
-    access_map = {}
-    for raw_line in access_map_lines:
-        line = raw_line.split()
-        if len(line) != 2:
-            raise ConfigurationError(f"Invalid map {raw_map}")
-        access_map.update({line[0]: line[1]})
-    return access_map
+    return yaml.safe_load(raw_map) if raw_map else {}
 
 
 def _parse_access_map(raw_map: str) -> dict[str, AccessMapValue]:
@@ -166,7 +156,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         restrict_recipients: Access map for restrictions by recipient address or domain.
         restrict_senders: Access map for restrictions by sender address or domain.
         relay_host: SMTP relay host to forward mail to.
-        relay_recipient_maps: List of of mappings that alias mail addresses or domains to
+        relay_recipient_maps: Map that alias mail addresses or domains to
             addresses.
         restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
         sender_login_maps: List of authenticated users that can send mail.
@@ -175,13 +165,13 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         spf_skip_addresses: List of CIDR addresses to skip SPF checks.
         tls_ciphers: Minimum TLS cipher grade for TLS encryption.
         tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher list.
-        tls_policy_maps: List of of mappings for TLS policy.
+        tls_policy_maps: Map for TLS policy.
         tls_protocols: List of TLS protocols accepted by the Postfix SMTP.
         tls_security_level: The TLS security level.
-        transport_maps: List of mappings from recipient address to message delivery transport
+        transport_maps: Map from recipient address to message delivery transport
             or next-hop destination.
         virtual_alias_domains: List of domains for which all addresses are aliased.
-        virtual_alias_maps: List of aliases of mail addresses or domains to other local or
+        virtual_alias_maps: Map of aliases of mail addresses or domains to other local or
             remote addresses.
         virtual_alias_maps_type: The virtual alias map type.
     """
@@ -201,7 +191,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     restrict_recipients: dict[str, AccessMapValue]
     restrict_senders: dict[str, AccessMapValue]
     relay_host: Annotated[str, Field(min_length=1)] | None
-    relay_recipient_maps: list[str]
+    relay_recipient_maps: dict[str, str]
     restrict_sender_access: list[Annotated[str, Field(min_length=1)]]
     sender_login_maps: dict[str, str]
     smtp_auth_users: list[str]
@@ -209,12 +199,12 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     spf_skip_addresses: list[IPvAnyNetwork]
     tls_ciphers: SmtpTlsCipherGrade | None
     tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]]
-    tls_policy_maps: list[str]
+    tls_policy_maps: dict[str, str]
     tls_protocols: list[Annotated[str, Field(min_length=1)]]
     tls_security_level: SmtpTlsSecurityLevel | None
-    transport_maps: list[str]
+    transport_maps: dict[str, str]
     virtual_alias_domains: list[Annotated[str, Field(min_length=1)]]
-    virtual_alias_maps: list[str]
+    virtual_alias_maps: dict[str, str]
     virtual_alias_maps_type: PostfixLookupTableType
     connection_limit: int = Field(ge=0)
 
@@ -235,7 +225,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         restrict_recipients: dict[str, AccessMapValue],
         restrict_senders: dict[str, AccessMapValue],
         relay_host: Annotated[str, Field(min_length=1)] | None,
-        relay_recipient_maps: list[str],
+        relay_recipient_maps: dict[str, str],
         restrict_sender_access: list[Annotated[str, Field(min_length=1)]],
         sender_login_maps: dict[str, str],
         smtp_auth_users: list[str],
@@ -243,12 +233,12 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         spf_skip_addresses: list[IPvAnyNetwork],
         tls_ciphers: SmtpTlsCipherGrade | None,
         tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]],
-        tls_policy_maps: list[str],
+        tls_policy_maps: dict[str, str],
         tls_protocols: list[Annotated[str, Field(min_length=1)]],
         tls_security_level: SmtpTlsSecurityLevel | None,
-        transport_maps: list[str],
+        transport_maps: dict[str, str],
         virtual_alias_domains: list[Annotated[str, Field(min_length=1)]],
-        virtual_alias_maps: list[str],
+        virtual_alias_maps: dict[str, str],
         virtual_alias_maps_type: PostfixLookupTableType,
         connection_limit: int = Field(ge=0)
     ):
@@ -272,7 +262,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             restrict_recipients: Access map for restrictions by recipient address or domain.
             restrict_senders: Access map for restrictions by sender address or domain.
             relay_host: SMTP relay host to forward mail to.
-            relay_recipient_maps: List of of mappings that alias mail addresses or domains to
+            relay_recipient_maps: Map that alias mail addresses or domains to
                 addresses.
             restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
             sender_login_maps: List of authenticated users that can send mail.
@@ -282,13 +272,13 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             tls_ciphers: Minimum TLS cipher grade for TLS encryption.
             tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher
                 list.
-            tls_policy_maps: List of of mappings for TLS policy.
+            tls_policy_maps:Map for TLS policy.
             tls_protocols: List of TLS protocols accepted by the Postfix SMTP.
             tls_security_level: The TLS security level.
-            transport_maps: List of mappings from recipient address to message delivery transport
+            transport_maps: Map for recipient address to message delivery transport
                 or next-hop destination.
             virtual_alias_domains: List of domains for which all addresses are aliased.
-            virtual_alias_maps: List of aliases of mail addresses or domains to other local or
+            virtual_alias_maps: Map of aliases of mail addresses or domains to other local or
                 remote addresses.
             virtual_alias_maps_type: The virtual alias map type.
         """
@@ -368,11 +358,11 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             header_checks = _parse_list(config.get("header_checks"))
             relay_access_sources = _parse_list(config.get("relay_access_sources"))
             relay_domains = _parse_list(config.get("relay_domains"))
-            relay_recipient_maps = _parse_list(config.get("relay_recipient_maps"))
+            relay_recipient_maps = _parse_map(config.get("relay_recipient_maps"))
             restrict_sender_access = _parse_list(config.get("restrict_sender_access"))
             spf_skip_addresses = _parse_list(config.get("spf_skip_addresses"))
             tls_exclude_ciphers = _parse_list(config.get("tls_exclude_ciphers"))
-            tls_policy_maps = _parse_list(config.get("tls_policy_maps"))
+            tls_policy_maps = _parse_map(config.get("tls_policy_maps"))
             tls_protocols = _parse_list(config.get("tls_protocols"))
             virtual_alias_domains = _parse_list(config.get("virtual_alias_domains"))
             restrict_recipients = _parse_access_map(config.get("restrict_recipients"))
@@ -380,8 +370,8 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             sender_login_maps = _parse_map(config.get("sender_login_maps"))
             smtp_auth_users = _parse_list(config.get("smtp_auth_users"))
             smtp_header_checks = _parse_list(config.get("smtp_header_checks"))
-            transport_maps = _parse_list(config.get("transport_maps"))
-            virtual_alias_maps = _parse_list(config.get("virtual_alias_maps"))
+            transport_maps = _parse_map(config.get("transport_maps"))
+            virtual_alias_maps = _parse_map(config.get("virtual_alias_maps"))
 
             return cls(
                 additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
