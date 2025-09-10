@@ -191,9 +191,7 @@ def configure_smtp_relay(
 
     tls_config_paths = _get_tls_config_paths(tls_dh_params)
 
-    fqdn = socket.getfqdn()
-    if charm_state.domain:
-        fqdn = _generate_fqdn(charm_state.domain)
+    fqdn = _generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
 
     smtpd_recipient_restrictions = _smtpd_recipient_restrictions(charm_state)
     smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state)
