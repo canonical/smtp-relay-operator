@@ -72,11 +72,14 @@ def configure_smtp_auth(
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
     context = {
-        "JUJU_HEADER": JUJU_HEADER,
-        "passdb_driver": "passwd-file",
-        "passdb_args": f"scheme=CRYPT username_format=%u {dovecot_users}",
-        "path": "/var/spool/postfix/private/auth",
-        "smtp_auth": charm_state.enable_smtp_auth,
+        'JUJU_HEADER': JUJU_HEADER,
+        # TODO: Allow overriding passdb driver.
+        'passdb_driver': 'passwd-file',
+        'passdb_args': f"scheme=CRYPT username_format=%u {dovecot_users}",
+        # We need to use /var/spool/postfix/private/auth because
+        # by default postfix runs chroot'ed in /var/spool/postfix.
+        'path': '/var/spool/postfix/private/auth',
+        'smtp_auth': charm_state.enable_smtp_auth,
     }
     changed = utils.render_template_and_write_to_file(
         context, "templates/dovecot_conf.tmpl", dovecot_config
