@@ -239,7 +239,7 @@ def configure_smtp_relay(
     contents = utils.render_jinja2_template(context, 'templates/postfix_master_cf.tmpl')
     changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
 
-    changed = _ensure_postmap_files(postfix_conf_dir, charm_state) or changed
+    changed = _ensure_postmap_files_with_charm_state(postfix_conf_dir, charm_state) or changed
 
     _update_aliases(charm_state.admin_email)
 
@@ -253,7 +253,7 @@ def configure_smtp_relay(
 
     reactive.set_flag('smtp-relay.configured')
 
-def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
+def _ensure_postmap_files_with_charm_state(postfix_conf_dir: str, charm_state: State) -> bool:
     """Ensure various postfix files exist and are up-to-date with the current charm state.
 
     Args:
@@ -263,71 +263,91 @@ def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
     Returns:
         True if any map was created or updated.
     """
-    PostmapSpecEntry = namedtuple("Postmap", ["map_type", "content"])
-    def postmap_spec(pmap_type: str, pmap_name: str) -> str:
-        return f"{pmap_type}:{os.path.join(postfix_conf_dir, pmap_name)}"
+    class PostmapEntry(NamedTuple):
+        postmap: str
+        content: str
 
+        @classmethod
+        def create(cls, pmap_type: str, pmap_name: str, content: str):
+            return cls(
+                postmap=f"{pmap_type}:{os.path.join(postfix_conf_dir, pmap_name)}",
+                content=content,
+            )
+
+    # Create a map of all the maps we may need to create/update from the charm state.
     maps = {
-        "append_envelope_to_header": PostmapSpecEntry(
-            postmap_spec("regexp", "append_envelope_to_header"),
+        "append_envelope_to_header": PostmapEntry.create(
+            "regexp",
+            "append_envelope_to_header",
             "/^(.*)$/ PREPEND X-Envelope-To: $1",
         ),
-        "header_checks": PostmapSpecEntry(
-            postmap_spec("regexp", "header_checks"),
+        "header_checks": PostmapEntry.create(
+            "regexp",
+            "header_checks",
             ";".join(charm_state.header_checks),
         ),
-        "relay_access_sources": PostmapSpecEntry(
-            postmap_spec("cidr", "relay_access"),
+        "relay_access_sources": PostmapEntry.create(
+            "cidr",
+            "relay_access",
             "\n".join(charm_state.relay_access_sources),
         ),
-        "relay_recipient_maps": PostmapSpecEntry(
-            postmap_spec("hash", "relay_recipient"),
+        "relay_recipient_maps": PostmapEntry.create(
+            "hash",
+            "relay_recipient",
             "\n".join(
                 [f"{key} {value}" for key, value in charm_state.relay_recipient_maps.items()]
             ),
         ),
-        "restrict_recipients": PostmapSpecEntry(
-            postmap_spec("hash", "restricted_recipients"),
+        "restrict_recipients": PostmapEntry.create(
+            "hash",
+            "restricted_recipients",
             "\n".join(
                 [f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()]
             ),
         ),
-        "restrict_senders": PostmapSpecEntry(
-            postmap_spec("hash", "restricted_senders"),
+        "restrict_senders": PostmapEntry.create(
+            "hash",
+            "restricted_senders",
             "\n".join(
                 [f"{key} {value.value}" for key, value in charm_state.restrict_senders.items()]
             ),
         ),
-        "sender_access": PostmapSpecEntry(
-            postmap_spec("hash", "access"),
+        "sender_access": PostmapEntry.create(
+            "hash",
+            "access",
             "".join([f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]),
         ),
-        "sender_login_maps": PostmapSpecEntry(
-            postmap_spec("hash", "sender_login"),
+        "sender_login_maps": PostmapEntry.create(
+            "hash",
+            "sender_login",
             "\n".join([f"{key} {value}" for key, value in charm_state.sender_login_maps.items()]),
         ),
-        "smtp_header_checks": PostmapSpecEntry(
-            postmap_spec("regexp", "smtp_header_checks"),
+        "smtp_header_checks": PostmapEntry.create(
+            "regexp",
+            "smtp_header_checks",
             ";".join(charm_state.smtp_header_checks),
         ),
-        "tls_policy_maps": PostmapSpecEntry(
-            postmap_spec("hash", "tls_policy"),
+        "tls_policy_maps": PostmapEntry.create(
+            "hash",
+            "tls_policy",
             "\n".join([f"{key} {value}" for key, value in charm_state.tls_policy_maps.items()]),
         ),
-        "transport_maps": PostmapSpecEntry(
-            postmap_spec("hash", "transport"),
+        "transport_maps": PostmapEntry.create(
+            "hash",
+            "transport",
             "\n".join([f"{key} {value}" for key, value in charm_state.transport_maps.items()]),
         ),
-        "virtual_alias_maps": PostmapSpecEntry(
-            postmap_spec(charm_state.virtual_alias_maps_type.value, "virtual_alias"),
+        "virtual_alias_maps": PostmapEntry.create(
+            charm_state.virtual_alias_maps_type.value,
+            "virtual_alias",
             "\n".join([f"{key} {value}" for key, value in charm_state.virtual_alias_maps.items()]),
         ),
     }
 
     # Ensure various maps exists before starting/restarting postfix.
     changed = False
-    for item in maps.values():
-        changed = _create_update_map(item.content, item.map_type) or changed
+    for entry in maps.values():
+        changed = _create_update_map(entry.content, entry.postmap) or changed
     return changed
 
 
