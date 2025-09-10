@@ -81,9 +81,8 @@ def configure_smtp_auth(
         'path': '/var/spool/postfix/private/auth',
         'smtp_auth': charm_state.enable_smtp_auth,
     }
-    changed = utils.render_template_and_write_to_file(
-        context, "templates/dovecot_conf.tmpl", dovecot_config
-    )
+    contents = utils.render_jinja2_template(context, 'templates/dovecot_conf.tmpl')
+    changed = utils.write_file(contents, dovecot_config)
 
     if charm_state.smtp_auth_users:
         _write_dovecot_users(dovecot_users, charm_state.smtp_auth_users)
@@ -234,12 +233,11 @@ def configure_smtp_relay(
         'virtual_alias_maps_type': virtual_alias_maps_type.value,
     }
 
-    changed = utils.render_template_and_write_to_file(
-        context, 'templates/postfix_main_cf.tmpl', os.path.join(postfix_conf_dir, 'main.cf')
-    )
-    changed = utils.render_template_and_write_to_file(
-        context, 'templates/postfix_master_cf.tmpl', os.path.join(postfix_conf_dir, 'master.cf')
-    ) or changed
+    contents = utils.render_jinja2_template(context, 'templates/postfix_main_cf.tmpl')
+    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'main.cf'))
+
+    contents = utils.render_jinja2_template(context, 'templates/postfix_master_cf.tmpl')
+    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
 
     changed = _ensure_postmap_files(postfix_conf_dir, charm_state) or changed
 
@@ -360,9 +358,9 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
             [str(address) for address in charm_state.spf_skip_addresses]
         ),
     }
-    utils.render_template_and_write_to_file(
-        context, 'templates/policyd_spf_conf.tmpl', policyd_spf_config
-    )
+    contents = utils.render_jinja2_template(context, 'templates/policyd_spf_conf.tmpl')
+    utils.write_file(contents, policyd_spf_config)
+
 
     reactive.set_flag('smtp-relay.policyd-spf.configured')
 
