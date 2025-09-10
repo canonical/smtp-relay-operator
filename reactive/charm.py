@@ -43,6 +43,7 @@ def install(logrotate_conf_path='/etc/logrotate.d/rsyslog'):
 
     _configure_smtp_relay_logging(logrotate_conf_path)
 
+
 def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
     """Configure logging for the SMTP relay."""
     utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
@@ -267,6 +268,7 @@ def _ensure_postmap_files_with_charm_state(postfix_conf_dir: str, charm_state: S
     Returns:
         True if any map was created or updated.
     """
+
     class PostmapEntry(NamedTuple):
         postmap: str
         content: str
