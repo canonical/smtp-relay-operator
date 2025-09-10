@@ -13,8 +13,9 @@ import jinja2
 from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
-import utils
-from state import State
+
+from reactive import utils
+from reactive.state import State
 
 
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
