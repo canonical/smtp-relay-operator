@@ -3,15 +3,12 @@
 
 """SMTP Relay charm."""
 
-from collections import namedtuple
 import hashlib
 import os
 from pathlib import Path
 import socket
-import subprocess
-from typing import NamedTuple  # nosec
-
-import jinja2
+import subprocess  # nosec
+from typing import NamedTuple
 
 from charms import reactive
 from charms.layer import status
@@ -275,7 +272,7 @@ def _ensure_postmap_files_with_charm_state(postfix_conf_dir: str, charm_state: S
         content: str
 
         @classmethod
-        def create(cls, pmap_type: str, pmap_name: str, content: str):
+        def create(cls, pmap_type: str, pmap_name: str, content: str) -> "PostmapEntry":
             return cls(
                 postmap=f"{pmap_type}:{os.path.join(postfix_conf_dir, pmap_name)}",
                 content=content,
@@ -388,7 +385,6 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
     contents = utils.render_jinja2_template(context, 'templates/policyd_spf_conf.tmpl')
     utils.write_file(contents, policyd_spf_config)
 
-
     reactive.set_flag('smtp-relay.policyd-spf.configured')
 
 
@@ -414,6 +410,7 @@ def _get_tls_config_paths(tls_dh_params: str) -> TLSConfigPaths:
         tls_key=tls_key,
         tls_cert_key=tls_cert_key,
     )
+
 
 def _get_autocert_cn(autocert_conf_dir='/etc/autocert/postfix'):
     # autocert relation is reversed so we can't get this info from
