@@ -169,31 +169,6 @@ class TestCharm(unittest.TestCase):
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
-    @mock.patch('subprocess.call')
-    def test__create_update_map(self, call):
-        postfix_relay_access = 'hash:{}'.format(os.path.join(self.tmpdir, 'relay_access'))
-        self.assertTrue(charm._create_update_map('mydomain.local OK', postfix_relay_access))
-        want = ['postmap', postfix_relay_access]
-        call.assert_called_with(want)
-        want = utils.JUJU_HEADER + 'mydomain.local OK' + '\n'
-        with open(os.path.join(self.tmpdir, 'relay_access'), 'r') as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-        call.reset_mock()
-        self.assertFalse(charm._create_update_map('mydomain.local OK', postfix_relay_access))
-        call.assert_not_called()
-
-    @mock.patch('subprocess.call')
-    def test__create_update_map_eno_content(self, call):
-        postfix_relay_access = 'hash:{}'.format(os.path.join(self.tmpdir, 'relay_access'))
-        self.assertTrue(charm._create_update_map('', postfix_relay_access))
-        want = ['postmap', postfix_relay_access]
-        call.assert_called_with(want)
-
-        call.reset_mock()
-        charm._create_update_map('', postfix_relay_access)
-        call.assert_not_called()
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
@@ -541,7 +516,7 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._create_update_map')
+    @mock.patch('reactive.charm.ensure_postmap_files')
     @mock.patch('reactive.charm._get_autocert_cn')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
@@ -554,7 +529,7 @@ class TestCharm(unittest.TestCase):
         update_aliases,
         get_milters,
         get_cn,
-        create_update_map,
+        ensure_postmap_files,
         set_flag,
         clear_flag,
     ):
@@ -568,7 +543,7 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._create_update_map')
+    @mock.patch('reactive.charm.ensure_postmap_files')
     @mock.patch('reactive.charm._get_autocert_cn')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
@@ -581,7 +556,7 @@ class TestCharm(unittest.TestCase):
         update_aliases,
         get_milters,
         get_cn,
-        create_update_map,
+        ensure_postmap_files,
         set_flag,
         clear_flag,
     ):
@@ -591,7 +566,7 @@ class TestCharm(unittest.TestCase):
         get_cn.return_value = ''
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir, dhparams)
-        create_update_map.assert_called()
+        ensure_postmap_files.assert_called()
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
