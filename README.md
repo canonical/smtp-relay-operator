@@ -3,9 +3,9 @@
 [![Promote charm](https://github.com/canonical/smtp-relay-operator/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/smtp-relay-operator/actions/workflows/promote_charm.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-# SMTP Relay Operator
+# SMTP relay operator
 
-A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
 deploying and managing a postfix SMTP relay server on bare metal. SMTP
 is an Internet standard communication protocol for email transmission.
 
@@ -26,7 +26,7 @@ For information about how to deploy, integrate, and manage this charm, see the O
 
 ## Get started
 
-Provision a Juju environment then deploy 2 units with:
+Provision a Juju environment then deploy two units with:
 ```
 juju deploy -n2 smtp-relay
 ```
