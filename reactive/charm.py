@@ -242,7 +242,7 @@ def configure_smtp_relay(
     contents = utils.render_jinja2_template(context, 'templates/postfix_master_cf.tmpl')
     changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
 
-    changed = _ensure_postmap_files_with_charm_state(postfix_conf_dir, charm_state) or changed
+    changed = _ensure_postmap_files(postfix_conf_dir, charm_state) or changed
 
     _update_aliases(charm_state.admin_email)
 
@@ -256,7 +256,7 @@ def configure_smtp_relay(
 
     reactive.set_flag('smtp-relay.configured')
 
-def _ensure_postmap_files_with_charm_state(postfix_conf_dir: str, charm_state: State) -> bool:
+def _ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
     """Ensure various postfix files exist and are up-to-date with the current charm state.
 
     Args:
