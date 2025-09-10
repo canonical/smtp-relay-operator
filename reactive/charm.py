@@ -22,7 +22,7 @@ JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
 
 class TLSConfigPaths(NamedTuple):
-    dh_params: str
+    tls_dh_params: str
     tls_cert: str
     tls_key: str
     tls_cert_key: str
@@ -224,7 +224,7 @@ def configure_smtp_relay(
         'tls_cert': tls_config_paths.tls_cert,
         'tls_key': tls_config_paths.tls_key,
         'tls_ciphers': charm_state.tls_ciphers.value if charm_state.tls_ciphers else None,
-        'tls_dh_params': tls_config_paths.dh_params,
+        'tls_dh_params': tls_config_paths.tls_dh_params,
         'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
         'tls_protocols': " ".join(charm_state.tls_protocols),
         'tls_security_level': (
@@ -405,7 +405,7 @@ def _get_tls_config_paths(tls_dh_params: str) -> TLSConfigPaths:
         subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])  # nosec
 
     return TLSConfigPaths(
-        dh_params=tls_dh_params,
+        tls_dh_params=tls_dh_params,
         tls_cert=tls_cert,
         tls_key=tls_key,
         tls_cert_key=tls_cert_key,
