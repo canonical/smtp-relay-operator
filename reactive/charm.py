@@ -24,6 +24,13 @@ from reactive.state import State
 JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
 
+class TLSConfigPaths(NamedTuple):
+    dh_params: str
+    tls_cert: str
+    tls_key: str
+    tls_cert_key: str
+
+
 @reactive.hook('upgrade-charm')
 def upgrade_charm():
     status.maintenance('forcing reconfiguration on upgrade-charm')
@@ -184,7 +191,7 @@ def configure_smtp_relay(
 
     status.maintenance('Setting up SMTP relay')
 
-    tls_certs = _get_tls_certs(tls_dh_params)
+    tls_config_paths = _get_tls_config_paths(tls_dh_params)
 
     fqdn = socket.getfqdn()
     if charm_state.domain:
@@ -217,11 +224,11 @@ def configure_smtp_relay(
         'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
         'smtpd_relay_restrictions': ', '.join(smtpd_relay_restrictions),
         'smtpd_sender_restrictions': ', '.join(smtpd_sender_restrictions),
-        'tls_cert_key': tls_certs.tls_cert_key,
-        'tls_cert': tls_certs.tls_cert,
-        'tls_key': tls_certs.tls_key,
+        'tls_cert_key': tls_config_paths.tls_cert_key,
+        'tls_cert': tls_config_paths.tls_cert,
+        'tls_key': tls_config_paths.tls_key,
         'tls_ciphers': charm_state.tls_ciphers.value if charm_state.tls_ciphers else None,
-        'tls_dh_params': tls_certs.dh_params_path,
+        'tls_dh_params': tls_config_paths.dh_params,
         'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
         'tls_protocols': " ".join(charm_state.tls_protocols),
         'tls_security_level': (
@@ -385,14 +392,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
     reactive.set_flag('smtp-relay.policyd-spf.configured')
 
 
-class TLSCertPaths(NamedTuple):
-    dh_params_path: str
-    tls_cert: str
-    tls_key: str
-    tls_cert_key: str
-
-
-def _get_tls_certs(tls_dh_params: str) -> TLSCertPaths:
+def _get_tls_config_paths(tls_dh_params: str) -> TLSConfigPaths:
     tls_cert_key = ''
     tls_cert = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
     tls_key = '/etc/ssl/private/ssl-cert-snakeoil.key'
@@ -408,8 +408,8 @@ def _get_tls_certs(tls_dh_params: str) -> TLSCertPaths:
     if not os.path.exists(tls_dh_params):
         subprocess.call(['openssl', 'dhparam', '-out', tls_dh_params, '2048'])  # nosec
 
-    return TLSCertPaths(
-        dh_params_path=tls_dh_params,
+    return TLSConfigPaths(
+        dh_params=tls_dh_params,
         tls_cert=tls_cert,
         tls_key=tls_key,
         tls_cert_key=tls_cert_key,
