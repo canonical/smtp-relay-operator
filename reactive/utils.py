@@ -13,6 +13,8 @@ from typing import Any
 import jinja2
 from charmhelpers.core import host
 
+JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"
+
 
 def update_logrotate_conf(path):
     """Update existing logrotate config with log retention settings.

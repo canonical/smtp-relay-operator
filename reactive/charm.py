@@ -5,7 +5,6 @@
 
 import hashlib
 import os
-from pathlib import Path
 import socket
 import subprocess  # nosec
 from typing import NamedTuple
@@ -14,11 +13,10 @@ from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
 
+from postfix import construct_postfix_config_file_content
+from dovecot import construct_dovecot_config_file_content, construct_dovecot_user_file_content
 from reactive import utils
 from reactive.state import State
-
-
-JUJU_HEADER = '# This file is Juju managed - do not edit by hand #\n\n'
 
 
 class TLSConfigPaths(NamedTuple):
@@ -76,21 +74,13 @@ def configure_smtp_auth(
 
     status.maintenance('Setting up SMTP authentication (dovecot)')
 
-    context = {
-        'JUJU_HEADER': JUJU_HEADER,
-        # TODO: Allow overriding passdb driver.
-        'passdb_driver': 'passwd-file',
-        'passdb_args': f"scheme=CRYPT username_format=%u {dovecot_users}",
-        # We need to use /var/spool/postfix/private/auth because
-        # by default postfix runs chroot'ed in /var/spool/postfix.
-        'path': '/var/spool/postfix/private/auth',
-        'smtp_auth': charm_state.enable_smtp_auth,
-    }
-    contents = utils.render_jinja2_template(context, 'templates/dovecot_conf.tmpl')
+    contents = construct_dovecot_config_file_content(dovecot_users, charm_state.enable_smtp_auth)
     changed = utils.write_file(contents, dovecot_config)
 
     if charm_state.smtp_auth_users:
-        _write_dovecot_users(dovecot_users, charm_state.smtp_auth_users)
+        contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
+        utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
+
 
     if not charm_state.enable_smtp_auth:
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')
@@ -113,13 +103,6 @@ def configure_smtp_auth(
     host.service_start('dovecot')
 
     reactive.set_flag('smtp-relay.auth.configured')
-
-
-def _write_dovecot_users(dovecot_users: str, smtp_auth_users: list[str]) -> None:
-    """Write Dovecot users file."""
-    contents = f"{JUJU_HEADER}{'\n'.join(smtp_auth_users)}\n"
-    utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
-
 
 @reactive.when_any(
     'config.changed.admin_email',
@@ -169,7 +152,7 @@ def _create_update_map(content, postmap: str) -> bool:
             os.utime(pmfname, None)
         changed = True
 
-    contents = JUJU_HEADER + content + '\n'
+    contents = utils.JUJU_HEADER + content + '\n'
     changed = utils.write_file(contents, pmfname) or changed
 
     if changed and pmtype == 'hash':
@@ -190,56 +173,28 @@ def configure_smtp_relay(
     status.maintenance('Setting up SMTP relay')
 
     tls_config_paths = _get_tls_config_paths(tls_dh_params)
-
     fqdn = _generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
+    hostname = socket.gethostname()
+    milters = _get_milters()
 
-    smtpd_recipient_restrictions = _smtpd_recipient_restrictions(charm_state)
-    smtpd_relay_restrictions = _smtpd_relay_restrictions(charm_state)
-    smtpd_sender_restrictions = _smtpd_sender_restrictions(charm_state)
+    contents = construct_postfix_config_file_content(
+        charm_state=charm_state,
+        tls_config_paths=tls_config_paths,
+        fqdn=fqdn,
+        hostname=hostname,
+        milters=milters,
+        template_path='templates/postfix_main_cf.tmpl'
 
-    virtual_alias_maps_type = charm_state.virtual_alias_maps_type
-
-    context = {
-        'JUJU_HEADER': JUJU_HEADER,
-        'fqdn': fqdn,
-        'hostname': socket.gethostname(),
-        'connection_limit': charm_state.connection_limit,
-        'enable_rate_limits': charm_state.enable_rate_limits,
-        'enable_sender_login_map': bool(charm_state.sender_login_maps),
-        'enable_smtp_auth': charm_state.enable_smtp_auth,
-        'enable_spf': charm_state.enable_spf,
-        'enable_tls_policy_map': bool(charm_state.tls_policy_maps),
-        'header_checks': bool(charm_state.header_checks),
-        'milter': _get_milters(),
-        'mynetworks': ",".join(charm_state.allowed_relay_networks),
-        'relayhost': charm_state.relay_host,
-        'relay_domains': " ".join(charm_state.relay_domains),
-        'relay_recipient_maps': bool(charm_state.relay_recipient_maps),
-        'restrict_recipients': bool(charm_state.restrict_recipients),
-        'smtp_header_checks': bool(charm_state.smtp_header_checks),
-        'smtpd_recipient_restrictions': ', '.join(smtpd_recipient_restrictions),
-        'smtpd_relay_restrictions': ', '.join(smtpd_relay_restrictions),
-        'smtpd_sender_restrictions': ', '.join(smtpd_sender_restrictions),
-        'tls_cert_key': tls_config_paths.tls_cert_key,
-        'tls_cert': tls_config_paths.tls_cert,
-        'tls_key': tls_config_paths.tls_key,
-        'tls_ciphers': charm_state.tls_ciphers.value if charm_state.tls_ciphers else None,
-        'tls_dh_params': tls_config_paths.tls_dh_params,
-        'tls_exclude_ciphers': ", ".join(charm_state.tls_exclude_ciphers),
-        'tls_protocols': " ".join(charm_state.tls_protocols),
-        'tls_security_level': (
-            charm_state.tls_security_level.value if charm_state.tls_security_level else None
-        ),
-        'transport_maps': bool(charm_state.transport_maps),
-        'virtual_alias_domains': " ".join(charm_state.virtual_alias_domains),
-        'virtual_alias_maps': bool(charm_state.virtual_alias_maps),
-        'virtual_alias_maps_type': virtual_alias_maps_type.value,
-    }
-
-    contents = utils.render_jinja2_template(context, 'templates/postfix_main_cf.tmpl')
+    )
     changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'main.cf'))
-
-    contents = utils.render_jinja2_template(context, 'templates/postfix_master_cf.tmpl')
+    contents = construct_postfix_config_file_content(
+        charm_state=charm_state,
+        tls_config_paths=tls_config_paths,
+        fqdn=fqdn,
+        hostname=hostname,
+        milters=milters,
+        template_path='templates/postfix_master_cf.tmpl'
+    )
     changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'master.cf')) or changed
 
     changed = _ensure_postmap_files(postfix_conf_dir, charm_state) or changed
@@ -377,7 +332,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
     status.maintenance('Setting up Postfix policy server for SPF checking (policyd-spf)')
 
     context = {
-        'JUJU_HEADER': JUJU_HEADER,
+        'JUJU_HEADER': utils.JUJU_HEADER,
         'skip_addresses': ",".join(
             [str(address) for address in charm_state.spf_skip_addresses]
         ),
@@ -441,7 +396,7 @@ def _get_peers():
     return sorted(set(peers))
 
 
-def _get_milters():
+def _get_milters() -> str:
     # TODO: We'll bring up a balancer in front of the list of
     # backend/related milters but for now, let's just map 1-to-1 and
     # try spread depending on how many available units.
@@ -493,53 +448,6 @@ def set_active(version_file='version'):
 
     status.active(f"Ready{postfix_cf_hash}{users_hash}{revision}")
     reactive.set_flag('smtp-relay.active')
-
-
-def _smtpd_recipient_restrictions(charm_state: State) -> list[str]:
-    smtpd_recipient_restrictions = []
-    if charm_state.append_x_envelope_to:
-        smtpd_recipient_restrictions.append(
-            'check_recipient_access regexp:/etc/postfix/append_envelope_to_header'
-        )
-
-    if charm_state.restrict_senders:
-        smtpd_recipient_restrictions.append(
-            'check_sender_access hash:/etc/postfix/restricted_senders'
-        )
-    smtpd_recipient_restrictions.extend(charm_state.additional_smtpd_recipient_restrictions)
-
-    if charm_state.enable_spf:
-        smtpd_recipient_restrictions.append('check_policy_service unix:private/policyd-spf')
-
-    return smtpd_recipient_restrictions
-
-
-def _smtpd_relay_restrictions(charm_state: State) -> list[str]:
-    smtpd_relay_restrictions = ['permit_mynetworks']
-    if bool(charm_state.relay_access_sources):
-        smtpd_relay_restrictions.append('check_client_access cidr:/etc/postfix/relay_access')
-
-    if charm_state.enable_smtp_auth:
-        if charm_state.sender_login_maps:
-            smtpd_relay_restrictions.append('reject_known_sender_login_mismatch')
-        if charm_state.restrict_senders:
-            smtpd_relay_restrictions.append('reject_sender_login_mismatch')
-        smtpd_relay_restrictions.append('permit_sasl_authenticated')
-
-    smtpd_relay_restrictions.append('defer_unauth_destination')
-
-    return smtpd_relay_restrictions
-
-
-def _smtpd_sender_restrictions(charm_state: State) -> list[str]:
-    smtpd_sender_restrictions = []
-    if charm_state.enable_reject_unknown_sender_domain:
-        smtpd_sender_restrictions.append('reject_unknown_sender_domain')
-    smtpd_sender_restrictions.append('check_sender_access hash:/etc/postfix/access')
-    if charm_state.restrict_sender_access:
-        smtpd_sender_restrictions.append('reject')
-
-    return smtpd_sender_restrictions
 
 
 def _update_aliases(admin_email, aliases_path='/etc/aliases'):

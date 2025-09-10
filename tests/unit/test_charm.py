@@ -18,7 +18,7 @@ from charmhelpers.core import unitdata  # NOQA: E402
 
 # Add path to where our reactive layer lives and import.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
-from reactive import charm  # NOQA: E402
+from reactive import charm, utils  # NOQA: E402
 
 
 class TestCharm(unittest.TestCase):
@@ -175,7 +175,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(charm._create_update_map('mydomain.local OK', postfix_relay_access))
         want = ['postmap', postfix_relay_access]
         call.assert_called_with(want)
-        want = charm.JUJU_HEADER + 'mydomain.local OK' + '\n'
+        want = utils.JUJU_HEADER + 'mydomain.local OK' + '\n'
         with open(os.path.join(self.tmpdir, 'relay_access'), 'r') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -656,7 +656,7 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        want = charm.JUJU_HEADER + '/^Received:/ HOLD' + "\n"
+        want = utils.JUJU_HEADER + '/^Received:/ HOLD' + "\n"
         with open(postfix_header_checks, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -683,7 +683,7 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        want = charm.JUJU_HEADER + '/^Received:/ HOLD' + "\n"
+        want = utils.JUJU_HEADER + '/^Received:/ HOLD' + "\n"
         with open(postfix_smtp_header_checks, 'r', encoding='utf-8') as f:
             got = f.read()
 
@@ -923,7 +923,7 @@ class TestCharm(unittest.TestCase):
 
         self.mock_config.return_value['restrict_sender_access'] = None
         charm.configure_smtp_relay(self.tmpdir)
-        want = charm.JUJU_HEADER + "\n"
+        want = utils.JUJU_HEADER + "\n"
         with open(postfix_access, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -1015,7 +1015,7 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        want = charm.JUJU_HEADER + 'noreply@mydomain.local noreply@mydomain.local' + "\n"
+        want = utils.JUJU_HEADER + 'noreply@mydomain.local noreply@mydomain.local' + "\n"
         with open(postfix_relay_recipient_maps, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -1042,7 +1042,7 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        want = charm.JUJU_HEADER + '.mydomain.local smtp:[smtp.mydomain.local]' + "\n"
+        want = utils.JUJU_HEADER + '.mydomain.local smtp:[smtp.mydomain.local]' + "\n"
         with open(postfix_transport_maps, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -1074,7 +1074,7 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        want = charm.JUJU_HEADER + '.mydomain.local smtp:[smtp.mydomain.local]' + "\n"
+        want = utils.JUJU_HEADER + '.mydomain.local smtp:[smtp.mydomain.local]' + "\n"
         with open(postfix_transport_maps, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
@@ -1116,7 +1116,7 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-        want = charm.JUJU_HEADER + 'abuse@mydomain.local sysadmin@mydomain.local' + "\n"
+        want = utils.JUJU_HEADER + 'abuse@mydomain.local sysadmin@mydomain.local' + "\n"
         with open(postfix_virtual_alias_maps, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
