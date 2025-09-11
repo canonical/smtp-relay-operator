@@ -19,7 +19,7 @@ from charmhelpers.core import unitdata  # NOQA: E402
 
 # Add path to where our reactive layer lives and import.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
-from reactive import utils, postfix  # NOQA: E402
+from reactive import tls  # NOQA: E402
 
 
 class TestCharm(unittest.TestCase):
@@ -129,28 +129,46 @@ class TestCharm(unittest.TestCase):
         status.blocked.reset_mock()
         status.maintenance.reset_mock()
 
+    def test__get_autocert_cn(self):
+        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
+        want = ""
+        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
+
+        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
+        autocert_conf = os.path.join(autocert_conf_dir, "smtp.mydomain.local.ini")
+        os.mkdir(autocert_conf_dir)
+        with open(autocert_conf, "a"):
+            os.utime(autocert_conf, None)
+        want = "smtp.mydomain.local"
+        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
+
+    def test__get_autocert_cn_multiple_files(self):
+        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
+        os.mkdir(autocert_conf_dir)
+        files = ["abc", "smtp.mydomain.local.ini", "zzz.mydomain.local.ini"]
+        for fn in files:
+            fff = os.path.join(autocert_conf_dir, fn)
+            with open(fff, "a"):
+                os.utime(fff, None)
+        want = "smtp.mydomain.local"
+        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
+
+    def test__get_autocert_cn_non_exists(self):
+        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
+        os.mkdir(autocert_conf_dir)
+        want = ""
+        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
+
+    @mock.patch("reactive.tls._get_autocert_cn")
     @mock.patch("subprocess.call")
-    def test__create_update_map(self, call):
-        postfix_relay_access = "hash:{}".format(os.path.join(self.tmpdir, "relay_access"))
-        self.assertTrue(postfix._create_update_map("mydomain.local OK", postfix_relay_access))
-        want = ["postmap", postfix_relay_access]
-        call.assert_called_with(want)
-        want = utils.JUJU_HEADER + "mydomain.local OK" + "\n"
-        with open(os.path.join(self.tmpdir, "relay_access"), "r") as f:
-            got = f.read()
-        self.assertEqual(want, got)
-
-        call.reset_mock()
-        self.assertFalse(postfix._create_update_map("mydomain.local OK", postfix_relay_access))
-        call.assert_not_called()
-
-    @mock.patch("subprocess.call")
-    def test__create_update_map_eno_content(self, call):
-        postfix_relay_access = "hash:{}".format(os.path.join(self.tmpdir, "relay_access"))
-        self.assertTrue(postfix._create_update_map("", postfix_relay_access))
-        want = ["postmap", postfix_relay_access]
-        call.assert_called_with(want)
-
-        call.reset_mock()
-        postfix._create_update_map("", postfix_relay_access)
-        call.assert_not_called()
+    def test_get_tls_config_paths_tls_dhparam_non_exists(
+        self,
+        call,
+        get_autocert_cn,
+    ):
+        dhparams = os.path.join(self.tmpdir, "dhparams.pem")
+        get_autocert_cn.return_value = ""
+        tls.get_tls_config_paths(dhparams)
+        want = [mock.call(["openssl", "dhparam", "-out", dhparams, "2048"])]
+        call.assert_has_calls(want, any_order=True)
+        self.assertEqual(len(want), len(call.mock_calls))

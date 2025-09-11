@@ -1,3 +1,8 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Postfix Service Layer."""
+
 import os
 import subprocess
 from typing import TYPE_CHECKING, NamedTuple
@@ -8,7 +13,7 @@ import utils
 
 if TYPE_CHECKING:
     from state import State
-    from charm import TLSConfigPaths
+    from tls import TLSConfigPaths
 
 
 def _smtpd_relay_restrictions(charm_state: "State") -> list[str]:
@@ -109,17 +114,17 @@ def construct_postfix_config_file_content(
 def _create_update_map(content, postmap: str) -> bool:
     changed = False
 
-    (pmtype, pmfname) = postmap.split(':')
+    (pmtype, pmfname) = postmap.split(":")
     if not os.path.exists(pmfname):
-        with open(pmfname, 'a', encoding="utf-8"):
+        with open(pmfname, "a", encoding="utf-8"):
             os.utime(pmfname, None)
         changed = True
 
-    contents = utils.JUJU_HEADER + content + '\n'
+    contents = utils.JUJU_HEADER + content + "\n"
     changed = utils.write_file(contents, pmfname) or changed
 
-    if changed and pmtype == 'hash':
-        subprocess.call(['postmap', postmap])  # nosec
+    if changed and pmtype == "hash":
+        subprocess.call(["postmap", postmap])  # nosec
 
     return changed
 

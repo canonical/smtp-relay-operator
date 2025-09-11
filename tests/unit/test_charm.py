@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+import tls
+
 # We also need to mock up charms.layer so we can run unit tests without having
 # to build the charm and pull in layers such as layer-status.
 sys.modules['charms.layer'] = mock.MagicMock()
@@ -19,6 +21,14 @@ from charmhelpers.core import unitdata  # NOQA: E402
 # Add path to where our reactive layer lives and import.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
 from reactive import charm, utils  # NOQA: E402
+
+
+DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
+    "/etc/ssl/private/dhparams.pem",
+    "/etc/ssl/certs/ssl-cert-snakeoil.pem",
+    "/etc/ssl/private/ssl-cert-snakeoil.key",
+    "",    
+)
 
 
 class TestCharm(unittest.TestCase):
@@ -312,14 +322,14 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir)
         self.mock_service_reload.assert_called_with('postfix')
@@ -335,16 +345,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_master_cf = os.path.join(self.tmpdir, 'master.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main.cf', 'r', encoding='utf-8') as f:
@@ -360,16 +370,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_auth_disabled(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_master_cf = os.path.join(self.tmpdir, 'master.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_smtp_auth'] = False
         charm.configure_smtp_relay(self.tmpdir)
@@ -386,15 +396,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_auth_sender_login_maps(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_smtp_auth'] = True
         charm.configure_smtp_relay(self.tmpdir)
@@ -408,15 +418,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_domain(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['domain'] = 'mydomain.local'
         self.mock_config.return_value['enable_smtp_auth'] = False
@@ -429,15 +439,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_with_milter(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = 'inet:10.48.129.221:8892'
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_with_milter.cf', 'r', encoding='utf-8') as f:
@@ -448,15 +458,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_with_milter_auth_disabled(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = 'inet:10.48.129.221:8892'
         self.mock_config.return_value['enable_smtp_auth'] = False
         charm.configure_smtp_relay(self.tmpdir)
@@ -470,15 +480,20 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_tls_cert_key(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = 'smtp.mydomain.local'
+        get_tls_config_paths.return_value = tls.TLSConfigPaths(
+            '/etc/postfix/ssl/dhparams.pem',
+            '/etc/postfix/ssl/smtp.mydomain.local.crt',
+            '/etc/postfix/ssl/smtp.mydomain.local.key',
+            '',
+        )
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir)
         with open('tests/unit/files/postfix_main_tls_cert_key.cf', 'r', encoding='utf-8') as f:
@@ -489,15 +504,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_tls_no_ciphers_and_protocols(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value["tls_ciphers"] = None
         self.mock_config.return_value["tls_exclude_ciphers"] = None
@@ -514,37 +529,11 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
-    @mock.patch('charms.reactive.clear_flag')
-    @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm.ensure_postmap_files')
-    @mock.patch('reactive.charm._get_autocert_cn')
-    @mock.patch('reactive.charm._get_milters')
-    @mock.patch('reactive.charm._update_aliases')
-    @mock.patch('reactive.utils.write_file')
-    @mock.patch('subprocess.call')
-    def test_configure_smtp_relay_config_tls_dhparam_non_exists(
-        self,
-        call,
-        write_file,
-        update_aliases,
-        get_milters,
-        get_cn,
-        ensure_postmap_files,
-        set_flag,
-        clear_flag,
-    ):
-        dhparams = os.path.join(self.tmpdir, 'dhparams.pem')
-        get_cn.return_value = ''
-        get_milters.return_value = ''
-        charm.configure_smtp_relay(self.tmpdir, dhparams)
-        want = [mock.call(['openssl', 'dhparam', '-out', dhparams, '2048'])]
-        call.assert_has_calls(want, any_order=True)
-        self.assertEqual(len(want), len(call.mock_calls))
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
     @mock.patch('reactive.charm.ensure_postmap_files')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('reactive.utils.write_file')
@@ -555,7 +544,7 @@ class TestCharm(unittest.TestCase):
         write_file,
         update_aliases,
         get_milters,
-        get_cn,
+        get_tls_config_paths,
         ensure_postmap_files,
         set_flag,
         clear_flag,
@@ -563,22 +552,22 @@ class TestCharm(unittest.TestCase):
         dhparams = os.path.join(self.tmpdir, 'dhparams.pem')
         with open(dhparams, 'a'):
             os.utime(dhparams, None)
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir, dhparams)
         ensure_postmap_files.assert_called()
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_rate_limits(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_rate_limits'] = True
         charm.configure_smtp_relay(self.tmpdir)
@@ -590,15 +579,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_rate_limits_auth_disabled(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_rate_limits'] = True
         self.mock_config.return_value['enable_smtp_auth'] = False
@@ -613,16 +602,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_header_checks(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_header_checks = os.path.join(self.tmpdir, 'header_checks')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['header_checks'] = '- /^Received:/ HOLD'
         charm.configure_smtp_relay(self.tmpdir)
@@ -638,16 +627,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_smtp_header_checks(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_smtp_header_checks = os.path.join(self.tmpdir, 'smtp_header_checks')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['smtp_header_checks'] = '- /^Received:/ HOLD'
         charm.configure_smtp_relay(self.tmpdir)
@@ -664,15 +653,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_reject_unknown_sender_domain(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_reject_unknown_sender_domain'] = False
         charm.configure_smtp_relay(self.tmpdir)
@@ -686,16 +675,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_relay_access_sources(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_relay_access = os.path.join(self.tmpdir, 'relay_access')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value[
             'relay_access_sources'
@@ -722,16 +711,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_relay_access_sources_auth_disabled(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_relay_access = os.path.join(self.tmpdir, 'relay_access')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value[
             'relay_access_sources'
@@ -761,15 +750,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_restrict_both_senders_and_recpients(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_recipients'] = 'mydomain.local: OK'
         self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local: OK'
@@ -786,16 +775,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_restrict_recpients(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_restricted_recipients = os.path.join(self.tmpdir, 'restricted_recipients')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_recipients'] = 'mydomain.local: OK'
         charm.configure_smtp_relay(self.tmpdir)
@@ -814,16 +803,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_restrict_senders(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_restricted_senders = os.path.join(self.tmpdir, 'restricted_senders')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local: OK'
         charm.configure_smtp_relay(self.tmpdir)
@@ -840,16 +829,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_restrict_sender_access(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_access = os.path.join(self.tmpdir, 'access')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = """
             - canonical.com
@@ -873,15 +862,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_restrict_sender_access_reset(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_access = os.path.join(self.tmpdir, 'access')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['restrict_sender_access'] = """
             - canonical.com
@@ -905,16 +894,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_tls_policy_map(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_tls_policy_map = os.path.join(self.tmpdir, 'tls_policy')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value[
             'tls_policy_maps'
@@ -939,15 +928,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_relay_domains(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['relay_domains'] = """
             - mydomain.local
@@ -962,16 +951,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_relay_domains_with_relay_recipient_maps(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_relay_recipient_maps = os.path.join(self.tmpdir, 'relay_recipient')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['relay_domains'] = """
             - mydomain.local
@@ -997,16 +986,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_transport_maps(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_transport_maps = os.path.join(self.tmpdir, 'transport')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['transport_maps'] = (
             ".mydomain.local: 'smtp:[smtp.mydomain.local]'"
@@ -1024,16 +1013,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_transport_maps_with_header_checks(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_transport_maps = os.path.join(self.tmpdir, 'transport')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['header_checks'] = '- /^Received:/ HOLD'
         self.mock_config.return_value['transport_maps'] = (
@@ -1056,16 +1045,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_transport_maps_with_virtual_alias_maps(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_virtual_alias_maps = os.path.join(self.tmpdir, 'virtual_alias')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['relay_domains'] = """
             - mydomain.local
@@ -1098,15 +1087,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_virtual_alias_maps_type(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['virtual_alias_maps'] = (
             'abuse@mydomain.local: sysadmin@mydomain.local'
@@ -1125,15 +1114,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_append_x_envelope_to(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['append_x_envelope_to'] = True
         charm.configure_smtp_relay(self.tmpdir)
@@ -1147,16 +1136,16 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_spf(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
         postfix_master_cf = os.path.join(self.tmpdir, 'master.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_spf'] = True
         charm.configure_smtp_relay(self.tmpdir)
@@ -1173,12 +1162,12 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_policyd_spf(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = True
@@ -1199,12 +1188,12 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_policyd_spf_disabled(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = False
@@ -1221,12 +1210,12 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_policyd_spf_skip_addresses(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         policyd_spf_config = os.path.join(self.tmpdir, 'policyd-spf.conf')
         self.mock_config.return_value['enable_spf'] = True
@@ -1245,15 +1234,15 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_config_spf_with_restrict_senders(
-        self, call, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         postfix_main_cf = os.path.join(self.tmpdir, 'main.cf')
-        get_cn.return_value = ''
+        get_tls_config_paths.return_value = DEFAULT_TLS_CONFIG_PATHS
         get_milters.return_value = ''
         self.mock_config.return_value['enable_spf'] = True
         self.mock_config.return_value['restrict_senders'] = 'noreply@mydomain.local: OK'
@@ -1268,13 +1257,13 @@ class TestCharm(unittest.TestCase):
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
-    @mock.patch('reactive.charm._get_autocert_cn')
+    @mock.patch('reactive.charm.get_tls_config_paths')
     @mock.patch('reactive.charm._get_milters')
     @mock.patch('reactive.charm._update_aliases')
     @mock.patch('reactive.utils.write_file')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_flags(
-        self, call, write_file, update_aliases, get_milters, get_cn, set_flag, clear_flag
+        self, call, write_file, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
     ):
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir)
@@ -1294,36 +1283,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(146, charm._calculate_offset('smtp-relay-internal'))
 
         self.assertEqual(8607, charm._calculate_offset('smtp-relay', 4))
-
-    def test__get_autocert_cn(self):
-        autocert_conf_dir = os.path.join(self.tmpdir, 'autocert')
-        want = ''
-        self.assertEqual(want, charm._get_autocert_cn(autocert_conf_dir))
-
-        autocert_conf_dir = os.path.join(self.tmpdir, 'autocert')
-        autocert_conf = os.path.join(autocert_conf_dir, 'smtp.mydomain.local.ini')
-        os.mkdir(autocert_conf_dir)
-        with open(autocert_conf, 'a'):
-            os.utime(autocert_conf, None)
-        want = 'smtp.mydomain.local'
-        self.assertEqual(want, charm._get_autocert_cn(autocert_conf_dir))
-
-    def test__get_autocert_cn_multiple_files(self):
-        autocert_conf_dir = os.path.join(self.tmpdir, 'autocert')
-        os.mkdir(autocert_conf_dir)
-        files = ['abc', 'smtp.mydomain.local.ini', 'zzz.mydomain.local.ini']
-        for fn in files:
-            fff = os.path.join(autocert_conf_dir, fn)
-            with open(fff, 'a'):
-                os.utime(fff, None)
-        want = 'smtp.mydomain.local'
-        self.assertEqual(want, charm._get_autocert_cn(autocert_conf_dir))
-
-    def test__get_autocert_cn_non_exists(self):
-        autocert_conf_dir = os.path.join(self.tmpdir, 'autocert')
-        os.mkdir(autocert_conf_dir)
-        want = ''
-        self.assertEqual(want, charm._get_autocert_cn(autocert_conf_dir))
 
     def test__generate_fqdn(self):
         want = 'smtp-relay-0.mydomain.local'

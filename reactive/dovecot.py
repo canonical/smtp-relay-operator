@@ -1,7 +1,9 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""Dovecot Service Layer."""
 from reactive import utils
+
 
 def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_auth: bool):
     context = {
