@@ -12,6 +12,8 @@ from state import State
 import utils
 
 if TYPE_CHECKING:
+    from pydantic import IPvAnyNetwork
+
     from state import State
     from tls import TLSConfigPaths
 
@@ -226,3 +228,12 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
     for entry in maps.values():
         changed = _create_update_map(entry.content, entry.postmap) or changed
     return changed
+
+
+def construct_policyd_spf_config_file_content(spf_skip_addresses: "IPvAnyNetwork"):
+    context = {
+        "JUJU_HEADER": utils.JUJU_HEADER,
+        "skip_addresses": ",".join([str(address) for address in spf_skip_addresses]),
+    }
+    contents = utils.render_jinja2_template(context, "templates/policyd_spf_conf.tmpl")
+    return contents

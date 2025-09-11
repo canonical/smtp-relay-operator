@@ -12,7 +12,7 @@ from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
 
-from postfix import construct_postfix_config_file_content, ensure_postmap_files
+from postfix import construct_policyd_spf_config_file_content, construct_postfix_config_file_content, ensure_postmap_files
 from dovecot import construct_dovecot_config_file_content, construct_dovecot_user_file_content
 from reactive import utils
 from reactive.state import State
@@ -208,17 +208,10 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
 
     status.maintenance('Setting up Postfix policy server for SPF checking (policyd-spf)')
 
-    context = {
-        'JUJU_HEADER': utils.JUJU_HEADER,
-        'skip_addresses': ",".join(
-            [str(address) for address in charm_state.spf_skip_addresses]
-        ),
-    }
-    contents = utils.render_jinja2_template(context, 'templates/policyd_spf_conf.tmpl')
+    contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
     utils.write_file(contents, policyd_spf_config)
 
     reactive.set_flag('smtp-relay.policyd-spf.configured')
-
 
 def _generate_fqdn(domain):
     return f"{hookenv.local_unit().replace('/', '-')}.{domain}"
