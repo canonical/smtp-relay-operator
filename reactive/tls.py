@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"TLS Management Service Layer."
+"""TLS Management Service Layer."""
 
 
 import os
@@ -22,6 +22,14 @@ def _get_autocert_cn(autocert_conf_dir="/etc/autocert/postfix"):
 
 
 class TLSConfigPaths(NamedTuple):
+    """A container for TLS file paths.
+
+    Attributes:
+        tls_dh_params: Path to the Diffie-Hellman parameters file.
+        tls_cert: Path to the TLS certificate file.
+        tls_key: Path to the TLS private key file.
+        tls_cert_key: Path to a combined certificate and key file (currently unused).
+    """
     tls_dh_params: str
     tls_cert: str
     tls_key: str

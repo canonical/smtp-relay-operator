@@ -8,8 +8,6 @@ import subprocess
 from typing import TYPE_CHECKING, NamedTuple
 
 from reactive import utils
-from state import State
-import utils
 
 if TYPE_CHECKING:
     from pydantic import IPvAnyNetwork
@@ -64,7 +62,8 @@ def _smtpd_recipient_restrictions(charm_state: "State") -> list[str]:
     return smtpd_recipient_restrictions
 
 
-def construct_postfix_config_file_content(
+def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
+    *,
     charm_state: "State",
     tls_dh_params_path: str,
     tls_cert_path: str,
@@ -133,7 +132,7 @@ def _create_update_map(content, postmap: str) -> bool:
     return changed
 
 
-def ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
+def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
     """Ensure various postfix files exist and are up-to-date with the current charm state.
 
     Args:
@@ -145,6 +144,12 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: State) -> bool:
     """
 
     class PostmapEntry(NamedTuple):
+        """A container for the postmap and its content.
+
+        Attributes:
+            postmap: The full Postfix lookup table string.
+            content: The content to be written to the map's source file.
+        """
         postmap: str
         content: str
 

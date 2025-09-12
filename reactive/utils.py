@@ -101,7 +101,7 @@ def render_jinja2_template(
     base_path: str | None = None,
 ) -> str:
     """Render jinja2 template given the context.
-    
+
     Args:
         context: Variables to render into the template.
         template_path: path of the Jinja2 template (relative to base_path).

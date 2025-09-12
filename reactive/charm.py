@@ -12,7 +12,11 @@ from charms import reactive
 from charms.layer import status
 from charmhelpers.core import hookenv, host
 
-from postfix import construct_policyd_spf_config_file_content, construct_postfix_config_file_content, ensure_postmap_files
+from postfix import (
+    construct_policyd_spf_config_file_content,
+    construct_postfix_config_file_content,
+    ensure_postmap_files,
+)
 from dovecot import construct_dovecot_config_file_content, construct_dovecot_user_file_content
 from reactive import utils
 from reactive.state import State
@@ -74,7 +78,6 @@ def configure_smtp_auth(
         contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
         utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
 
-
     if not charm_state.enable_smtp_auth:
         status.maintenance('SMTP authentication not enabled, ensuring ports are closed')
         hookenv.close_port(465, 'TCP')
@@ -96,6 +99,7 @@ def configure_smtp_auth(
     host.service_start('dovecot')
 
     reactive.set_flag('smtp-relay.auth.configured')
+
 
 @reactive.when_any(
     'config.changed.admin_email',
@@ -165,7 +169,7 @@ def configure_smtp_relay(
 
     )
     changed = utils.write_file(contents, os.path.join(postfix_conf_dir, 'main.cf'))
-    
+
     contents = construct_postfix_config_file_content(
         charm_state=charm_state,
         tls_dh_params_path=tls_config_paths.tls_dh_params,
@@ -193,6 +197,7 @@ def configure_smtp_relay(
 
     reactive.set_flag('smtp-relay.configured')
 
+
 @reactive.when_any(
     'config.changed.enable_spf',
     'config.changed.spf_skip_addresses',
@@ -218,6 +223,7 @@ def configure_policyd_spf(policyd_spf_config='/etc/postfix-policyd-spf-python/po
     utils.write_file(contents, policyd_spf_config)
 
     reactive.set_flag('smtp-relay.policyd-spf.configured')
+
 
 def _generate_fqdn(domain):
     return f"{hookenv.local_unit().replace('/', '-')}.{domain}"

@@ -27,7 +27,7 @@ DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
     "/etc/ssl/private/dhparams.pem",
     "/etc/ssl/certs/ssl-cert-snakeoil.pem",
     "/etc/ssl/private/ssl-cert-snakeoil.key",
-    "",    
+    "",
 )
 
 
@@ -178,7 +178,6 @@ class TestCharm(unittest.TestCase):
         want = [mock.call('smtp-relay.policyd-spf.configured')]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
-
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
@@ -528,7 +527,6 @@ class TestCharm(unittest.TestCase):
         with open(postfix_main_cf, 'r', encoding='utf-8') as f:
             got = f.read()
         self.assertEqual(want, got)
-
 
     @mock.patch('charms.reactive.clear_flag')
     @mock.patch('charms.reactive.set_flag')
@@ -1263,7 +1261,14 @@ class TestCharm(unittest.TestCase):
     @mock.patch('reactive.utils.write_file')
     @mock.patch('subprocess.call')
     def test_configure_smtp_relay_flags(
-        self, call, write_file, update_aliases, get_milters, get_tls_config_paths, set_flag, clear_flag
+        self,
+        call,
+        write_file,
+        update_aliases,
+        get_milters,
+        get_tls_config_paths,
+        set_flag,
+        clear_flag,
     ):
         get_milters.return_value = ''
         charm.configure_smtp_relay(self.tmpdir)
