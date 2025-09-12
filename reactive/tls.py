@@ -5,7 +5,7 @@
 
 
 import os
-import subprocess
+import subprocess  # nosec
 from typing import NamedTuple
 
 

@@ -108,6 +108,6 @@ def render_jinja2_template(
         base_path: base path to the template, defaults to the project root.
     """
     base = Path(base_path) if base_path else Path(__file__).resolve().parent.parent
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base), autoescape=True)
     template = env.get_template(template_path)
     return template.render(context)
