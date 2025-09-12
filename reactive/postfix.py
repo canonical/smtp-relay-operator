@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from pydantic import IPvAnyNetwork
 
     from state import State
-    from tls import TLSConfigPaths
 
 
 def _smtpd_relay_restrictions(charm_state: "State") -> list[str]:
