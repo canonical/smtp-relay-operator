@@ -67,7 +67,10 @@ def _smtpd_recipient_restrictions(charm_state: "State") -> list[str]:
 
 def construct_postfix_config_file_content(
     charm_state: "State",
-    tls_config_paths: "TLSConfigPaths",
+    tls_dh_params_path: str,
+    tls_cert_path: str,
+    tls_key_path: str,
+    tls_cert_key_path,
     fqdn: str,
     hostname: str,
     milters: str,
@@ -94,11 +97,11 @@ def construct_postfix_config_file_content(
         "smtpd_recipient_restrictions": ", ".join(_smtpd_recipient_restrictions(charm_state)),
         "smtpd_relay_restrictions": ", ".join(_smtpd_relay_restrictions(charm_state)),
         "smtpd_sender_restrictions": ", ".join(_smtpd_sender_restrictions(charm_state)),
-        "tls_cert_key": tls_config_paths.tls_cert_key,
-        "tls_cert": tls_config_paths.tls_cert,
-        "tls_key": tls_config_paths.tls_key,
+        "tls_cert_key": tls_cert_key_path,
+        "tls_cert": tls_cert_path,
+        "tls_key": tls_key_path,
         "tls_ciphers": charm_state.tls_ciphers.value if charm_state.tls_ciphers else None,
-        "tls_dh_params": tls_config_paths.tls_dh_params,
+        "tls_dh_params": tls_dh_params_path,
         "tls_exclude_ciphers": ", ".join(charm_state.tls_exclude_ciphers),
         "tls_protocols": " ".join(charm_state.tls_protocols),
         "tls_security_level": (

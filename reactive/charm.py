@@ -154,7 +154,10 @@ def configure_smtp_relay(
 
     contents = construct_postfix_config_file_content(
         charm_state=charm_state,
-        tls_config_paths=tls_config_paths,
+        tls_dh_params_path=tls_config_paths.tls_dh_params,
+        tls_cert_path=tls_config_paths.tls_cert,
+        tls_key_path=tls_config_paths.tls_key,
+        tls_cert_key_path=tls_config_paths.tls_cert_key,
         fqdn=fqdn,
         hostname=hostname,
         milters=milters,
@@ -165,7 +168,10 @@ def configure_smtp_relay(
     
     contents = construct_postfix_config_file_content(
         charm_state=charm_state,
-        tls_config_paths=tls_config_paths,
+        tls_dh_params_path=tls_config_paths.tls_dh_params,
+        tls_cert_path=tls_config_paths.tls_cert,
+        tls_key_path=tls_config_paths.tls_key,
+        tls_cert_key_path=tls_config_paths.tls_cert_key,
         fqdn=fqdn,
         hostname=hostname,
         milters=milters,
