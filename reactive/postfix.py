@@ -4,7 +4,7 @@
 """Postfix Service Layer."""
 
 import os
-import subprocess
+import subprocess  # nosec
 from typing import TYPE_CHECKING, NamedTuple
 
 from reactive import utils
