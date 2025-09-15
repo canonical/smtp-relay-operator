@@ -7,7 +7,7 @@ from unittest import mock
 from typing import TYPE_CHECKING
 
 
-from reactive import utils, postfix  # NOQA: E402
+from reactive import utils, postfix, state  # NOQA: E402
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,16 +18,24 @@ if TYPE_CHECKING:
 @mock.patch("reactive.postfix.utils.write_file")
 class TestCreateUpdateMap:
 
-    def test_pmfname_file_not_exists(self, write_file, os_utime, call, tmp_path: "Path") -> None:
-        # Given
+    def test_pmfname_file_not_exists(self, write_file, os_utime, _call, tmp_path: "Path") -> None:
+        """
+        arrange: path to non-existing pmfname file.
+        act: call _create_update_map.
+        assert: 
+            - file created
+            - write_file called
+            - return change
+        """
+        # Arrange
         write_file.return_value = True
         non_existing_file_path = tmp_path / "pmfname"
         postmap = f"hash:{non_existing_file_path}"
 
-        # When
+        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Then
+        # Assert
         os_utime.assert_called_once_with(str(non_existing_file_path), None)
         write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -36,18 +44,26 @@ class TestCreateUpdateMap:
         assert result is True
 
     def test_pmfname_file_exists_no_change(
-        self, write_file, os_utime, call, tmp_path: "Path"
+        self, write_file, os_utime, _call, tmp_path: "Path"
     ) -> None:
-        # Given
+        """
+        arrange: path to existing pmfname file having same content to be written.
+        act: call _create_update_map.
+        assert:
+            - no file creation
+            - write_file called
+            - return no change
+        """
+        # Arrange
         write_file.return_value = False
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"hash:{exising_file_path}"
 
-        # When
+        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Then
+        # Assert
         os_utime.assert_not_called()
         write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -58,16 +74,25 @@ class TestCreateUpdateMap:
     def test_pmfname_file_exists_change_hash_type(
         self, write_file, os_utime, call, tmp_path: "Path"
     ) -> None:
-        # Given
+        """
+        arrange: path to existing pmfname and pmap_name is hash.
+        act: call _create_update_map.
+        assert:
+            - no file creation
+            - write_file called
+            - postmap command called
+            - return change.
+        """
+        # Arrange
         write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"hash:{exising_file_path}"
 
-        # When
+        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Then
+        # Assert
         os_utime.assert_not_called()
         write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -79,16 +104,25 @@ class TestCreateUpdateMap:
     def test_pmfname_file_exists_change_not_hash_type(
         self, write_file, os_utime, call, tmp_path: "Path"
     ) -> None:
-        # Given
+        """
+        arrange: path to existing pmfname and pmap_name is not shash.
+        act: call _create_update_map.
+        assert:
+            - no file creation
+            - call write_file
+            - postmap command not called
+            - return change.
+        """
+        # Arrange
         write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"cidr:{exising_file_path}"
 
-        # When
+        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Then
+        # Assert
         os_utime.assert_not_called()
         write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
