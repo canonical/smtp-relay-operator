@@ -67,7 +67,7 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
     tls_dh_params_path: str,
     tls_cert_path: str,
     tls_key_path: str,
-    tls_cert_key_path,
+    tls_cert_key_path: str,
     fqdn: str,
     hostname: str,
     milters: str,
@@ -114,7 +114,7 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
     return utils.render_jinja2_template(context, template_path)
 
 
-def _create_update_map(content, postmap: str) -> bool:
+def _create_update_map(content: str, postmap: str) -> bool:
     changed = False
 
     (pmtype, pmfname) = postmap.split(":")
@@ -238,7 +238,7 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
     return changed
 
 
-def construct_policyd_spf_config_file_content(spf_skip_addresses: "IPvAnyNetwork") -> str:
+def construct_policyd_spf_config_file_content(spf_skip_addresses: "list[IPvAnyNetwork]") -> str:
     """Create the configuration file content for the policyd-spf service."""
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,

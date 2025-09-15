@@ -9,7 +9,7 @@ import subprocess  # nosec
 from typing import NamedTuple
 
 
-def _get_autocert_cn(autocert_conf_dir="/etc/autocert/postfix") -> str:
+def _get_autocert_cn(autocert_conf_dir: str = "/etc/autocert/postfix") -> str:
     # autocert relation is reversed so we can't get this info from
     # juju relations but rather try work it out from the shipped out
     # config.

@@ -14,6 +14,8 @@ from reactive import postfix, state, utils
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pydantic import IPvAnyNetwork
+
 
 @patch("reactive.postfix.subprocess.call")
 @patch("reactive.postfix.os.utime")
@@ -522,7 +524,7 @@ class TestConstructPolicydSpfConfigFileContent:
     def test_content_construction(
         self,
         mock_render_template: Mock,
-        spf_skip_addresses: list,
+        spf_skip_addresses: list["IPvAnyNetwork"],
         expected_skip_string: str,
     ) -> None:
         """
@@ -585,44 +587,30 @@ class TestEnsurePostmapFiles:
         # Arrange
         postfix_conf_dir = "/etc/postfix"
 
-        expected_calls = {
-            "append_envelope_to_header": call(
+        expected_calls = [
+            call(
                 "/^(.*)$/ PREPEND X-Envelope-To: $1",
                 "regexp:/etc/postfix/append_envelope_to_header",
             ),
-            "header_checks": call("/^Subject:/ WARN", "regexp:/etc/postfix/header_checks"),
-            "relay_access_sources": call("192.168.1.0/24", "cidr:/etc/postfix/relay_access"),
-            "relay_recipient_maps": call(
-                "user@example.com OK", "hash:/etc/postfix/relay_recipient"
-            ),
-            "restrict_recipients": call(
-                "bad@example.com REJECT", "hash:/etc/postfix/restricted_recipients"
-            ),
-            "restrict_senders": call(
-                "spammer@example.com REJECT", "hash:/etc/postfix/restricted_senders"
-            ),
-            "sender_access": call(f"{'unwanted.com':35} OK\n", "hash:/etc/postfix/access"),
-            "sender_login_maps": call(
-                "sender@example.com user@example.com", "hash:/etc/postfix/sender_login"
-            ),
-            "smtp_header_checks": call(
-                "/^Received:/ IGNORE", "regexp:/etc/postfix/smtp_header_checks"
-            ),
-            "tls_policy_maps": call("example.com secure", "hash:/etc/postfix/tls_policy"),
-            "transport_maps": call(
-                "domain.com smtp:relay.example.com", "hash:/etc/postfix/transport"
-            ),
-            "virtual_alias_maps": call(
-                "alias@example.com real@example.com", "hash:/etc/postfix/virtual_alias"
-            ),
-        }
+            call("/^Subject:/ WARN", "regexp:/etc/postfix/header_checks"),
+            call("192.168.1.0/24", "cidr:/etc/postfix/relay_access"),
+            call("user@example.com OK", "hash:/etc/postfix/relay_recipient"),
+            call("bad@example.com REJECT", "hash:/etc/postfix/restricted_recipients"),
+            call("spammer@example.com REJECT", "hash:/etc/postfix/restricted_senders"),
+            call(f"{'unwanted.com':35} OK\n", "hash:/etc/postfix/access"),
+            call("sender@example.com user@example.com", "hash:/etc/postfix/sender_login"),
+            call("/^Received:/ IGNORE", "regexp:/etc/postfix/smtp_header_checks"),
+            call("example.com secure", "hash:/etc/postfix/tls_policy"),
+            call("domain.com smtp:relay.example.com", "hash:/etc/postfix/transport"),
+            call("alias@example.com real@example.com", "hash:/etc/postfix/virtual_alias"),
+        ]
 
         # Act
         postfix.ensure_postmap_files(postfix_conf_dir, self.charm_state)
 
         # Assert
         assert mock_create_update_map.call_count == len(expected_calls)
-        mock_create_update_map.assert_has_calls(expected_calls.values(), any_order=True)
+        mock_create_update_map.assert_has_calls(expected_calls, any_order=True)
 
     @pytest.mark.parametrize(
         ("side_effects", "expected_return"),
