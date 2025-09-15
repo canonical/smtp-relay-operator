@@ -3,7 +3,8 @@
 
 """Postfix service unit tests."""
 
-from unittest.mock import patch
+import ipaddress
+from unittest.mock import patch, Mock
 from typing import TYPE_CHECKING
 
 import pytest
@@ -252,7 +253,7 @@ class TestSMTPDRelayRestrictions(TestWithState):
             ),
         ],
     )
-    def test_items_and_order(
+    def test_restrictions(
         self,
         relay_access_sources: list[str],
         enable_smtp_auth: bool,
@@ -420,3 +421,49 @@ class TestSmtpdRecipientRestrictions(TestWithState):
 
         # Assert
         assert result == expected
+
+
+class TestConstructPolicydSpfConfigFileContent:
+    @pytest.mark.parametrize(
+        ("spf_skip_addresses", "expected_skip_string"),
+        [
+            pytest.param([], "", id="empty_list"),
+            pytest.param(
+                [ipaddress.ip_network("127.0.0.1")],
+                "127.0.0.1/32",
+                id="single_ipv4_address",
+            ),
+            pytest.param(
+                [
+                    ipaddress.ip_network("192.168.1.0/24"),
+                    ipaddress.ip_network("::1"),
+                    ipaddress.ip_network("10.0.0.5"),
+                ],
+                "192.168.1.0/24,::1/128,10.0.0.5/32",
+                id="multiple_mixed_addresses",
+            ),
+        ],
+    )
+    @patch("reactive.postfix.utils.render_jinja2_template")
+    def test_content_construction(
+        self,
+        mock_render_template: Mock,
+        spf_skip_addresses: list,
+        expected_skip_string: str,
+    ):
+        """
+        arrange: Given a list of IP addresses to skip for SPF checks.
+        act: Call construct_policyd_spf_config_file_content.
+        assert: The Jinja2 renderer is called with the correctly formatted context.
+        """
+        # Arrange
+        expected_context = {
+            "JUJU_HEADER": utils.JUJU_HEADER,
+            "skip_addresses": expected_skip_string,
+        }
+
+        # Act
+        postfix.construct_policyd_spf_config_file_content(spf_skip_addresses)
+
+        # Assert
+        mock_render_template.assert_called_once_with(expected_context, "templates/policyd_spf_conf.tmpl")
