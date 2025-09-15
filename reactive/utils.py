@@ -27,7 +27,7 @@ def update_logrotate_conf(path):
 
     config = Path(path).read_text(encoding="utf-8")
     new = []
-    regex = re.compile(r'^(\s+)(daily|weekly|monthly|rotate|dateext)')
+    regex = re.compile(r"^(\s+)(daily|weekly|monthly|rotate|dateext)")
     for line in config.splitlines():
         m = regex.match(line)
         if not m:

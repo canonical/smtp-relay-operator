@@ -30,6 +30,7 @@ class TLSConfigPaths(NamedTuple):
         tls_key: Path to the TLS private key file.
         tls_cert_key: Path to a combined certificate and key file (currently unused).
     """
+
     tls_dh_params: str
     tls_cert: str
     tls_key: str

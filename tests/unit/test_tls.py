@@ -14,8 +14,8 @@ from unittest import mock
 # to build the charm and pull in layers such as layer-status.
 sys.modules["charms.layer"] = mock.MagicMock()
 
-from charms.layer import status  # NOQA: E402
 from charmhelpers.core import unitdata  # NOQA: E402
+from charms.layer import status  # NOQA: E402
 
 # Add path to where our reactive layer lives and import.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))

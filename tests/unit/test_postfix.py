@@ -4,13 +4,12 @@
 """Postfix service unit tests."""
 
 import ipaddress
-from unittest.mock import patch, Mock, call
 from typing import TYPE_CHECKING
+from unittest.mock import Mock, call, patch
 
 import pytest
 
-
-from reactive import utils, postfix, state
+from reactive import postfix, state, utils
 
 if TYPE_CHECKING:
     from pathlib import Path

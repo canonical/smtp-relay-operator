@@ -11,7 +11,6 @@ from reactive import utils
 
 if TYPE_CHECKING:
     from pydantic import IPvAnyNetwork
-
     from state import State
 
 
