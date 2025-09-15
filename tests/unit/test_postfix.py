@@ -327,13 +327,96 @@ class TestSmtpdSenderRestrictions(TestWithState):
         assert: The returned list of restrictions is correct and in order.
         """
         # Arrange
-        self.charm_state.enable_reject_unknown_sender_domain = (
-            enable_reject_unknown_sender
-        )
+        self.charm_state.enable_reject_unknown_sender_domain = enable_reject_unknown_sender
         self.charm_state.restrict_sender_access = restrict_sender_access
 
         # Act
         result = postfix._smtpd_sender_restrictions(self.charm_state)
+
+        # Assert
+        assert result == expected
+
+
+class TestSmtpdRecipientRestrictions(TestWithState):
+    @pytest.mark.parametrize(
+        (
+            "append_x_envelope_to",
+            "restrict_senders",
+            "additional_restrictions",
+            "enable_spf",
+            "expected",
+        ),
+        [
+            pytest.param(False, {}, [], False, [], id="all_disabled"),
+            pytest.param(
+                True,
+                {},
+                [],
+                False,
+                ["check_recipient_access regexp:/etc/postfix/append_envelope_to_header"],
+                id="append_x_envelope_enabled",
+            ),
+            pytest.param(
+                False,
+                {"sender": "value"},
+                [],
+                False,
+                ["check_sender_access hash:/etc/postfix/restricted_senders"],
+                id="restrict_senders_enabled",
+            ),
+            pytest.param(
+                False,
+                {},
+                ["custom_restriction_1"],
+                False,
+                ["custom_restriction_1"],
+                id="additional_restrictions_enabled",
+            ),
+            pytest.param(
+                False,
+                {},
+                [],
+                True,
+                ["check_policy_service unix:private/policyd-spf"],
+                id="spf_enabled",
+            ),
+            pytest.param(
+                True,
+                {"sender": "value"},
+                ["custom_restriction_1", "custom_restriction_2"],
+                True,
+                [
+                    "check_recipient_access regexp:/etc/postfix/append_envelope_to_header",
+                    "check_sender_access hash:/etc/postfix/restricted_senders",
+                    "custom_restriction_1",
+                    "custom_restriction_2",
+                    "check_policy_service unix:private/policyd-spf",
+                ],
+                id="all_enabled",
+            ),
+        ],
+    )
+    def test_restrictions(
+        self,
+        append_x_envelope_to: bool,
+        restrict_senders: dict,
+        additional_restrictions: list[str],
+        enable_spf: bool,
+        expected: list[str],
+    ) -> None:
+        """
+        arrange: Create charm_state with different recipient restriction settings.
+        act: Call _smtpd_recipient_restrictions with the charm_state.
+        assert: The returned list of restrictions is correct and in order.
+        """
+        # Arrange
+        self.charm_state.append_x_envelope_to = append_x_envelope_to
+        self.charm_state.restrict_senders = restrict_senders
+        self.charm_state.additional_smtpd_recipient_restrictions = additional_restrictions
+        self.charm_state.enable_spf = enable_spf
+
+        # Act
+        result = postfix._smtpd_recipient_restrictions(self.charm_state)
 
         # Assert
         assert result == expected
