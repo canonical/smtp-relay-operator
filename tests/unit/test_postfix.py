@@ -627,8 +627,16 @@ class TestEnsurePostmapFiles:
     @pytest.mark.parametrize(
         ("side_effects", "expected_return"),
         [
-            ([False] * 12, False),  # Test with all returning False
-            ([False] * 5 + [True] + [False] * 6, True),  # Test with one returning True
+            pytest.param(
+                [False] * 12,
+                False,
+                id="no_changes_returns_false"
+            ),
+            pytest.param(
+                [False] * 5 + [True] + [False] * 6,
+                True,
+                id="one_change_returns_true"
+            ),
         ],
     )
     def test_return_value(
