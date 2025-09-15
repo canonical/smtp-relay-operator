@@ -261,9 +261,9 @@ class TestSMTPDRelayRestrictions(TestWithState):
         expected: list[str],
     ) -> None:
         """
-        arrange: create charm_state with enable_smpt_auth and sender_login_maps.
-        act: call _smtpd_relay_restrictions with the charm_state.
-        assert: has expected restrictions in correct order.
+        arrange: Create charm_state with different relay restriction settings.
+        act: Call _smtpd_restrictions with the charm_state.
+        assert: The returned list of restrictions is correct and in order..
         """
         # Arrange
         self.charm_state.relay_access_sources = relay_access_sources
@@ -273,6 +273,67 @@ class TestSMTPDRelayRestrictions(TestWithState):
 
         # Act
         result = postfix._smtpd_relay_restrictions(self.charm_state)
+
+        # Assert
+        assert result == expected
+
+
+class TestSmtpdSenderRestrictions(TestWithState):
+    @pytest.mark.parametrize(
+        ("enable_reject_unknown_sender", "restrict_sender_access", "expected"),
+        [
+            pytest.param(
+                False,
+                [],
+                ["check_sender_access hash:/etc/postfix/access"],
+                id="neither_enabled",
+            ),
+            pytest.param(
+                True,
+                [],
+                [
+                    "reject_unknown_sender_domain",
+                    "check_sender_access hash:/etc/postfix/access",
+                ],
+                id="reject_unknown_enabled",
+            ),
+            pytest.param(
+                False,
+                ["example.com"],
+                ["check_sender_access hash:/etc/postfix/access", "reject"],
+                id="restrict_access_enabled",
+            ),
+            pytest.param(
+                True,
+                ["example.com"],
+                [
+                    "reject_unknown_sender_domain",
+                    "check_sender_access hash:/etc/postfix/access",
+                    "reject",
+                ],
+                id="both_enabled",
+            ),
+        ],
+    )
+    def test_restrictions(
+        self,
+        enable_reject_unknown_sender: bool,
+        restrict_sender_access: list[str],
+        expected: list[str],
+    ) -> None:
+        """
+        arrange: Create charm_state with different sender restriction settings.
+        act: Call _smtpd_sender_restrictions with the charm_state.
+        assert: The returned list of restrictions is correct and in order.
+        """
+        # Arrange
+        self.charm_state.enable_reject_unknown_sender_domain = (
+            enable_reject_unknown_sender
+        )
+        self.charm_state.restrict_sender_access = restrict_sender_access
+
+        # Act
+        result = postfix._smtpd_sender_restrictions(self.charm_state)
 
         # Assert
         assert result == expected
