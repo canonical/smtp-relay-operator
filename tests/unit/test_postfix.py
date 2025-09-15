@@ -21,7 +21,13 @@ if TYPE_CHECKING:
 @patch("reactive.postfix.utils.write_file")
 class TestCreateUpdateMap:
 
-    def test_pmfname_file_not_exists(self, write_file, os_utime, _call, tmp_path: "Path") -> None:
+    def test_pmfname_file_not_exists(
+        self,
+        mock_write_file: Mock,
+        mock_os_utime: Mock,
+        _mock_call: Mock,
+        tmp_path: "Path",
+    ) -> None:
         """
         arrange: path to non-existing pmfname file.
         act: call _create_update_map.
@@ -31,7 +37,7 @@ class TestCreateUpdateMap:
             - return change
         """
         # Arrange
-        write_file.return_value = True
+        mock_write_file.return_value = True
         non_existing_file_path = tmp_path / "pmfname"
         postmap = f"hash:{non_existing_file_path}"
 
@@ -39,15 +45,19 @@ class TestCreateUpdateMap:
         result = postfix._create_update_map("contents", postmap)
 
         # Assert
-        os_utime.assert_called_once_with(str(non_existing_file_path), None)
-        write_file.assert_called_once_with(
+        mock_os_utime.assert_called_once_with(str(non_existing_file_path), None)
+        mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
             str(non_existing_file_path),
         )
         assert result is True
 
     def test_pmfname_file_exists_no_change(
-        self, write_file, os_utime, _call, tmp_path: "Path"
+        self,
+        mock_write_file: Mock,
+        mock_os_utime: Mock,
+        _mock_call: Mock,
+        tmp_path: "Path",
     ) -> None:
         """
         arrange: path to existing pmfname file having same content to be written.
@@ -58,7 +68,7 @@ class TestCreateUpdateMap:
             - return no change
         """
         # Arrange
-        write_file.return_value = False
+        mock_write_file.return_value = False
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"hash:{exising_file_path}"
@@ -67,15 +77,19 @@ class TestCreateUpdateMap:
         result = postfix._create_update_map("contents", postmap)
 
         # Assert
-        os_utime.assert_not_called()
-        write_file.assert_called_once_with(
+        mock_os_utime.assert_not_called()
+        mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
             str(exising_file_path),
         )
         assert result is False
 
     def test_pmfname_file_exists_change_hash_type(
-        self, write_file, os_utime, call, tmp_path: "Path"
+        self,
+        mock_write_file: Mock,
+        mock_os_utime: Mock,
+        mock_call: Mock,
+        tmp_path: "Path",
     ) -> None:
         """
         arrange: path to existing pmfname and pmap_name is hash.
@@ -87,7 +101,7 @@ class TestCreateUpdateMap:
             - return change.
         """
         # Arrange
-        write_file.return_value = True
+        mock_write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"hash:{exising_file_path}"
@@ -96,16 +110,20 @@ class TestCreateUpdateMap:
         result = postfix._create_update_map("contents", postmap)
 
         # Assert
-        os_utime.assert_not_called()
-        write_file.assert_called_once_with(
+        mock_os_utime.assert_not_called()
+        mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
             str(exising_file_path),
         )
-        call.asset_called_once_with(["postmap", postmap])
+        mock_call.asset_called_once_with(["postmap", postmap])
         assert result is True
 
     def test_pmfname_file_exists_change_not_hash_type(
-        self, write_file, os_utime, call, tmp_path: "Path"
+        self,
+        mock_write_file: Mock,
+        mock_os_utime: Mock,
+        mock_call: Mock,
+        tmp_path: "Path",
     ) -> None:
         """
         arrange: path to existing pmfname and pmap_name is not shash.
@@ -117,7 +135,7 @@ class TestCreateUpdateMap:
             - return change.
         """
         # Arrange
-        write_file.return_value = True
+        mock_write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"cidr:{exising_file_path}"
@@ -126,12 +144,12 @@ class TestCreateUpdateMap:
         result = postfix._create_update_map("contents", postmap)
 
         # Assert
-        os_utime.assert_not_called()
-        write_file.assert_called_once_with(
+        mock_os_utime.assert_not_called()
+        mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
             str(exising_file_path),
         )
-        call.assert_not_called()
+        mock_call.assert_not_called()
         assert result is True
 
 
@@ -466,4 +484,6 @@ class TestConstructPolicydSpfConfigFileContent:
         postfix.construct_policyd_spf_config_file_content(spf_skip_addresses)
 
         # Assert
-        mock_render_template.assert_called_once_with(expected_context, "templates/policyd_spf_conf.tmpl")
+        mock_render_template.assert_called_once_with(
+            expected_context, "templates/policyd_spf_conf.tmpl"
+        )
