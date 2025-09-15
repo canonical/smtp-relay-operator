@@ -6,7 +6,8 @@
 from reactive import utils
 
 
-def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_auth: bool):
+def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_auth: bool) -> str:
+    """Prepare the context and render the dovecot.conf file content."""
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,
         # TODO: Allow overriding passdb driver.
@@ -22,5 +23,5 @@ def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_a
 
 
 def construct_dovecot_user_file_content(smtp_auth_users: list[str]) -> str:
-    """Write Dovecot users file."""
+    """Format the list of users into the content for the Dovecot users file."""
     return f"{utils.JUJU_HEADER}{'\n'.join(smtp_auth_users)}\n"

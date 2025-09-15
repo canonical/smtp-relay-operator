@@ -73,6 +73,7 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
     milters: str,
     template_path: str,
 ) -> str:
+    """Prepare the context and renders the Postfix configuration files."""
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,
         "fqdn": fqdn,
@@ -237,7 +238,8 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
     return changed
 
 
-def construct_policyd_spf_config_file_content(spf_skip_addresses: "IPvAnyNetwork"):
+def construct_policyd_spf_config_file_content(spf_skip_addresses: "IPvAnyNetwork") -> str:
+    """Create the configuration file content for the policyd-spf service."""
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,
         "skip_addresses": ",".join([str(address) for address in spf_skip_addresses]),

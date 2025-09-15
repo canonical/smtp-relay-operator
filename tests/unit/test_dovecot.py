@@ -40,7 +40,9 @@ class TestConstructDovecotConfigFileContent:
         }
 
         # Act
-        result = dovecot.construct_dovecot_config_file_content(dovecot_users_path, enable_smtp_auth)
+        result = dovecot.construct_dovecot_config_file_content(
+            dovecot_users_path, enable_smtp_auth
+        )
 
         # Assert
         mock_render.assert_called_once_with(expected_context, "templates/dovecot_conf.tmpl")

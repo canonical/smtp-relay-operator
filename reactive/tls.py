@@ -37,6 +37,7 @@ class TLSConfigPaths(NamedTuple):
 
 
 def get_tls_config_paths(tls_dh_params: str) -> TLSConfigPaths:
+    """Determine paths for TLS assets."""
     tls_cert_key = ""
     tls_cert = "/etc/ssl/certs/ssl-cert-snakeoil.pem"
     tls_key = "/etc/ssl/private/ssl-cert-snakeoil.key"
