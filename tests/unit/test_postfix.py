@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@patch("subprocess.call")
+@patch("reactive.postfix.subprocess.call")
 @patch("reactive.postfix.os.utime")
 @patch("reactive.postfix.utils.write_file")
 class TestCreateUpdateMap:

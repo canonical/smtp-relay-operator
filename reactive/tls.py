@@ -9,15 +9,14 @@ import subprocess  # nosec
 from typing import NamedTuple
 
 
-def _get_autocert_cn(autocert_conf_dir="/etc/autocert/postfix"):
+def _get_autocert_cn(autocert_conf_dir="/etc/autocert/postfix") -> str:
     # autocert relation is reversed so we can't get this info from
     # juju relations but rather try work it out from the shipped out
     # config.
     if os.path.exists(autocert_conf_dir):
         for f in sorted(os.listdir(autocert_conf_dir)):
-            if not f.endswith(".ini"):
-                continue
-            return f[:-4]
+            if f.endswith(".ini"):
+                return f.removesuffix(".ini")
     return ""
 
 

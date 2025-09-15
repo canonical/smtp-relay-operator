@@ -1,174 +1,155 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Postfix service unit tests."""
+"""TLS service unit tests."""
 
-import os
-import shutil
-import sys
-import tempfile
-import unittest
-from unittest import mock
+from typing import TYPE_CHECKING
+from unittest.mock import Mock, patch
 
-# We also need to mock up charms.layer so we can run unit tests without having
-# to build the charm and pull in layers such as layer-status.
-sys.modules["charms.layer"] = mock.MagicMock()
+import pytest
 
-from charmhelpers.core import unitdata  # NOQA: E402
-from charms.layer import status  # NOQA: E402
+from reactive import tls
 
-# Add path to where our reactive layer lives and import.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
-from reactive import tls  # NOQA: E402
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-class TestCharm(unittest.TestCase):
-    def setUp(self):
-        # TODO: copied from test_charm, needs reduction
-        self.maxDiff = None
-        self.tmpdir = tempfile.mkdtemp(prefix="charm-unittests-")
-        self.addCleanup(shutil.rmtree, self.tmpdir)
+class TestGetAutocertCn:
+    def test_no_autocert_dir(self, tmp_path: "Path") -> None:
+        """
+        arrange: Define a path to a non-existent autocert directory.
+        act: Call _get_autocert_cn.
+        assert: An empty string is returned.
+        """
+        # Arrange
+        autocert_conf_dir = tmp_path / "autocert"
 
-        os.environ["UNIT_STATE_DB"] = os.path.join(self.tmpdir, ".unit-state.db")
-        unitdata.kv().set("test", {})
+        # Act
+        result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        self.charm_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        )
+        # Assert
+        assert result == ""
 
-        patcher = mock.patch("charmhelpers.core.hookenv.log")
-        self.mock_log = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_log.return_value = ""
-        # Also needed for host.write_file()
-        patcher = mock.patch("charmhelpers.core.host.log")
-        self.mock_log = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_log.return_value = ""
+    def test_empty_autocert_dir(self, tmp_path: "Path") -> None:
+        """
+        arrange: Create an empty autocert directory.
+        act: Call _get_autocert_cn.
+        assert: An empty string is returned.
+        """
+        # Arrange
+        autocert_conf_dir = tmp_path / "autocert"
+        autocert_conf_dir.mkdir()
 
-        patcher = mock.patch("charmhelpers.core.hookenv.charm_dir")
-        self.mock_charm_dir = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_charm_dir.return_value = self.charm_dir
+        # Act
+        result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        patcher = mock.patch("charmhelpers.core.hookenv.application_name")
-        self.mock_application_name = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_application_name.return_value = "smtp-relay"
+        # Assert
+        assert result == ""
 
-        patcher = mock.patch("charmhelpers.core.hookenv.local_unit")
-        self.mock_local_unit = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_local_unit.return_value = "smtp-relay/0"
+    def test_single_config_file(self, tmp_path: "Path") -> None:
+        """
+        arrange: Create an autocert directory with one .ini file.
+        act: Call _get_autocert_cn.
+        assert: The common name is correctly extracted from the filename.
+        """
+        # Arrange
+        autocert_conf_dir = tmp_path / "autocert"
+        autocert_conf_dir.mkdir()
+        (autocert_conf_dir / "smtp.mydomain.local.ini").touch()
 
-        patcher = mock.patch("charmhelpers.core.hookenv.config")
-        self.mock_config = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_config.return_value = {
-            "append_x_envelope_to": False,
-            "connection_limit": 100,
-            "domain": "",
-            "enable_rate_limits": False,
-            "enable_reject_unknown_sender_domain": True,
-            "enable_smtp_auth": True,
-            "enable_spf": False,
-            "message_size_limit": 61440000,
-            "tls_ciphers": "HIGH",
-            "tls_exclude_ciphers": """
-                - aNULL
-                - eNULL
-                - DES
-                - 3DES
-                - MD5
-                - RC4
-                - CAMELLIA
-            """,
-            "tls_protocols": """
-                - '!SSLv2'
-                - '!SSLv3'
-            """,
-            "tls_security_level": "may",
-            "virtual_alias_maps_type": "hash",
-        }
+        # Act
+        result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        patcher = mock.patch("charmhelpers.core.hookenv.close_port")
-        self.mock_close_port = patcher.start()
-        self.addCleanup(patcher.stop)
+        # Assert
+        assert result == "smtp.mydomain.local"
 
-        patcher = mock.patch("charmhelpers.core.hookenv.open_port")
-        self.mock_open_port = patcher.start()
-        self.addCleanup(patcher.stop)
+    def test_multiple_files_sorted(self, tmp_path: "Path") -> None:
+        """
+        arrange: Create an autocert directory with multiple files.
+        act: Call _get_autocert_cn.
+        assert: The common name from the first .ini file alphabetically is returned.
+        """
+        # Arrange
+        autocert_conf_dir = tmp_path / "autocert"
+        autocert_conf_dir.mkdir()
+        (autocert_conf_dir / "aaa.unrelated.file").touch()
+        (autocert_conf_dir / "zzz.mydomain.local.ini").touch()
+        (autocert_conf_dir / "bbb.mydomain.local.ini").touch()
 
-        patcher = mock.patch("charmhelpers.core.host.service_reload")
-        self.mock_service_reload = patcher.start()
-        self.addCleanup(patcher.stop)
+        # Act
+        result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        patcher = mock.patch("charmhelpers.core.host.service_restart")
-        self.mock_service_restart = patcher.start()
-        self.addCleanup(patcher.stop)
+        # Assert
+        assert result == "bbb.mydomain.local"
 
-        patcher = mock.patch("charmhelpers.core.host.service_start")
-        self.mock_service_start = patcher.start()
-        self.addCleanup(patcher.stop)
 
-        patcher = mock.patch("charmhelpers.core.host.service_stop")
-        self.mock_service_stop = patcher.start()
-        self.addCleanup(patcher.stop)
-
-        patcher = mock.patch("socket.getfqdn")
-        self.mock_getfqdn = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_getfqdn.return_value = "juju-87625f-hloeung-94.openstacklocal"
-
-        patcher = mock.patch("socket.gethostname")
-        self.mock_getfqdn = patcher.start()
-        self.addCleanup(patcher.stop)
-        self.mock_getfqdn.return_value = "juju-87625f-hloeung-94"
-
-        status.active.reset_mock()
-        status.blocked.reset_mock()
-        status.maintenance.reset_mock()
-
-    def test__get_autocert_cn(self):
-        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
-        want = ""
-        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
-
-        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
-        autocert_conf = os.path.join(autocert_conf_dir, "smtp.mydomain.local.ini")
-        os.mkdir(autocert_conf_dir)
-        with open(autocert_conf, "a"):
-            os.utime(autocert_conf, None)
-        want = "smtp.mydomain.local"
-        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
-
-    def test__get_autocert_cn_multiple_files(self):
-        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
-        os.mkdir(autocert_conf_dir)
-        files = ["abc", "smtp.mydomain.local.ini", "zzz.mydomain.local.ini"]
-        for fn in files:
-            fff = os.path.join(autocert_conf_dir, fn)
-            with open(fff, "a"):
-                os.utime(fff, None)
-        want = "smtp.mydomain.local"
-        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
-
-    def test__get_autocert_cn_non_exists(self):
-        autocert_conf_dir = os.path.join(self.tmpdir, "autocert")
-        os.mkdir(autocert_conf_dir)
-        want = ""
-        self.assertEqual(want, tls._get_autocert_cn(autocert_conf_dir))
-
-    @mock.patch("reactive.tls._get_autocert_cn")
-    @mock.patch("subprocess.call")
-    def test_get_tls_config_paths_tls_dhparam_non_exists(
+class TestGetTlsConfigPaths:
+    @pytest.mark.parametrize(
+        ("dhparams_exist"),
+        [
+            pytest.param(False, id="no_dhparams"),
+            pytest.param(True, id="with_dhparams"),
+        ],
+    )
+    @patch("reactive.tls.subprocess.call")
+    @patch("reactive.tls._get_autocert_cn", return_value="")
+    def test_path_logic_without_autocert(
         self,
-        call,
-        get_autocert_cn,
-    ):
-        dhparams = os.path.join(self.tmpdir, "dhparams.pem")
-        get_autocert_cn.return_value = ""
-        tls.get_tls_config_paths(dhparams)
-        want = [mock.call(["openssl", "dhparam", "-out", dhparams, "2048"])]
-        call.assert_has_calls(want, any_order=True)
-        self.assertEqual(len(want), len(call.mock_calls))
+        _mock_get_autocert_cn: Mock,
+        mock_subprocess_call: Mock,
+        dhparams_exist: bool,
+        tmp_path: "Path",
+    ) -> None:
+        """
+        arrange: Given no autocert certificate, check behavior based on DH file existence.
+        act: Call get_tls_config_paths.
+        assert: Snakeoil paths are returned and openssl is called only when needed.
+        """
+        # Arrange
+        dhparams_path = tmp_path / "dhparams.pem"
+        if dhparams_exist:
+            dhparams_path.touch()
+
+        # Act
+        result = tls.get_tls_config_paths(str(dhparams_path))
+
+        # Assert
+        if dhparams_exist:
+            mock_subprocess_call.assert_not_called()
+        else:
+            mock_subprocess_call.assert_called_with(
+                ["openssl", "dhparam", "-out", str(dhparams_path), "2048"]
+            )
+
+        assert result.tls_cert == "/etc/ssl/certs/ssl-cert-snakeoil.pem"
+        assert result.tls_key == "/etc/ssl/private/ssl-cert-snakeoil.key"
+        assert result.tls_dh_params == str(dhparams_path)
+
+    @patch("reactive.tls.subprocess.call")
+    @patch("reactive.tls._get_autocert_cn", return_value="smtp.example.com")
+    @patch("reactive.tls.os.path.exists", return_value=False)
+    def test_path_logic_with_autocert(
+        self,
+        _mock_exists: Mock,
+        _mock_get_autocert_cn: Mock,
+        mock_subprocess_call: Mock,
+    ) -> None:
+        """
+        arrange: Given an autocert certificate is present and its DH file is missing.
+        act: Call get_tls_config_paths.
+        assert: Autocert paths are returned and openssl is called to create the DH file.
+        """
+        # Arrange
+        # This path is passed but will be ignored by the function's logic
+        ignored_dhparams_path = "/tmp/some/path/dhparams.pem"
+
+        # Act
+        result = tls.get_tls_config_paths(ignored_dhparams_path)
+
+        # Assert
+        mock_subprocess_call.assert_called_with(
+            ["openssl", "dhparam", "-out", "/etc/postfix/ssl/dhparams.pem", "2048"]
+        )
+        assert result.tls_cert == "/etc/postfix/ssl/smtp.example.com.crt"
+        assert result.tls_key == "/etc/postfix/ssl/smtp.example.com.key"
+        assert result.tls_dh_params == "/etc/postfix/ssl/dhparams.pem"
