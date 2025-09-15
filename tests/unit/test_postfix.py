@@ -524,7 +524,7 @@ class TestConstructPolicydSpfConfigFileContent:
         mock_render_template: Mock,
         spf_skip_addresses: list,
         expected_skip_string: str,
-    ):
+    ) -> None:
         """
         arrange: Given a list of IP addresses to skip for SPF checks.
         act: Call construct_policyd_spf_config_file_content.
@@ -575,7 +575,7 @@ class TestEnsurePostmapFiles:
 
         self.charm_state = state.State.from_charm(config=charm_config)
 
-    def test_all_maps_are_processed(self, mock_create_update_map: Mock):
+    def test_all_maps_are_processed(self, mock_create_update_map: Mock) -> None:
         """
         arrange: Create a charm_state with data for all possible maps.
         act: Call ensure_postmap_files.
@@ -627,21 +627,16 @@ class TestEnsurePostmapFiles:
     @pytest.mark.parametrize(
         ("side_effects", "expected_return"),
         [
-            pytest.param(
-                [False] * 12,
-                False,
-                id="no_changes_returns_false"
-            ),
-            pytest.param(
-                [False] * 5 + [True] + [False] * 6,
-                True,
-                id="one_change_returns_true"
-            ),
+            pytest.param([False] * 12, False, id="no_changes_returns_false"),
+            pytest.param([False] * 5 + [True] + [False] * 6, True, id="one_change_returns_true"),
         ],
     )
     def test_return_value(
-        self, mock_create_update_map: Mock, side_effects: list[bool], expected_return: bool
-    ):
+        self,
+        mock_create_update_map: Mock,
+        side_effects: list[bool],
+        expected_return: bool,
+    ) -> None:
         """
         arrange: Mock the _create_update_map helper to return various boolean values.
         act: Call ensure_postmap_files.
