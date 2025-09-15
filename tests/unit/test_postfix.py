@@ -4,7 +4,7 @@
 """Postfix service unit tests."""
 
 import ipaddress
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, call
 from typing import TYPE_CHECKING
 
 import pytest
@@ -153,7 +153,7 @@ class TestCreateUpdateMap:
         assert result is True
 
 
-class TestWithState:
+class TestSMTPDRelayRestrictions:
 
     @pytest.fixture(autouse=True)
     def setup_method(self) -> None:
@@ -183,9 +183,6 @@ class TestWithState:
             "virtual_alias_maps_type": "hash",
         }
         self.charm_state = state.State.from_charm(config=charm_config)
-
-
-class TestSMTPDRelayRestrictions(TestWithState):
 
     @pytest.mark.parametrize(
         (
@@ -297,7 +294,37 @@ class TestSMTPDRelayRestrictions(TestWithState):
         assert result == expected
 
 
-class TestSmtpdSenderRestrictions(TestWithState):
+class TestSmtpdSenderRestrictions:
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self) -> None:
+        charm_config = {
+            "append_x_envelope_to": False,
+            "connection_limit": 100,
+            "domain": "",
+            "enable_rate_limits": False,
+            "enable_reject_unknown_sender_domain": True,
+            "enable_spf": False,
+            "enable_smtp_auth": True,
+            "tls_ciphers": "HIGH",
+            "tls_exclude_ciphers": """
+                - aNULL
+                - eNULL
+                - DES
+                - 3DES
+                - MD5
+                - RC4
+                - CAMELLIA
+            """,
+            "tls_protocols": """
+                - '!SSLv2'
+                - '!SSLv3'
+            """,
+            "tls_security_level": "may",
+            "virtual_alias_maps_type": "hash",
+        }
+        self.charm_state = state.State.from_charm(config=charm_config)
+
     @pytest.mark.parametrize(
         ("enable_reject_unknown_sender", "restrict_sender_access", "expected"),
         [
@@ -356,7 +383,37 @@ class TestSmtpdSenderRestrictions(TestWithState):
         assert result == expected
 
 
-class TestSmtpdRecipientRestrictions(TestWithState):
+class TestSmtpdRecipientRestrictions:
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self) -> None:
+        charm_config = {
+            "append_x_envelope_to": False,
+            "connection_limit": 100,
+            "domain": "",
+            "enable_rate_limits": False,
+            "enable_reject_unknown_sender_domain": True,
+            "enable_spf": False,
+            "enable_smtp_auth": True,
+            "tls_ciphers": "HIGH",
+            "tls_exclude_ciphers": """
+                - aNULL
+                - eNULL
+                - DES
+                - 3DES
+                - MD5
+                - RC4
+                - CAMELLIA
+            """,
+            "tls_protocols": """
+                - '!SSLv2'
+                - '!SSLv3'
+            """,
+            "tls_security_level": "may",
+            "virtual_alias_maps_type": "hash",
+        }
+        self.charm_state = state.State.from_charm(config=charm_config)
+
     @pytest.mark.parametrize(
         (
             "append_x_envelope_to",
@@ -487,3 +544,107 @@ class TestConstructPolicydSpfConfigFileContent:
         mock_render_template.assert_called_once_with(
             expected_context, "templates/policyd_spf_conf.tmpl"
         )
+
+
+@patch("reactive.postfix._create_update_map")
+class TestEnsurePostmapFiles:
+
+    def setup_method(self) -> None:
+        charm_config = {
+            # Values directly used by the function under test
+            "header_checks": "- '/^Subject:/ WARN'",
+            "relay_access_sources": "- 192.168.1.0/24",
+            "relay_recipient_maps": "user@example.com: OK",
+            "restrict_recipients": "bad@example.com: REJECT",
+            "restrict_senders": "spammer@example.com: REJECT",
+            "restrict_sender_access": "- unwanted.com",
+            "sender_login_maps": "sender@example.com: user@example.com",
+            "smtp_header_checks": "- '/^Received:/ IGNORE'",
+            "tls_policy_maps": "example.com: secure",
+            "transport_maps": "domain.com: smtp:relay.example.com",
+            "virtual_alias_maps": "alias@example.com: real@example.com",
+            "virtual_alias_maps_type": "hash",
+            # Values required for State object instantiation
+            "domain": "example.com",
+            "append_x_envelope_to": False,
+            "enable_rate_limits": False,
+            "enable_reject_unknown_sender_domain": False,
+            "enable_smtp_auth": False,
+            "enable_spf": False,
+            "connection_limit": 0,
+        }
+
+        self.charm_state = state.State.from_charm(config=charm_config)
+
+    def test_all_maps_are_processed(self, mock_create_update_map: Mock):
+        """
+        arrange: Create a charm_state with data for all possible maps.
+        act: Call ensure_postmap_files.
+        assert: The _create_update_map helper is called for each map with the
+                correctly formatted content and path.
+        """
+        # Arrange
+        postfix_conf_dir = "/etc/postfix"
+
+        expected_calls = {
+            "append_envelope_to_header": call(
+                "/^(.*)$/ PREPEND X-Envelope-To: $1",
+                "regexp:/etc/postfix/append_envelope_to_header",
+            ),
+            "header_checks": call("/^Subject:/ WARN", "regexp:/etc/postfix/header_checks"),
+            "relay_access_sources": call("192.168.1.0/24", "cidr:/etc/postfix/relay_access"),
+            "relay_recipient_maps": call(
+                "user@example.com OK", "hash:/etc/postfix/relay_recipient"
+            ),
+            "restrict_recipients": call(
+                "bad@example.com REJECT", "hash:/etc/postfix/restricted_recipients"
+            ),
+            "restrict_senders": call(
+                "spammer@example.com REJECT", "hash:/etc/postfix/restricted_senders"
+            ),
+            "sender_access": call(f"{'unwanted.com':35} OK\n", "hash:/etc/postfix/access"),
+            "sender_login_maps": call(
+                "sender@example.com user@example.com", "hash:/etc/postfix/sender_login"
+            ),
+            "smtp_header_checks": call(
+                "/^Received:/ IGNORE", "regexp:/etc/postfix/smtp_header_checks"
+            ),
+            "tls_policy_maps": call("example.com secure", "hash:/etc/postfix/tls_policy"),
+            "transport_maps": call(
+                "domain.com smtp:relay.example.com", "hash:/etc/postfix/transport"
+            ),
+            "virtual_alias_maps": call(
+                "alias@example.com real@example.com", "hash:/etc/postfix/virtual_alias"
+            ),
+        }
+
+        # Act
+        postfix.ensure_postmap_files(postfix_conf_dir, self.charm_state)
+
+        # Assert
+        assert mock_create_update_map.call_count == len(expected_calls)
+        mock_create_update_map.assert_has_calls(expected_calls.values(), any_order=True)
+
+    @pytest.mark.parametrize(
+        ("side_effects", "expected_return"),
+        [
+            ([False] * 12, False),  # Test with all returning False
+            ([False] * 5 + [True] + [False] * 6, True),  # Test with one returning True
+        ],
+    )
+    def test_return_value(
+        self, mock_create_update_map: Mock, side_effects: list[bool], expected_return: bool
+    ):
+        """
+        arrange: Mock the _create_update_map helper to return various boolean values.
+        act: Call ensure_postmap_files.
+        assert: The function correctly aggregates the boolean results.
+        """
+        # Arrange
+        mock_create_update_map.side_effect = side_effects
+
+        # Act
+        result = postfix.ensure_postmap_files("/etc/postfix", self.charm_state)
+
+        # Assert
+        assert result is expected_return

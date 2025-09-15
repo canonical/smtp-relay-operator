@@ -150,6 +150,7 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
             postmap: The full Postfix lookup table string.
             content: The content to be written to the map's source file.
         """
+
         postmap: str
         content: str
 
