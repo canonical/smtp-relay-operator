@@ -161,26 +161,11 @@ class TestSMTPDRelayRestrictions:
         charm_config = {
             "append_x_envelope_to": False,
             "connection_limit": 100,
-            "domain": "",
+            "domain": "example.domain.com",
             "enable_rate_limits": False,
             "enable_reject_unknown_sender_domain": True,
             "enable_spf": False,
             "enable_smtp_auth": True,
-            "tls_ciphers": "HIGH",
-            "tls_exclude_ciphers": """
-                - aNULL
-                - eNULL
-                - DES
-                - 3DES
-                - MD5
-                - RC4
-                - CAMELLIA
-            """,
-            "tls_protocols": """
-                - '!SSLv2'
-                - '!SSLv3'
-            """,
-            "tls_security_level": "may",
             "virtual_alias_maps_type": "hash",
         }
         self.charm_state = state.State.from_charm(config=charm_config)
@@ -302,26 +287,11 @@ class TestSmtpdSenderRestrictions:
         charm_config = {
             "append_x_envelope_to": False,
             "connection_limit": 100,
-            "domain": "",
+            "domain": "example.domain.com",
             "enable_rate_limits": False,
             "enable_reject_unknown_sender_domain": True,
             "enable_spf": False,
             "enable_smtp_auth": True,
-            "tls_ciphers": "HIGH",
-            "tls_exclude_ciphers": """
-                - aNULL
-                - eNULL
-                - DES
-                - 3DES
-                - MD5
-                - RC4
-                - CAMELLIA
-            """,
-            "tls_protocols": """
-                - '!SSLv2'
-                - '!SSLv3'
-            """,
-            "tls_security_level": "may",
             "virtual_alias_maps_type": "hash",
         }
         self.charm_state = state.State.from_charm(config=charm_config)
@@ -391,26 +361,11 @@ class TestSmtpdRecipientRestrictions:
         charm_config = {
             "append_x_envelope_to": False,
             "connection_limit": 100,
-            "domain": "",
+            "domain": "example.domain.com",
             "enable_rate_limits": False,
             "enable_reject_unknown_sender_domain": True,
             "enable_spf": False,
             "enable_smtp_auth": True,
-            "tls_ciphers": "HIGH",
-            "tls_exclude_ciphers": """
-                - aNULL
-                - eNULL
-                - DES
-                - 3DES
-                - MD5
-                - RC4
-                - CAMELLIA
-            """,
-            "tls_protocols": """
-                - '!SSLv2'
-                - '!SSLv3'
-            """,
-            "tls_security_level": "may",
             "virtual_alias_maps_type": "hash",
         }
         self.charm_state = state.State.from_charm(config=charm_config)
@@ -566,7 +521,7 @@ class TestEnsurePostmapFiles:
             "virtual_alias_maps": "alias@example.com: real@example.com",
             "virtual_alias_maps_type": "hash",
             # Values required for State object instantiation
-            "domain": "example.com",
+            "domain": "example.domain.com",
             "append_x_envelope_to": False,
             "enable_rate_limits": False,
             "enable_reject_unknown_sender_domain": False,
