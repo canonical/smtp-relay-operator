@@ -8,19 +8,22 @@ import os
 import socket
 import subprocess  # nosec
 
+from charmhelpers.core import hookenv, host
 from charms import reactive
 from charms.layer import status
-from charmhelpers.core import hookenv, host
 
-from postfix import (
+from reactive import utils
+from reactive.dovecot import (
+    construct_dovecot_config_file_content,
+    construct_dovecot_user_file_content,
+)
+from reactive.postfix import (
     construct_policyd_spf_config_file_content,
     construct_postfix_config_file_content,
     ensure_postmap_files,
 )
-from dovecot import construct_dovecot_config_file_content, construct_dovecot_user_file_content
-from reactive import utils
 from reactive.state import State
-from tls import get_tls_config_paths
+from reactive.tls import get_tls_config_paths
 
 
 @reactive.hook('upgrade-charm')
