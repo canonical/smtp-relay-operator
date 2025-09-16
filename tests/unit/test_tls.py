@@ -133,6 +133,7 @@ class TestGetTlsConfigPaths:
         _mock_exists: Mock,
         _mock_get_autocert_cn: Mock,
         mock_subprocess_call: Mock,
+        tmp_path: "Path",
     ) -> None:
         """
         arrange: Given an autocert certificate is present and its DH file is missing.
@@ -141,7 +142,7 @@ class TestGetTlsConfigPaths:
         """
         # Arrange
         # This path is passed but will be ignored by the function's logic
-        ignored_dhparams_path = "/tmp/some/path/dhparams.pem"
+        ignored_dhparams_path = str(tmp_path / "dhparams.pem")
 
         # Act
         result = tls.get_tls_config_paths(ignored_dhparams_path)
