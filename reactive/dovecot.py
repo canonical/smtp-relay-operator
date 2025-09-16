@@ -24,4 +24,4 @@ def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_a
 
 def construct_dovecot_user_file_content(smtp_auth_users: list[str]) -> str:
     """Format the list of users into the content for the Dovecot users file."""
-    return f"{utils.JUJU_HEADER}{'\n'.join(smtp_auth_users)}\n"
+    return utils.JUJU_HEADER + "\n".join(smtp_auth_users) + "\n"
