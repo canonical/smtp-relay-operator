@@ -14,9 +14,9 @@ def _get_autocert_cn(autocert_conf_dir: str = "/etc/autocert/postfix") -> str:
     # juju relations but rather try work it out from the shipped out
     # config.
     if os.path.exists(autocert_conf_dir):
-        for f in sorted(os.listdir(autocert_conf_dir)):
-            if f.endswith(".ini"):
-                return f.removesuffix(".ini")
+        for filename in sorted(os.listdir(autocert_conf_dir)):
+            if filename.endswith(".ini"):
+                return filename.removesuffix(".ini")
     return ""
 
 
@@ -37,7 +37,14 @@ class TLSConfigPaths(NamedTuple):
 
 
 def get_tls_config_paths(tls_dh_params: str) -> TLSConfigPaths:
-    """Determine paths for TLS assets."""
+    """Determine paths for TLS assets.
+
+    Args:
+        tls_dh_params: Path to the Diffie-Hellman parameters file.
+
+    Returns:
+        TLSConfigPaths: A named tuple containing paths for TLS assets.
+    """
     tls_cert_key = ""
     tls_cert = "/etc/ssl/certs/ssl-cert-snakeoil.pem"
     tls_key = "/etc/ssl/private/ssl-cert-snakeoil.key"
