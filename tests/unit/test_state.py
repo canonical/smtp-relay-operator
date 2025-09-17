@@ -101,9 +101,7 @@ def test_state():
     )
     assert charm_state.admin_email == charm_config["admin_email"]
     assert charm_state.allowed_relay_networks == [
-        IPvAnyNetwork(value)
-        for value
-        in yaml.safe_load(charm_config["allowed_relay_networks"])
+        IPvAnyNetwork(value) for value in yaml.safe_load(charm_config["allowed_relay_networks"])
     ]
     assert charm_state.append_x_envelope_to
     assert charm_state.connection_limit == charm_config["connection_limit"]
@@ -204,7 +202,13 @@ def test_state_defaults():
     assert charm_state.spf_skip_addresses == []
     assert charm_state.tls_ciphers == state.SmtpTlsCipherGrade.HIGH
     assert charm_state.tls_exclude_ciphers == [
-        "aNULL", "eNULL", "DES", "3DES", "MD5", "RC4", "CAMELLIA"
+        "aNULL",
+        "eNULL",
+        "DES",
+        "3DES",
+        "MD5",
+        "RC4",
+        "CAMELLIA",
     ]
     assert charm_state.tls_policy_maps == {}
     assert charm_state.tls_protocols == ["!SSLv2", "!SSLv3"]

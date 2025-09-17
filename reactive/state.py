@@ -7,11 +7,11 @@ import itertools
 import logging
 import re
 import typing
-import yaml
 from enum import Enum
 
+import yaml
+from pydantic import BaseModel, EmailStr, Field, IPvAnyNetwork, ValidationError, field_validator
 from typing_extensions import Annotated
-from pydantic import BaseModel, EmailStr, Field, field_validator, IPvAnyNetwork, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +240,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         virtual_alias_domains: list[Annotated[str, Field(min_length=1)]],
         virtual_alias_maps: dict[str, str],
         virtual_alias_maps_type: PostfixLookupTableType,
-        connection_limit: int = Field(ge=0)
+        connection_limit: int = Field(ge=0),
     ):
         """Initialize a new instance of the State class.
 
@@ -313,7 +313,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             virtual_alias_domains=virtual_alias_domains,
             virtual_alias_maps=virtual_alias_maps,
             virtual_alias_maps_type=virtual_alias_maps_type,
-            connection_limit=connection_limit
+            connection_limit=connection_limit,
         )
 
     # Validation is done in this method instead of using a pydantic model because
@@ -327,9 +327,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
             ValueError: if the value is invalid.
         """
         if not value == "" and not re.match(HOSTNAME_REGEX, value):
-            logger.error(
-                "The domain (%s) does not match regex: %s", value, HOSTNAME_REGEX
-            )
+            logger.error("The domain (%s) does not match regex: %s", value, HOSTNAME_REGEX)
             raise ValueError("The domain is invalid.")
         return value
 
@@ -348,9 +346,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         """
         try:
             allowed_relay_networks = [
-                IPvAnyNetwork(value)
-                for value
-                in _parse_list(config.get("allowed_relay_networks"))
+                IPvAnyNetwork(value) for value in _parse_list(config.get("allowed_relay_networks"))
             ]
             additional_smtpd_recipient_restrictions = _parse_list(
                 config.get("additional_smtpd_recipient_restrictions")
