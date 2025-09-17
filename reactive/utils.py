@@ -8,7 +8,12 @@ import os
 import pwd
 import re
 from pathlib import Path
+from typing import Any
+
+import jinja2
 from charmhelpers.core import host
+
+JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"
 
 
 def update_logrotate_conf(path):
@@ -22,7 +27,7 @@ def update_logrotate_conf(path):
 
     config = Path(path).read_text(encoding="utf-8")
     new = []
-    regex = re.compile(r'^(\s+)(daily|weekly|monthly|rotate|dateext)')
+    regex = re.compile(r"^(\s+)(daily|weekly|monthly|rotate|dateext)")
     for line in config.splitlines():
         m = regex.match(line)
         if not m:
@@ -88,3 +93,21 @@ def write_file(content, destination_path, perms=0o644, group=None):
     )
     Path(f"{destination_path}.new").rename(destination_path)
     return True
+
+
+def render_jinja2_template(
+    context: dict[str, Any],
+    template_path: str,
+    base_path: str | None = None,
+) -> str:
+    """Render jinja2 template given the context.
+
+    Args:
+        context: Variables to render into the template.
+        template_path: path of the Jinja2 template (relative to base_path).
+        base_path: base path to the template, defaults to the project root.
+    """
+    base = Path(base_path) if base_path else Path(__file__).resolve().parent.parent
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(base), autoescape=True)
+    template = env.get_template(template_path)
+    return template.render(context)
