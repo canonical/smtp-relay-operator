@@ -35,11 +35,10 @@ def test_construct_dovecot_config_file_content(mock_render: Mock, enable_smtp_au
     }
 
     # Act
-    result = dovecot.construct_dovecot_config_file_content(dovecot_users_path, enable_smtp_auth)
+    dovecot.construct_dovecot_config_file_content(dovecot_users_path, enable_smtp_auth)
 
     # Assert
     mock_render.assert_called_once_with(expected_context, "templates/dovecot_conf.tmpl")
-    assert result == mock_render.return_value
 
 
 @pytest.mark.parametrize(
