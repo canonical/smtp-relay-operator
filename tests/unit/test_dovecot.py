@@ -10,15 +10,7 @@ import pytest
 from reactive import dovecot, utils
 
 
-@pytest.mark.parametrize(
-    ("enable_smtp_auth"),
-    [
-        pytest.param(True, id="smtp_auth_enabled"),
-        pytest.param(False, id="smtp_auth_disabled"),
-    ],
-)
-@patch("reactive.dovecot.utils.render_jinja2_template")
-def test_construct_dovecot_config_file_content(mock_render: Mock, enable_smtp_auth: bool) -> None:
+def test_construct_dovecot_config_file_content() -> None:
     """
     arrange: Given different values for enabling SMTP auth.
     act: Call construct_dovecot_config_file_content.
@@ -26,19 +18,51 @@ def test_construct_dovecot_config_file_content(mock_render: Mock, enable_smtp_au
     """
     # Arrange
     dovecot_users_path = "/etc/dovecot/users"
-    expected_context = {
-        "JUJU_HEADER": utils.JUJU_HEADER,
-        "passdb_driver": "passwd-file",
-        "passdb_args": f"scheme=CRYPT username_format=%u {dovecot_users_path}",
-        "path": "/var/spool/postfix/private/auth",
-        "smtp_auth": enable_smtp_auth,
-    }
+    expected = (
+        f"#{utils.JUJU_HEADER}\n"
+        "auth_mechanisms = plain login\n"
+        "auth_verbose = yes\n"
+        "\n"
+        "service auth {\n"
+        "    unix_listener /var/spool/postfix/private/auth {\n"
+        "        mode = 0660\n"
+        "        user = postfix\n"
+        "        group = postfix\n"
+        "    }\n"
+        "}\n"
+        "\n"
+        "passdb {\n"
+        "    driver = passwd-file\n"
+        f"    args = scheme=CRYPT username_format=%u {dovecot_users_path}\n"
+        "}\n"
+    )
 
     # Act
-    dovecot.construct_dovecot_config_file_content(dovecot_users_path, enable_smtp_auth)
+    result = dovecot.construct_dovecot_config_file_content(
+        dovecot_users_path=dovecot_users_path, enable_smtp_auth=True
+    )
 
     # Assert
-    mock_render.assert_called_once_with(expected_context, "templates/dovecot_conf.tmpl")
+    assert result == expected
+
+
+def test_construct_dovecot_config_file_content_smtp_auth_disabled() -> None:
+    """
+    arrange: Nothing.
+    act: Call construct_dovecot_config_file_content with smtp auth disabled.
+    assert: The Jinja2 renderer is called with the correctly formatted context.
+    """
+    # Arrange
+    dovecot_users_path = "/etc/dovecot/users"
+    expected = f"#{utils.JUJU_HEADER}\n## DISABLED\n"
+
+    # Act
+    result = dovecot.construct_dovecot_config_file_content(
+        dovecot_users_path=dovecot_users_path, enable_smtp_auth=False
+    )
+
+    # Assert
+    assert result == expected
 
 
 @pytest.mark.parametrize(
