@@ -3,6 +3,7 @@
 
 """dovecot service unit tests."""
 
+from pathlib import Path
 import pytest
 
 from reactive import dovecot, utils
@@ -16,24 +17,8 @@ def test_construct_dovecot_config_file_content() -> None:
     """
 
     dovecot_users_path = "/etc/dovecot/users"
-    expected = (
-        f"#{utils.JUJU_HEADER}\n"
-        "auth_mechanisms = plain login\n"
-        "auth_verbose = yes\n"
-        "\n"
-        "service auth {\n"
-        "    unix_listener /var/spool/postfix/private/auth {\n"
-        "        mode = 0660\n"
-        "        user = postfix\n"
-        "        group = postfix\n"
-        "    }\n"
-        "}\n"
-        "\n"
-        "passdb {\n"
-        "    driver = passwd-file\n"
-        f"    args = scheme=CRYPT username_format=%u {dovecot_users_path}\n"
-        "}\n"
-    )
+    expected_path = Path(__file__).parent / "files" / "dovecot_config"
+    expected = expected_path.read_text()
 
     result = dovecot.construct_dovecot_config_file_content(
         dovecot_users_path=dovecot_users_path, enable_smtp_auth=True
@@ -50,7 +35,8 @@ def test_construct_dovecot_config_file_content_smtp_auth_disabled() -> None:
     """
 
     dovecot_users_path = "/etc/dovecot/users"
-    expected = f"#{utils.JUJU_HEADER}\n## DISABLED\n"
+    expected_path = Path(__file__).parent / "files" / "dovecot_config_auth_disabled"
+    expected = expected_path.read_text()
 
     result = dovecot.construct_dovecot_config_file_content(
         dovecot_users_path=dovecot_users_path, enable_smtp_auth=False
