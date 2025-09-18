@@ -4,8 +4,8 @@
 """Postfix service unit tests."""
 
 import ipaddress
-from unittest.mock import Mock, call, patch
 from pathlib import Path
+from unittest.mock import Mock, call, patch
 
 import pytest
 
