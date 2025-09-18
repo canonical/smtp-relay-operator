@@ -21,13 +21,11 @@ class TestGetAutocertCn:
         act: Call _get_autocert_cn.
         assert: An empty string is returned.
         """
-        # Arrange
+
         autocert_conf_dir = tmp_path / "autocert"
 
-        # Act
         result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        # Assert
         assert result == ""
 
     def test_empty_autocert_dir(self, tmp_path: "Path") -> None:
@@ -36,14 +34,12 @@ class TestGetAutocertCn:
         act: Call _get_autocert_cn.
         assert: An empty string is returned.
         """
-        # Arrange
+
         autocert_conf_dir = tmp_path / "autocert"
         autocert_conf_dir.mkdir()
 
-        # Act
         result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        # Assert
         assert result == ""
 
     def test_single_config_file(self, tmp_path: "Path") -> None:
@@ -52,15 +48,13 @@ class TestGetAutocertCn:
         act: Call _get_autocert_cn.
         assert: The common name is correctly extracted from the filename.
         """
-        # Arrange
+
         autocert_conf_dir = tmp_path / "autocert"
         autocert_conf_dir.mkdir()
         (autocert_conf_dir / "smtp.mydomain.local.ini").touch()
 
-        # Act
         result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        # Assert
         assert result == "smtp.mydomain.local"
 
     def test_multiple_files_sorted(self, tmp_path: "Path") -> None:
@@ -69,17 +63,15 @@ class TestGetAutocertCn:
         act: Call _get_autocert_cn.
         assert: The common name from the first .ini file alphabetically is returned.
         """
-        # Arrange
+
         autocert_conf_dir = tmp_path / "autocert"
         autocert_conf_dir.mkdir()
         (autocert_conf_dir / "aaa.unrelated.file").touch()
         (autocert_conf_dir / "zzz.mydomain.local.ini").touch()
         (autocert_conf_dir / "bbb.mydomain.local.ini").touch()
 
-        # Act
         result = tls._get_autocert_cn(str(autocert_conf_dir))
 
-        # Assert
         assert result == "bbb.mydomain.local"
 
 
@@ -105,15 +97,13 @@ class TestGetTlsConfigPaths:
         act: Call get_tls_config_paths.
         assert: Snakeoil paths are returned and openssl is called only when needed.
         """
-        # Arrange
+
         dhparams_path = tmp_path / "dhparams.pem"
         if dhparams_exist:
             dhparams_path.touch()
 
-        # Act
         result = tls.get_tls_config_paths(str(dhparams_path))
 
-        # Assert
         if dhparams_exist:
             mock_subprocess_call.assert_not_called()
         else:
@@ -140,14 +130,12 @@ class TestGetTlsConfigPaths:
         act: Call get_tls_config_paths.
         assert: Autocert paths are returned and openssl is called to create the DH file.
         """
-        # Arrange
+
         # This path is passed but will be ignored by the function's logic
         ignored_dhparams_path = str(tmp_path / "dhparams.pem")
 
-        # Act
         result = tls.get_tls_config_paths(ignored_dhparams_path)
 
-        # Assert
         mock_subprocess_call.assert_called_with(
             ["openssl", "dhparam", "-out", "/etc/postfix/ssl/dhparams.pem", "2048"]
         )

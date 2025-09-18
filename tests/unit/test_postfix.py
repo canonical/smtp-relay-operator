@@ -37,15 +37,13 @@ class TestCreateUpdateMap:
             - write_file called
             - return change
         """
-        # Arrange
+
         mock_write_file.return_value = True
         non_existing_file_path = tmp_path / "pmfname"
         postmap = f"hash:{non_existing_file_path}"
 
-        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Assert
         mock_os_utime.assert_called_once_with(str(non_existing_file_path), None)
         mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -68,16 +66,14 @@ class TestCreateUpdateMap:
             - write_file called
             - return no change
         """
-        # Arrange
+
         mock_write_file.return_value = False
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"hash:{exising_file_path}"
 
-        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Assert
         mock_os_utime.assert_not_called()
         mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -101,16 +97,14 @@ class TestCreateUpdateMap:
             - postmap command called
             - return change.
         """
-        # Arrange
+
         mock_write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"hash:{exising_file_path}"
 
-        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Assert
         mock_os_utime.assert_not_called()
         mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -135,16 +129,14 @@ class TestCreateUpdateMap:
             - postmap command not called
             - return change.
         """
-        # Arrange
+
         mock_write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
         postmap = f"cidr:{exising_file_path}"
 
-        # Act
         result = postfix._create_update_map("contents", postmap)
 
-        # Assert
         mock_os_utime.assert_not_called()
         mock_write_file.assert_called_once_with(
             utils.JUJU_HEADER + "contents\n",
@@ -267,16 +259,14 @@ class TestSMTPDRelayRestrictions:
         act: Call _smtpd_restrictions with the charm_state.
         assert: The returned list of restrictions is correct and in order..
         """
-        # Arrange
+
         self.charm_state.relay_access_sources = relay_access_sources
         self.charm_state.enable_smtp_auth = enable_smtp_auth
         self.charm_state.sender_login_maps = sender_login_maps
         self.charm_state.restrict_senders = restrict_senders
 
-        # Act
         result = postfix._smtpd_relay_restrictions(self.charm_state)
 
-        # Assert
         assert result == expected
 
 
@@ -343,14 +333,12 @@ class TestSmtpdSenderRestrictions:
         act: Call _smtpd_sender_restrictions with the charm_state.
         assert: The returned list of restrictions is correct and in order.
         """
-        # Arrange
+
         self.charm_state.enable_reject_unknown_sender_domain = enable_reject_unknown_sender
         self.charm_state.restrict_sender_access = restrict_sender_access
 
-        # Act
         result = postfix._smtpd_sender_restrictions(self.charm_state)
 
-        # Assert
         assert result == expected
 
 
@@ -441,16 +429,14 @@ class TestSmtpdRecipientRestrictions:
         act: Call _smtpd_recipient_restrictions with the charm_state.
         assert: The returned list of restrictions is correct and in order.
         """
-        # Arrange
+
         self.charm_state.append_x_envelope_to = append_x_envelope_to
         self.charm_state.restrict_senders = restrict_senders
         self.charm_state.additional_smtpd_recipient_restrictions = additional_restrictions
         self.charm_state.enable_spf = enable_spf
 
-        # Act
         result = postfix._smtpd_recipient_restrictions(self.charm_state)
 
-        # Assert
         assert result == expected
 
 
@@ -487,16 +473,14 @@ class TestConstructPolicydSpfConfigFileContent:
         act: Call construct_policyd_spf_config_file_content.
         assert: The Jinja2 renderer is called with the correctly formatted context.
         """
-        # Arrange
+
         expected_context = {
             "JUJU_HEADER": utils.JUJU_HEADER,
             "skip_addresses": expected_skip_string,
         }
 
-        # Act
         postfix.construct_policyd_spf_config_file_content(spf_skip_addresses)
 
-        # Assert
         mock_render_template.assert_called_once_with(
             expected_context, "templates/policyd_spf_conf.tmpl"
         )
@@ -539,7 +523,7 @@ class TestEnsurePostmapFiles:
         assert: The _create_update_map helper is called for each map with the
                 correctly formatted content and path.
         """
-        # Arrange
+
         postfix_conf_dir = "/etc/postfix"
 
         expected_calls = [
@@ -560,10 +544,8 @@ class TestEnsurePostmapFiles:
             call("alias@example.com real@example.com", "hash:/etc/postfix/virtual_alias"),
         ]
 
-        # Act
         postfix.ensure_postmap_files(postfix_conf_dir, self.charm_state)
 
-        # Assert
         assert mock_create_update_map.call_count == len(expected_calls)
         mock_create_update_map.assert_has_calls(expected_calls, any_order=True)
 
@@ -585,11 +567,9 @@ class TestEnsurePostmapFiles:
         act: Call ensure_postmap_files.
         assert: The function correctly aggregates the boolean results.
         """
-        # Arrange
+
         mock_create_update_map.side_effect = side_effects
 
-        # Act
         result = postfix.ensure_postmap_files("/etc/postfix", self.charm_state)
 
-        # Assert
         assert result is expected_return

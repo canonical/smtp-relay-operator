@@ -14,7 +14,7 @@ def test_construct_dovecot_config_file_content() -> None:
     act: Call construct_dovecot_config_file_content.
     assert: The Jinja2 renderer is called with the correctly formatted context.
     """
-    # Arrange
+
     dovecot_users_path = "/etc/dovecot/users"
     expected = (
         f"#{utils.JUJU_HEADER}\n"
@@ -35,12 +35,10 @@ def test_construct_dovecot_config_file_content() -> None:
         "}\n"
     )
 
-    # Act
     result = dovecot.construct_dovecot_config_file_content(
         dovecot_users_path=dovecot_users_path, enable_smtp_auth=True
     )
 
-    # Assert
     assert result == expected
 
 
@@ -50,16 +48,14 @@ def test_construct_dovecot_config_file_content_smtp_auth_disabled() -> None:
     act: Call construct_dovecot_config_file_content with smtp auth disabled.
     assert: The Jinja2 renderer is called with the correctly formatted context.
     """
-    # Arrange
+
     dovecot_users_path = "/etc/dovecot/users"
     expected = f"#{utils.JUJU_HEADER}\n## DISABLED\n"
 
-    # Act
     result = dovecot.construct_dovecot_config_file_content(
         dovecot_users_path=dovecot_users_path, enable_smtp_auth=False
     )
 
-    # Assert
     assert result == expected
 
 
@@ -87,8 +83,7 @@ def test_construct_dovecot_user_file_content(
     act: Call construct_dovecot_user_file_content.
     assert: The returned string is correctly formatted.
     """
-    # Act
+
     result = dovecot.construct_dovecot_user_file_content(smtp_auth_users)
 
-    # Assert
     assert result == expected_content
