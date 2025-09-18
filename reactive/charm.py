@@ -28,6 +28,7 @@ from reactive.tls import get_tls_config_paths
 
 @reactive.hook("upgrade-charm")
 def upgrade_charm():
+    """Reconfigure the charm on upgrade by clearing relevant flags."""
     status.maintenance("forcing reconfiguration on upgrade-charm")
     reactive.clear_flag("smtp-relay.active")
     reactive.clear_flag("smtp-relay.auth.configured")
@@ -37,6 +38,7 @@ def upgrade_charm():
 
 @reactive.when_not("smtp-relay.installed")
 def install(logrotate_conf_path="/etc/logrotate.d/rsyslog"):
+    """Configure logging and mark SMTP relay as installed."""
     reactive.set_flag("smtp-relay.installed")
 
     _configure_smtp_relay_logging(logrotate_conf_path)
@@ -52,6 +54,7 @@ def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
 
 @reactive.hook("peer-relation-joined", "peer-relation-changed")
 def peer_relation_changed():
+    """Invalidate SMTP relay configuration upon peer relation changes."""
     reactive.clear_flag("smtp-relay.configured")
 
 
@@ -60,6 +63,7 @@ def peer_relation_changed():
     "config.changed.smtp_auth_users",
 )
 def config_changed_smtp_auth():
+    """Invalidate auth configuration when SMTP auth settings have changed."""
     reactive.clear_flag("smtp-relay.auth.configured")
 
 
@@ -68,6 +72,7 @@ def config_changed_smtp_auth():
 def configure_smtp_auth(
     dovecot_config="/etc/dovecot/dovecot.conf", dovecot_users="/etc/dovecot/users"
 ):
+    """Ensure SMTP authentication is configured or disabled via Dovecot as per charm settings."""
     reactive.clear_flag("smtp-relay.active")
     reactive.clear_flag("smtp-relay.configured")
     charm_state = State.from_charm(hookenv.config())
@@ -135,11 +140,13 @@ def configure_smtp_auth(
     "config.changed.virtual_alias_maps_type",
 )
 def config_changed():
+    """Clear configured flag upon config changes so SMTP relay is reconfigured."""
     reactive.clear_flag("smtp-relay.configured")
 
 
 @reactive.hook("milter-relation-joined", "milter-relation-changed")
 def milter_relation_changed():
+    """Invalidate SMTP relay configuration when milter relation changes or joins."""
     reactive.clear_flag("smtp-relay.configured")
 
 
@@ -149,6 +156,7 @@ def milter_relation_changed():
 def configure_smtp_relay(
     postfix_conf_dir="/etc/postfix", tls_dh_params="/etc/ssl/private/dhparams.pem"
 ):
+    """Generate and apply SMTP relay (Postfix) configuration."""
     reactive.clear_flag("smtp-relay.active")
     charm_state = State.from_charm(hookenv.config())
 
@@ -205,12 +213,14 @@ def configure_smtp_relay(
     "config.changed.spf_skip_addresses",
 )
 def config_changed_policyd_spf():
+    """Clear SPF policy‑configured flag when SPF‑related config options change."""
     reactive.clear_flag("smtp-relay.policyd-spf.configured")
 
 
 @reactive.when("smtp-relay.installed")
 @reactive.when_not("smtp-relay.policyd-spf.configured")
 def configure_policyd_spf(policyd_spf_config="/etc/postfix-policyd-spf-python/policyd-spf.conf"):
+    """Configure Postfix SPF policy server (policyd-spf) based on charm state and configuration."""
     reactive.clear_flag("smtp-relay.active")
     charm_state = State.from_charm(hookenv.config())
 
@@ -236,7 +246,7 @@ def _calculate_offset(seed, length=2):
     return int(result, 16)
 
 
-def _get_peers():
+def _get_peers() -> list:
     # Build a list of peer units so we can map it to milters.
     peers = [hookenv.local_unit()]
     if hookenv.relation_ids("peer"):
@@ -276,7 +286,8 @@ def _get_milters() -> str:
 
 @reactive.when("smtp-relay.configured")
 @reactive.when_not("smtp-relay.active")
-def set_active(version_file="version"):
+def set_active(version_file: str = "version") -> None:
+    """Set the charm's status to active, including version and configuration details."""
     revision = ""
     if os.path.exists(version_file):
         with open(version_file, encoding="utf-8") as f:
@@ -298,7 +309,7 @@ def set_active(version_file="version"):
     reactive.set_flag("smtp-relay.active")
 
 
-def _update_aliases(admin_email, aliases_path="/etc/aliases"):
+def _update_aliases(admin_email: str | None, aliases_path="/etc/aliases"):
     aliases = []
     try:
         with open(aliases_path, "r", encoding="utf-8") as f:
