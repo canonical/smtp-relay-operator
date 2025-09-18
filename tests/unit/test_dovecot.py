@@ -3,8 +3,6 @@
 
 """dovecot service unit tests."""
 
-from unittest.mock import Mock, patch
-
 import pytest
 
 from reactive import dovecot, utils
