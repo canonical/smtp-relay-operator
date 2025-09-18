@@ -25,7 +25,6 @@ def test_construct_dovecot_config_file_content(
     act: Call construct_dovecot_config_file_content.
     assert: The Jinja2 renderer is called with the correctly formatted context.
     """
-
     dovecot_users_path = "/etc/dovecot/users"
     expected_path = Path(__file__).parent / "files" / expected_filename
     expected = expected_path.read_text()

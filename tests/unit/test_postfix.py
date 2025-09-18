@@ -4,17 +4,12 @@
 """Postfix service unit tests."""
 
 import ipaddress
-from typing import TYPE_CHECKING
 from unittest.mock import Mock, call, patch
+from pathlib import Path
 
 import pytest
 
 from reactive import postfix, state, utils
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pydantic import IPvAnyNetwork
 
 
 @patch("reactive.postfix.subprocess.call")
@@ -27,7 +22,7 @@ class TestCreateUpdateMap:
         mock_write_file: Mock,
         mock_os_utime: Mock,
         _mock_call: Mock,
-        tmp_path: "Path",
+        tmp_path: Path,
     ) -> None:
         """
         arrange: path to non-existing pmfname file.
@@ -37,7 +32,6 @@ class TestCreateUpdateMap:
             - write_file called
             - return change
         """
-
         mock_write_file.return_value = True
         non_existing_file_path = tmp_path / "pmfname"
         postmap = f"hash:{non_existing_file_path}"
@@ -56,7 +50,7 @@ class TestCreateUpdateMap:
         mock_write_file: Mock,
         mock_os_utime: Mock,
         _mock_call: Mock,
-        tmp_path: "Path",
+        tmp_path: Path,
     ) -> None:
         """
         arrange: path to existing pmfname file having same content to be written.
@@ -66,7 +60,6 @@ class TestCreateUpdateMap:
             - write_file called
             - return no change
         """
-
         mock_write_file.return_value = False
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
@@ -86,7 +79,7 @@ class TestCreateUpdateMap:
         mock_write_file: Mock,
         mock_os_utime: Mock,
         mock_call: Mock,
-        tmp_path: "Path",
+        tmp_path: Path,
     ) -> None:
         """
         arrange: path to existing pmfname and pmap_name is hash.
@@ -97,7 +90,6 @@ class TestCreateUpdateMap:
             - postmap command called
             - return change.
         """
-
         mock_write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
@@ -118,7 +110,7 @@ class TestCreateUpdateMap:
         mock_write_file: Mock,
         mock_os_utime: Mock,
         mock_call: Mock,
-        tmp_path: "Path",
+        tmp_path: Path,
     ) -> None:
         """
         arrange: path to existing pmfname and pmap_name is not shash.
@@ -129,7 +121,6 @@ class TestCreateUpdateMap:
             - postmap command not called
             - return change.
         """
-
         mock_write_file.return_value = True
         exising_file_path = tmp_path / "pmfname"
         exising_file_path.write_text("stuff")
@@ -259,7 +250,6 @@ class TestSMTPDRelayRestrictions:
         act: Call _smtpd_restrictions with the charm_state.
         assert: The returned list of restrictions is correct and in order..
         """
-
         self.charm_state.relay_access_sources = relay_access_sources
         self.charm_state.enable_smtp_auth = enable_smtp_auth
         self.charm_state.sender_login_maps = sender_login_maps
@@ -333,7 +323,6 @@ class TestSmtpdSenderRestrictions:
         act: Call _smtpd_sender_restrictions with the charm_state.
         assert: The returned list of restrictions is correct and in order.
         """
-
         self.charm_state.enable_reject_unknown_sender_domain = enable_reject_unknown_sender
         self.charm_state.restrict_sender_access = restrict_sender_access
 
@@ -429,7 +418,6 @@ class TestSmtpdRecipientRestrictions:
         act: Call _smtpd_recipient_restrictions with the charm_state.
         assert: The returned list of restrictions is correct and in order.
         """
-
         self.charm_state.append_x_envelope_to = append_x_envelope_to
         self.charm_state.restrict_senders = restrict_senders
         self.charm_state.additional_smtpd_recipient_restrictions = additional_restrictions
@@ -440,50 +428,23 @@ class TestSmtpdRecipientRestrictions:
         assert result == expected
 
 
-class TestConstructPolicydSpfConfigFileContent:
-    @pytest.mark.parametrize(
-        ("spf_skip_addresses", "expected_skip_string"),
-        [
-            pytest.param([], "", id="empty_list"),
-            pytest.param(
-                [ipaddress.ip_network("127.0.0.1")],
-                "127.0.0.1/32",
-                id="single_ipv4_address",
-            ),
-            pytest.param(
-                [
-                    ipaddress.ip_network("192.168.1.0/24"),
-                    ipaddress.ip_network("::1"),
-                    ipaddress.ip_network("10.0.0.5"),
-                ],
-                "192.168.1.0/24,::1/128,10.0.0.5/32",
-                id="multiple_mixed_addresses",
-            ),
-        ],
-    )
-    @patch("reactive.postfix.utils.render_jinja2_template")
-    def test_content_construction(
-        self,
-        mock_render_template: Mock,
-        spf_skip_addresses: list["IPvAnyNetwork"],
-        expected_skip_string: str,
-    ) -> None:
-        """
-        arrange: Given a list of IP addresses to skip for SPF checks.
-        act: Call construct_policyd_spf_config_file_content.
-        assert: The Jinja2 renderer is called with the correctly formatted context.
-        """
+def test_construct_policyd_spf_content() -> None:
+    """
+    arrange: Given a list of IP addresses to skip for SPF checks.
+    act: Call construct_policyd_spf_config_file_content.
+    assert: The Jinja2 renderer is called with the correctly formatted context.
+    """
+    spf_skip_addresses = [
+        ipaddress.ip_network("10.0.114.0/24"),
+        ipaddress.ip_network("10.1.1.0/24"),
+    ]
 
-        expected_context = {
-            "JUJU_HEADER": utils.JUJU_HEADER,
-            "skip_addresses": expected_skip_string,
-        }
+    expected_path = Path(__file__).parent / "files/policyd_spf_config_skip_addresses"
+    expected = expected_path.read_text()
 
-        postfix.construct_policyd_spf_config_file_content(spf_skip_addresses)
+    result = postfix.construct_policyd_spf_config_file_content(spf_skip_addresses)
 
-        mock_render_template.assert_called_once_with(
-            expected_context, "templates/policyd_spf_conf.tmpl"
-        )
+    assert result == expected
 
 
 @patch("reactive.postfix._create_update_map")
@@ -523,7 +484,6 @@ class TestEnsurePostmapFiles:
         assert: The _create_update_map helper is called for each map with the
                 correctly formatted content and path.
         """
-
         postfix_conf_dir = "/etc/postfix"
 
         expected_calls = [
@@ -567,7 +527,6 @@ class TestEnsurePostmapFiles:
         act: Call ensure_postmap_files.
         assert: The function correctly aggregates the boolean results.
         """
-
         mock_create_update_map.side_effect = side_effects
 
         result = postfix.ensure_postmap_files("/etc/postfix", self.charm_state)
