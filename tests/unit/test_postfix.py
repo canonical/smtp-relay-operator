@@ -137,295 +137,277 @@ class TestCreateUpdateMap:
         assert result is True
 
 
-class TestSMTPDRelayRestrictions:
-
-    @pytest.fixture(autouse=True)
-    def setup_method(self) -> None:
-        charm_config = {
-            "append_x_envelope_to": False,
-            "connection_limit": 100,
-            "domain": "example.domain.com",
-            "enable_rate_limits": False,
-            "enable_reject_unknown_sender_domain": True,
-            "enable_spf": False,
-            "enable_smtp_auth": True,
-            "virtual_alias_maps_type": "hash",
-        }
-        self.charm_state = state.State.from_charm(config=charm_config)
-
-    @pytest.mark.parametrize(
-        (
-            "relay_access_sources",
-            "enable_smtp_auth",
-            "sender_login_maps",
-            "restrict_senders",
-            "expected",
+@pytest.mark.parametrize(
+    (
+        "relay_access_sources",
+        "enable_smtp_auth",
+        "sender_login_maps",
+        "restrict_senders",
+        "expected",
+    ),
+    [
+        pytest.param(
+            [],
+            False,
+            {},
+            {},
+            ["permit_mynetworks", "defer_unauth_destination"],
+            id="no_access_sources_no_auth",
         ),
-        [
-            pytest.param(
-                [],
-                False,
-                {},
-                {},
-                ["permit_mynetworks", "defer_unauth_destination"],
-                id="no_access_sources_no_auth",
-            ),
-            pytest.param(
-                ["source1, source2"],
-                False,
-                {},
-                {},
-                [
-                    "permit_mynetworks",
-                    "check_client_access cidr:/etc/postfix/relay_access",
-                    "defer_unauth_destination",
-                ],
-                id="has_access_sources_no_auth",
-            ),
-            pytest.param(
-                ["source1, source2"],
-                True,
-                {},
-                {},
-                [
-                    "permit_mynetworks",
-                    "check_client_access cidr:/etc/postfix/relay_access",
-                    "permit_sasl_authenticated",
-                    "defer_unauth_destination",
-                ],
-                id="has_auth",
-            ),
-            pytest.param(
-                [],
-                True,
-                {"group@example.com": "group"},
-                {},
-                [
-                    "permit_mynetworks",
-                    "reject_known_sender_login_mismatch",
-                    "permit_sasl_authenticated",
-                    "defer_unauth_destination",
-                ],
-                id="has_auth_and_sender_login_maps",
-            ),
-            pytest.param(
-                [],
-                True,
-                {},
-                {"sender": state.AccessMapValue.OK},
-                [
-                    "permit_mynetworks",
-                    "reject_sender_login_mismatch",
-                    "permit_sasl_authenticated",
-                    "defer_unauth_destination",
-                ],
-                id="has_auth_and_restrict_senders",
-            ),
-            pytest.param(
-                [],
-                True,
-                {"group@example.com": "group"},
-                {"sender": state.AccessMapValue.OK},
-                [
-                    "permit_mynetworks",
-                    "reject_known_sender_login_mismatch",
-                    "reject_sender_login_mismatch",
-                    "permit_sasl_authenticated",
-                    "defer_unauth_destination",
-                ],
-                id="has_auth_and_sender_login_maps_and_restrict_senders",
-            ),
-        ],
-    )
-    def test_restrictions(
-        self,
-        relay_access_sources: list[str],
-        enable_smtp_auth: bool,
-        sender_login_maps: dict[str, str],
-        restrict_senders: dict[str, state.AccessMapValue],
-        expected: list[str],
-    ) -> None:
-        """
-        arrange: Create charm_state with different relay restriction settings.
-        act: Call _smtpd_restrictions with the charm_state.
-        assert: The returned list of restrictions is correct and in order..
-        """
-        self.charm_state.relay_access_sources = relay_access_sources
-        self.charm_state.enable_smtp_auth = enable_smtp_auth
-        self.charm_state.sender_login_maps = sender_login_maps
-        self.charm_state.restrict_senders = restrict_senders
-
-        result = postfix._smtpd_relay_restrictions(self.charm_state)
-
-        assert result == expected
-
-
-class TestSmtpdSenderRestrictions:
-
-    @pytest.fixture(autouse=True)
-    def setup_method(self) -> None:
-        charm_config = {
-            "append_x_envelope_to": False,
-            "connection_limit": 100,
-            "domain": "example.domain.com",
-            "enable_rate_limits": False,
-            "enable_reject_unknown_sender_domain": True,
-            "enable_spf": False,
-            "enable_smtp_auth": True,
-            "virtual_alias_maps_type": "hash",
-        }
-        self.charm_state = state.State.from_charm(config=charm_config)
-
-    @pytest.mark.parametrize(
-        ("enable_reject_unknown_sender", "restrict_sender_access", "expected"),
-        [
-            pytest.param(
-                False,
-                [],
-                ["check_sender_access hash:/etc/postfix/access"],
-                id="neither_enabled",
-            ),
-            pytest.param(
-                True,
-                [],
-                [
-                    "reject_unknown_sender_domain",
-                    "check_sender_access hash:/etc/postfix/access",
-                ],
-                id="reject_unknown_enabled",
-            ),
-            pytest.param(
-                False,
-                ["example.com"],
-                ["check_sender_access hash:/etc/postfix/access", "reject"],
-                id="restrict_access_enabled",
-            ),
-            pytest.param(
-                True,
-                ["example.com"],
-                [
-                    "reject_unknown_sender_domain",
-                    "check_sender_access hash:/etc/postfix/access",
-                    "reject",
-                ],
-                id="both_enabled",
-            ),
-        ],
-    )
-    def test_restrictions(
-        self,
-        enable_reject_unknown_sender: bool,
-        restrict_sender_access: list[str],
-        expected: list[str],
-    ) -> None:
-        """
-        arrange: Create charm_state with different sender restriction settings.
-        act: Call _smtpd_sender_restrictions with the charm_state.
-        assert: The returned list of restrictions is correct and in order.
-        """
-        self.charm_state.enable_reject_unknown_sender_domain = enable_reject_unknown_sender
-        self.charm_state.restrict_sender_access = restrict_sender_access
-
-        result = postfix._smtpd_sender_restrictions(self.charm_state)
-
-        assert result == expected
-
-
-class TestSmtpdRecipientRestrictions:
-
-    @pytest.fixture(autouse=True)
-    def setup_method(self) -> None:
-        charm_config = {
-            "append_x_envelope_to": False,
-            "connection_limit": 100,
-            "domain": "example.domain.com",
-            "enable_rate_limits": False,
-            "enable_reject_unknown_sender_domain": True,
-            "enable_spf": False,
-            "enable_smtp_auth": True,
-            "virtual_alias_maps_type": "hash",
-        }
-        self.charm_state = state.State.from_charm(config=charm_config)
-
-    @pytest.mark.parametrize(
-        (
-            "append_x_envelope_to",
-            "restrict_senders",
-            "additional_restrictions",
-            "enable_spf",
-            "expected",
+        pytest.param(
+            ["source1, source2"],
+            False,
+            {},
+            {},
+            [
+                "permit_mynetworks",
+                "check_client_access cidr:/etc/postfix/relay_access",
+                "defer_unauth_destination",
+            ],
+            id="has_access_sources_no_auth",
         ),
-        [
-            pytest.param(False, {}, [], False, [], id="all_disabled"),
-            pytest.param(
-                True,
-                {},
-                [],
-                False,
-                ["check_recipient_access regexp:/etc/postfix/append_envelope_to_header"],
-                id="append_x_envelope_enabled",
-            ),
-            pytest.param(
-                False,
-                {"sender": "value"},
-                [],
-                False,
-                ["check_sender_access hash:/etc/postfix/restricted_senders"],
-                id="restrict_senders_enabled",
-            ),
-            pytest.param(
-                False,
-                {},
-                ["custom_restriction_1"],
-                False,
-                ["custom_restriction_1"],
-                id="additional_restrictions_enabled",
-            ),
-            pytest.param(
-                False,
-                {},
-                [],
-                True,
-                ["check_policy_service unix:private/policyd-spf"],
-                id="spf_enabled",
-            ),
-            pytest.param(
-                True,
-                {"sender": "value"},
-                ["custom_restriction_1", "custom_restriction_2"],
-                True,
-                [
-                    "check_recipient_access regexp:/etc/postfix/append_envelope_to_header",
-                    "check_sender_access hash:/etc/postfix/restricted_senders",
-                    "custom_restriction_1",
-                    "custom_restriction_2",
-                    "check_policy_service unix:private/policyd-spf",
-                ],
-                id="all_enabled",
-            ),
-        ],
-    )
-    def test_restrictions(
-        self,
-        append_x_envelope_to: bool,
-        restrict_senders: dict,
-        additional_restrictions: list[str],
-        enable_spf: bool,
-        expected: list[str],
-    ) -> None:
-        """
-        arrange: Create charm_state with different recipient restriction settings.
-        act: Call _smtpd_recipient_restrictions with the charm_state.
-        assert: The returned list of restrictions is correct and in order.
-        """
-        self.charm_state.append_x_envelope_to = append_x_envelope_to
-        self.charm_state.restrict_senders = restrict_senders
-        self.charm_state.additional_smtpd_recipient_restrictions = additional_restrictions
-        self.charm_state.enable_spf = enable_spf
+        pytest.param(
+            ["source1, source2"],
+            True,
+            {},
+            {},
+            [
+                "permit_mynetworks",
+                "check_client_access cidr:/etc/postfix/relay_access",
+                "permit_sasl_authenticated",
+                "defer_unauth_destination",
+            ],
+            id="has_auth",
+        ),
+        pytest.param(
+            [],
+            True,
+            {"group@example.com": "group"},
+            {},
+            [
+                "permit_mynetworks",
+                "reject_known_sender_login_mismatch",
+                "permit_sasl_authenticated",
+                "defer_unauth_destination",
+            ],
+            id="has_auth_and_sender_login_maps",
+        ),
+        pytest.param(
+            [],
+            True,
+            {},
+            {"sender": state.AccessMapValue.OK},
+            [
+                "permit_mynetworks",
+                "reject_sender_login_mismatch",
+                "permit_sasl_authenticated",
+                "defer_unauth_destination",
+            ],
+            id="has_auth_and_restrict_senders",
+        ),
+        pytest.param(
+            [],
+            True,
+            {"group@example.com": "group"},
+            {"sender": state.AccessMapValue.OK},
+            [
+                "permit_mynetworks",
+                "reject_known_sender_login_mismatch",
+                "reject_sender_login_mismatch",
+                "permit_sasl_authenticated",
+                "defer_unauth_destination",
+            ],
+            id="has_auth_and_sender_login_maps_and_restrict_senders",
+        ),
+    ],
+)
+def test_smtpd_relay_restrictions(
+    relay_access_sources: list[str],
+    enable_smtp_auth: bool,
+    sender_login_maps: dict[str, str],
+    restrict_senders: dict[str, state.AccessMapValue],
+    expected: list[str],
+) -> None:
+    """
+    arrange: Create charm_state with different relay restriction settings.
+    act: Call _smtpd_restrictions with the charm_state.
+    assert: The returned list of restrictions is correct and in order..
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": 100,
+        "domain": "example.domain.com",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "virtual_alias_maps_type": "hash",
+    }
+    charm_state = state.State.from_charm(config=charm_config)
+    charm_state.relay_access_sources = relay_access_sources
+    charm_state.enable_smtp_auth = enable_smtp_auth
+    charm_state.sender_login_maps = sender_login_maps
+    charm_state.restrict_senders = restrict_senders
 
-        result = postfix._smtpd_recipient_restrictions(self.charm_state)
+    result = postfix._smtpd_relay_restrictions(charm_state)
 
-        assert result == expected
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("enable_reject_unknown_sender", "restrict_sender_access", "expected"),
+    [
+        pytest.param(
+            False,
+            [],
+            ["check_sender_access hash:/etc/postfix/access"],
+            id="neither_enabled",
+        ),
+        pytest.param(
+            True,
+            [],
+            [
+                "reject_unknown_sender_domain",
+                "check_sender_access hash:/etc/postfix/access",
+            ],
+            id="reject_unknown_enabled",
+        ),
+        pytest.param(
+            False,
+            ["example.com"],
+            ["check_sender_access hash:/etc/postfix/access", "reject"],
+            id="restrict_access_enabled",
+        ),
+        pytest.param(
+            True,
+            ["example.com"],
+            [
+                "reject_unknown_sender_domain",
+                "check_sender_access hash:/etc/postfix/access",
+                "reject",
+            ],
+            id="both_enabled",
+        ),
+    ],
+)
+def test_smtpd_sender_restrictions(
+    enable_reject_unknown_sender: bool,
+    restrict_sender_access: list[str],
+    expected: list[str],
+) -> None:
+    """
+    arrange: Create charm_state with different sender restriction settings.
+    act: Call _smtpd_sender_restrictions with the charm_state.
+    assert: The returned list of restrictions is correct and in order.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": 100,
+        "domain": "example.domain.com",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "virtual_alias_maps_type": "hash",
+    }
+    charm_state = state.State.from_charm(config=charm_config)
+    charm_state.enable_reject_unknown_sender_domain = enable_reject_unknown_sender
+    charm_state.restrict_sender_access = restrict_sender_access
+
+    result = postfix._smtpd_sender_restrictions(charm_state)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    (
+        "append_x_envelope_to",
+        "restrict_senders",
+        "additional_restrictions",
+        "enable_spf",
+        "expected",
+    ),
+    [
+        pytest.param(False, {}, [], False, [], id="all_disabled"),
+        pytest.param(
+            True,
+            {},
+            [],
+            False,
+            ["check_recipient_access regexp:/etc/postfix/append_envelope_to_header"],
+            id="append_x_envelope_enabled",
+        ),
+        pytest.param(
+            False,
+            {"sender": "value"},
+            [],
+            False,
+            ["check_sender_access hash:/etc/postfix/restricted_senders"],
+            id="restrict_senders_enabled",
+        ),
+        pytest.param(
+            False,
+            {},
+            ["custom_restriction_1"],
+            False,
+            ["custom_restriction_1"],
+            id="additional_restrictions_enabled",
+        ),
+        pytest.param(
+            False,
+            {},
+            [],
+            True,
+            ["check_policy_service unix:private/policyd-spf"],
+            id="spf_enabled",
+        ),
+        pytest.param(
+            True,
+            {"sender": "value"},
+            ["custom_restriction_1", "custom_restriction_2"],
+            True,
+            [
+                "check_recipient_access regexp:/etc/postfix/append_envelope_to_header",
+                "check_sender_access hash:/etc/postfix/restricted_senders",
+                "custom_restriction_1",
+                "custom_restriction_2",
+                "check_policy_service unix:private/policyd-spf",
+            ],
+            id="all_enabled",
+        ),
+    ],
+)
+def test_smtpd_recipient_restrictions(
+    append_x_envelope_to: bool,
+    restrict_senders: dict,
+    additional_restrictions: list[str],
+    enable_spf: bool,
+    expected: list[str],
+) -> None:
+    """
+    arrange: Create charm_state with different recipient restriction settings.
+    act: Call _smtpd_recipient_restrictions with the charm_state.
+    assert: The returned list of restrictions is correct and in order.
+    """
+    charm_config = {
+        "append_x_envelope_to": False,
+        "connection_limit": 100,
+        "domain": "example.domain.com",
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": True,
+        "enable_spf": False,
+        "enable_smtp_auth": True,
+        "virtual_alias_maps_type": "hash",
+    }
+    charm_state = state.State.from_charm(config=charm_config)
+    charm_state.append_x_envelope_to = append_x_envelope_to
+    charm_state.restrict_senders = restrict_senders
+    charm_state.additional_smtpd_recipient_restrictions = additional_restrictions
+    charm_state.enable_spf = enable_spf
+
+    result = postfix._smtpd_recipient_restrictions(charm_state)
+
+    assert result == expected
 
 
 def test_construct_policyd_spf_content() -> None:
