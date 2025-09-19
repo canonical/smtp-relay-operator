@@ -4,12 +4,19 @@
 """Charm state."""
 import itertools
 import logging
-import re
 import typing
 from enum import Enum
+from ipaddress import ip_network
 
 import yaml
-from pydantic import BaseModel, EmailStr, Field, IPvAnyNetwork, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    IPvAnyNetwork,
+    ValidationError,
+)
 from typing_extensions import Annotated
 
 logger = logging.getLogger(__name__)
@@ -174,11 +181,13 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         virtual_alias_maps_type: The virtual alias map type.
     """
 
+    model_config = ConfigDict(regex_engine="python-re")  # noqa: DCO063
+
     additional_smtpd_recipient_restrictions: list[str]
     admin_email: EmailStr | None
     allowed_relay_networks: list[IPvAnyNetwork]
     append_x_envelope_to: bool
-    domain: str
+    domain: str = Field(pattern=rf"^(?:$|{HOSTNAME_REGEX})$")
     enable_rate_limits: bool
     enable_reject_unknown_sender_domain: bool
     enable_smtp_auth: bool
@@ -206,21 +215,6 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     virtual_alias_maps_type: PostfixLookupTableType
     connection_limit: int = Field(ge=0)
 
-    # Validation is done in this method instead of using a pydantic model because
-    # regex is not fully supported.
-    @field_validator("domain", mode="before")
-    @classmethod
-    def validate(cls, value: str) -> str:
-        """Validate the precondition to initialize this state component.
-
-        Raises:
-            ValueError: if the value is invalid.
-        """
-        if not value == "" and not re.match(HOSTNAME_REGEX, value):
-            logger.error("The domain (%s) does not match regex: %s", value, HOSTNAME_REGEX)
-            raise ValueError("The domain is invalid.")
-        return value
-
     @classmethod
     def from_charm(cls, config: dict[str, typing.Any]) -> "State":
         """Initialize the state from charm.
@@ -236,7 +230,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         """
         try:
             allowed_relay_networks = [
-                IPvAnyNetwork(value) for value in _parse_list(config.get("allowed_relay_networks"))
+                ip_network(value) for value in _parse_list(config.get("allowed_relay_networks"))
             ]
             additional_smtpd_recipient_restrictions = _parse_list(
                 config.get("additional_smtpd_recipient_restrictions")
