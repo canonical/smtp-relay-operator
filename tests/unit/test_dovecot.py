@@ -49,5 +49,4 @@ def test_construct_dovecot_user_file_content() -> None:
 
     result = dovecot.construct_dovecot_user_file_content(smtp_auth_users)
 
-    # Assert
     assert result == expected
