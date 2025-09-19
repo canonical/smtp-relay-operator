@@ -27,7 +27,7 @@ from reactive.tls import get_tls_config_paths
 
 
 @reactive.hook("upgrade-charm")
-def upgrade_charm():
+def upgrade_charm() -> None:
     """Reconfigure the charm on upgrade by clearing relevant flags."""
     status.maintenance("forcing reconfiguration on upgrade-charm")
     reactive.clear_flag("smtp-relay.active")
@@ -37,7 +37,7 @@ def upgrade_charm():
 
 
 @reactive.when_not("smtp-relay.installed")
-def install(logrotate_conf_path="/etc/logrotate.d/rsyslog"):
+def install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
     """Configure logging and mark SMTP relay as installed."""
     reactive.set_flag("smtp-relay.installed")
 
@@ -53,7 +53,7 @@ def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
 
 
 @reactive.hook("peer-relation-joined", "peer-relation-changed")
-def peer_relation_changed():
+def peer_relation_changed() -> None:
     """Invalidate SMTP relay configuration upon peer relation changes."""
     reactive.clear_flag("smtp-relay.configured")
 
@@ -62,7 +62,7 @@ def peer_relation_changed():
     "config.changed.enable_smtp_auth",
     "config.changed.smtp_auth_users",
 )
-def config_changed_smtp_auth():
+def config_changed_smtp_auth() -> None:
     """Invalidate auth configuration when SMTP auth settings have changed."""
     reactive.clear_flag("smtp-relay.auth.configured")
 
@@ -70,8 +70,8 @@ def config_changed_smtp_auth():
 @reactive.when("smtp-relay.installed")
 @reactive.when_not("smtp-relay.auth.configured")
 def configure_smtp_auth(
-    dovecot_config="/etc/dovecot/dovecot.conf", dovecot_users="/etc/dovecot/users"
-):
+    dovecot_config: str = "/etc/dovecot/dovecot.conf", dovecot_users: str = "/etc/dovecot/users"
+) -> None:
     """Ensure SMTP authentication is configured or disabled via Dovecot as per charm settings."""
     reactive.clear_flag("smtp-relay.active")
     reactive.clear_flag("smtp-relay.configured")
@@ -139,13 +139,13 @@ def configure_smtp_auth(
     "config.changed.virtual_alias_maps",
     "config.changed.virtual_alias_maps_type",
 )
-def config_changed():
+def config_changed() -> None:
     """Clear configured flag upon config changes so SMTP relay is reconfigured."""
     reactive.clear_flag("smtp-relay.configured")
 
 
 @reactive.hook("milter-relation-joined", "milter-relation-changed")
-def milter_relation_changed():
+def milter_relation_changed() -> None:
     """Invalidate SMTP relay configuration when milter relation changes or joins."""
     reactive.clear_flag("smtp-relay.configured")
 
@@ -154,8 +154,8 @@ def milter_relation_changed():
 @reactive.when("smtp-relay.auth.configured")
 @reactive.when_not("smtp-relay.configured")
 def configure_smtp_relay(
-    postfix_conf_dir="/etc/postfix", tls_dh_params="/etc/ssl/private/dhparams.pem"
-):
+    postfix_conf_dir: str = "/etc/postfix", tls_dh_params: str = "/etc/ssl/private/dhparams.pem"
+) -> None:
     """Generate and apply SMTP relay (Postfix) configuration."""
     reactive.clear_flag("smtp-relay.active")
     charm_state = State.from_charm(hookenv.config())
@@ -212,14 +212,16 @@ def configure_smtp_relay(
     "config.changed.enable_spf",
     "config.changed.spf_skip_addresses",
 )
-def config_changed_policyd_spf():
+def config_changed_policyd_spf() -> None:
     """Clear SPF policy‑configured flag when SPF‑related config options change."""
     reactive.clear_flag("smtp-relay.policyd-spf.configured")
 
 
 @reactive.when("smtp-relay.installed")
 @reactive.when_not("smtp-relay.policyd-spf.configured")
-def configure_policyd_spf(policyd_spf_config="/etc/postfix-policyd-spf-python/policyd-spf.conf"):
+def configure_policyd_spf(
+    policyd_spf_config: str = "/etc/postfix-policyd-spf-python/policyd-spf.conf",
+) -> None:
     """Configure Postfix SPF policy server (policyd-spf) based on charm state and configuration."""
     reactive.clear_flag("smtp-relay.active")
     charm_state = State.from_charm(hookenv.config())
@@ -237,11 +239,11 @@ def configure_policyd_spf(policyd_spf_config="/etc/postfix-policyd-spf-python/po
     reactive.set_flag("smtp-relay.policyd-spf.configured")
 
 
-def _generate_fqdn(domain):
+def _generate_fqdn(domain: str) -> str:
     return f"{hookenv.local_unit().replace('/', '-')}.{domain}"
 
 
-def _calculate_offset(seed, length=2):
+def _calculate_offset(seed: str, length: int = 2) -> int:
     result = hashlib.md5(seed.encode("utf-8")).hexdigest()[0:length]  # nosec
     return int(result, 16)
 
@@ -309,7 +311,7 @@ def set_active(version_file: str = "version") -> None:
     reactive.set_flag("smtp-relay.active")
 
 
-def _update_aliases(admin_email: str | None, aliases_path="/etc/aliases"):
+def _update_aliases(admin_email: str | None, aliases_path: str = "/etc/aliases") -> None:
     aliases = []
     try:
         with open(aliases_path, "r", encoding="utf-8") as f:
