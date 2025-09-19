@@ -4,9 +4,9 @@
 """Charm state."""
 import itertools
 import logging
-import typing
 from enum import Enum
 from ipaddress import ip_network
+from typing import Any
 
 import yaml
 from pydantic import (
@@ -216,7 +216,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     connection_limit: int = Field(ge=0)
 
     @classmethod
-    def from_charm(cls, config: dict[str, typing.Any]) -> "State":
+    def from_charm(cls, config: dict[str, Any]) -> "State":
         """Initialize the state from charm.
 
         Args:
@@ -257,15 +257,15 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
                 additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
                 admin_email=config.get("admin_email"),
                 allowed_relay_networks=allowed_relay_networks,
-                append_x_envelope_to=config.get("append_x_envelope_to"),
-                connection_limit=config.get("connection_limit"),
-                domain=config.get("domain"),
-                enable_rate_limits=config.get("enable_rate_limits"),
+                append_x_envelope_to=config.get("append_x_envelope_to"),  # type: ignore[arg-type]
+                connection_limit=config.get("connection_limit"),  # type: ignore[arg-type]
+                domain=config.get("domain"),  # type: ignore[arg-type]
+                enable_rate_limits=config.get("enable_rate_limits"),  # type: ignore[arg-type]
                 enable_reject_unknown_sender_domain=config.get(
                     "enable_reject_unknown_sender_domain"
-                ),
-                enable_smtp_auth=config.get("enable_smtp_auth"),
-                enable_spf=config.get("enable_spf"),
+                ),  # type: ignore[arg-type]
+                enable_smtp_auth=config.get("enable_smtp_auth"),  # type: ignore[arg-type]
+                enable_spf=config.get("enable_spf"),  # type: ignore[arg-type]
                 header_checks=header_checks,
                 relay_access_sources=relay_access_sources,
                 relay_domains=relay_domains,
@@ -277,7 +277,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
                 sender_login_maps=sender_login_maps,
                 smtp_auth_users=smtp_auth_users,
                 smtp_header_checks=smtp_header_checks,
-                spf_skip_addresses=spf_skip_addresses,
+                spf_skip_addresses=spf_skip_addresses,  # type: ignore[arg-type]
                 tls_ciphers=(
                     SmtpTlsCipherGrade(config.get("tls_ciphers"))
                     if config.get("tls_ciphers")
