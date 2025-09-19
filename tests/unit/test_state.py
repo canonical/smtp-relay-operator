@@ -3,9 +3,11 @@
 
 """State unit tests."""
 
+from ipaddress import ip_network
+from typing import cast
+
 import pytest
 import yaml
-from pydantic import IPvAnyNetwork
 
 from reactive import state
 
@@ -97,13 +99,12 @@ def test_state():
     charm_state = state.State.from_charm(config=charm_config)
 
     assert charm_state.additional_smtpd_recipient_restrictions == (
-        yaml.safe_load(charm_config["additional_smtpd_recipient_restrictions"])
+        yaml.safe_load(cast("str", charm_config["additional_smtpd_recipient_restrictions"]))
     )
     assert charm_state.admin_email == charm_config["admin_email"]
     assert charm_state.allowed_relay_networks == [
-        IPvAnyNetwork(value)
-        for value
-        in yaml.safe_load(charm_config["allowed_relay_networks"])
+        ip_network(value)
+        for value in yaml.safe_load(cast("str", charm_config["allowed_relay_networks"]))
     ]
     assert charm_state.append_x_envelope_to
     assert charm_state.connection_limit == charm_config["connection_limit"]
@@ -112,39 +113,56 @@ def test_state():
     assert not charm_state.enable_reject_unknown_sender_domain
     assert charm_state.enable_spf
     assert not charm_state.enable_smtp_auth
-    assert charm_state.header_checks == yaml.safe_load(charm_config["header_checks"])
-    assert charm_state.relay_access_sources == yaml.safe_load(charm_config["relay_access_sources"])
-    assert charm_state.relay_domains == yaml.safe_load(charm_config["relay_domains"])
+    assert charm_state.header_checks == yaml.safe_load(cast("str", charm_config["header_checks"]))
+    assert charm_state.relay_access_sources == yaml.safe_load(
+        cast("str", charm_config["relay_access_sources"])
+    )
+    assert charm_state.relay_domains == yaml.safe_load(cast("str", charm_config["relay_domains"]))
     assert charm_state.relay_host == charm_config["relay_host"]
-    restrict_recipients_raw = yaml.safe_load(charm_config["restrict_recipients"])
+    restrict_recipients_raw = yaml.safe_load(cast("str", charm_config["restrict_recipients"]))
     restrict_recipients = {
         key: state.AccessMapValue(value) for key, value in restrict_recipients_raw.items()
     }
     assert charm_state.restrict_recipients == restrict_recipients
-    restrict_sender_raw = yaml.safe_load(charm_config["restrict_senders"])
+    restrict_sender_raw = yaml.safe_load(cast("str", charm_config["restrict_senders"]))
     restrict_senders = {
         key: state.AccessMapValue(value) for key, value in restrict_sender_raw.items()
     }
     assert charm_state.restrict_senders == restrict_senders
     assert charm_state.restrict_sender_access == yaml.safe_load(
-        charm_config["restrict_sender_access"]
+        cast("str", charm_config["restrict_sender_access"])
     )
-    assert charm_state.sender_login_maps == yaml.safe_load(charm_config["sender_login_maps"])
-    assert charm_state.smtp_auth_users == yaml.safe_load(charm_config["smtp_auth_users"])
-    assert charm_state.smtp_header_checks == yaml.safe_load(charm_config["smtp_header_checks"])
+    assert charm_state.sender_login_maps == yaml.safe_load(
+        cast("str", charm_config["sender_login_maps"])
+    )
+    assert charm_state.smtp_auth_users == yaml.safe_load(
+        cast("str", charm_config["smtp_auth_users"])
+    )
+    assert charm_state.smtp_header_checks == yaml.safe_load(
+        cast("str", charm_config["smtp_header_checks"])
+    )
     assert charm_state.spf_skip_addresses == [
-        IPvAnyNetwork(address) for address in yaml.safe_load(charm_config["spf_skip_addresses"])
+        ip_network(address)
+        for address in yaml.safe_load(cast("str", charm_config["spf_skip_addresses"]))
     ]
     assert charm_state.tls_ciphers == state.SmtpTlsCipherGrade.HIGH
-    assert charm_state.tls_exclude_ciphers == yaml.safe_load(charm_config["tls_exclude_ciphers"])
-    assert charm_state.tls_policy_maps == yaml.safe_load(charm_config["tls_policy_maps"])
-    assert charm_state.tls_protocols == yaml.safe_load(charm_config["tls_protocols"])
-    assert charm_state.tls_security_level == state.SmtpTlsSecurityLevel.MAY
-    assert charm_state.transport_maps == yaml.safe_load(charm_config["transport_maps"])
-    assert charm_state.virtual_alias_domains == yaml.safe_load(
-        charm_config["virtual_alias_domains"]
+    assert charm_state.tls_exclude_ciphers == yaml.safe_load(
+        cast("str", charm_config["tls_exclude_ciphers"])
     )
-    assert charm_state.virtual_alias_maps == yaml.safe_load(charm_config["virtual_alias_maps"])
+    assert charm_state.tls_policy_maps == yaml.safe_load(
+        cast("str", charm_config["tls_policy_maps"])
+    )
+    assert charm_state.tls_protocols == yaml.safe_load(cast("str", charm_config["tls_protocols"]))
+    assert charm_state.tls_security_level == state.SmtpTlsSecurityLevel.MAY
+    assert charm_state.transport_maps == yaml.safe_load(
+        cast("str", charm_config["transport_maps"])
+    )
+    assert charm_state.virtual_alias_domains == yaml.safe_load(
+        cast("str", charm_config["virtual_alias_domains"])
+    )
+    assert charm_state.virtual_alias_maps == yaml.safe_load(
+        cast("str", charm_config["virtual_alias_maps"])
+    )
     assert charm_state.virtual_alias_maps_type == state.PostfixLookupTableType.HASH
 
 
@@ -204,7 +222,13 @@ def test_state_defaults():
     assert charm_state.spf_skip_addresses == []
     assert charm_state.tls_ciphers == state.SmtpTlsCipherGrade.HIGH
     assert charm_state.tls_exclude_ciphers == [
-        "aNULL", "eNULL", "DES", "3DES", "MD5", "RC4", "CAMELLIA"
+        "aNULL",
+        "eNULL",
+        "DES",
+        "3DES",
+        "MD5",
+        "RC4",
+        "CAMELLIA",
     ]
     assert charm_state.tls_policy_maps == {}
     assert charm_state.tls_protocols == ["!SSLv2", "!SSLv3"]

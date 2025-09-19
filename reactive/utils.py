@@ -16,7 +16,7 @@ from charmhelpers.core import host
 JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"
 
 
-def update_logrotate_conf(path):
+def update_logrotate_conf(path: str) -> str:
     """Update existing logrotate config with log retention settings.
 
     Args:
@@ -51,7 +51,7 @@ def update_logrotate_conf(path):
     return "\n".join(new)
 
 
-def copy_file(source_path, destination_path, perms=0o644):
+def copy_file(source_path: str, destination_path: str, perms: int = 0o644) -> bool:
     """Copy file.
 
     Args:
@@ -63,7 +63,9 @@ def copy_file(source_path, destination_path, perms=0o644):
     return write_file(content, destination_path, perms=perms)
 
 
-def write_file(content, destination_path, perms=0o644, group=None):
+def write_file(
+    content: str, destination_path: str, perms: int = 0o644, group: str | None = None
+) -> bool:
     """Write file only on changes and return True if changes written.
 
     Args:
