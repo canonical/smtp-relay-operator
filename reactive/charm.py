@@ -239,7 +239,7 @@ def configure_policyd_spf(
     reactive.set_flag("smtp-relay.policyd-spf.configured")
 
 
-def _generate_fqdn(domain):
+def _generate_fqdn(domain: str) -> str:
     return f"{hookenv.local_unit().replace('/', '-')}.{domain}"
 
 
@@ -311,7 +311,7 @@ def set_active(version_file: str = "version") -> None:
     reactive.set_flag("smtp-relay.active")
 
 
-def _update_aliases(admin_email, aliases_path="/etc/aliases"):
+def _update_aliases(admin_email: str | None, aliases_path: str = "/etc/aliases") -> None:
     aliases = []
     try:
         with open(aliases_path, "r", encoding="utf-8") as f:
