@@ -78,3 +78,6 @@ max-complexity = 10
 [tool.codespell]
 ignore-words-list = "aNULL"
 skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage"
+
+[tool.pydocstyle]
+add_ignore = ["D104"]
