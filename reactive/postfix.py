@@ -73,7 +73,22 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
     milters: str,
     template_path: str,
 ) -> str:
-    """Prepare the context and renders the Postfix configuration files."""
+    """Prepare the context and render the Postfix configuration files.
+
+    Args:
+        charm_state: The current state of the charm.
+        tls_dh_params_path: Path to the Diffie-Hellman parameters file for TLS.
+        tls_cert_path: Path to the TLS certificate file.
+        tls_key_path: Path to the TLS private key file.
+        tls_cert_key_path: Path to the combined certificate and key file for TLS.
+        fqdn: Fully Qualified Domain Name of the system.
+        hostname: Hostname of the system.
+        milters: String representing the milters to be used by Postfix.
+        template_path: Path to the Jinja2 template for rendering the configuration.
+
+    Returns:
+        str: The rendered Postfix configuration file content as a string.
+    """
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,
         "fqdn": fqdn,
@@ -123,7 +138,7 @@ def _create_update_map(content: str, postmap: str) -> bool:
             os.utime(pmfname, None)
         changed = True
 
-    contents = utils.JUJU_HEADER + content + "\n"
+    contents = f"{utils.JUJU_HEADER}{content}\n"
     changed = utils.write_file(contents, pmfname) or changed
 
     if changed and pmtype == "hash":
@@ -239,10 +254,16 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
 
 
 def construct_policyd_spf_config_file_content(spf_skip_addresses: "list[IPvAnyNetwork]") -> str:
-    """Create the configuration file content for the policyd-spf service."""
+    """Generate the configuration content for the policyd-spf service.
+
+    Args:
+        spf_skip_addresses: A list of IP addresses or networks to exclude from SPF checks.
+
+    Returns:
+        str: The rendered configuration file content for policyd-spf.
+    """
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,
         "skip_addresses": ",".join([str(address) for address in spf_skip_addresses]),
     }
-    contents = utils.render_jinja2_template(context, "templates/policyd_spf_conf.tmpl")
-    return contents
+    return utils.render_jinja2_template(context, "templates/policyd_spf_conf.tmpl")

@@ -7,7 +7,15 @@ from reactive import utils
 
 
 def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_auth: bool) -> str:
-    """Prepare the context and render the dovecot.conf file content."""
+    """Prepare the context and render the dovecot.conf file content.
+
+    Args:
+        dovecot_users_path: Path to the passwd-file of Dovecot users.
+        enable_smtp_auth: Whether SMTP authentication should be enabled.
+
+    Returns:
+        str: The rendered content of the `dovecot.conf` file.
+    """
     context = {
         "JUJU_HEADER": utils.JUJU_HEADER,
         # TODO: Allow overriding passdb driver.
@@ -18,10 +26,16 @@ def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_a
         "path": "/var/spool/postfix/private/auth",
         "smtp_auth": enable_smtp_auth,
     }
-    contents = utils.render_jinja2_template(context, "templates/dovecot_conf.tmpl")
-    return contents
+    return utils.render_jinja2_template(context, "templates/dovecot_conf.tmpl")
 
 
 def construct_dovecot_user_file_content(smtp_auth_users: list[str]) -> str:
-    """Format the list of users into the content for the Dovecot users file."""
+    """Format the list of users into the content for the Dovecot users file.
+
+    Args:
+        smtp_auth_users: List of SMTP authentication usernames.
+
+    Returns:
+        str: The formatted content for the Dovecot users file.
+    """
     return utils.JUJU_HEADER + "\n".join(smtp_auth_users) + "\n"

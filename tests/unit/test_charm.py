@@ -553,6 +553,7 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ""
         charm.configure_smtp_relay(self.tmpdir, dhparams)
         ensure_postmap_files.assert_called()
+        ensure_postmap_files.assert_called()
 
     @mock.patch("charms.reactive.clear_flag")
     @mock.patch("charms.reactive.set_flag")

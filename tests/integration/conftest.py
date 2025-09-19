@@ -1,6 +1,8 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""Conftest."""
+
 import typing
 from collections.abc import Generator
 
