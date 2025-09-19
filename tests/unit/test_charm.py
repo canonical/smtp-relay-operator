@@ -1192,11 +1192,11 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
-        want = [mock.call("smtp-relay.policyd-spf.configured")]
+        want = [mock.call("smtp-relay.policyd-spf.configured")]  # type: ignore[assignment]
         set_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
-        want = [mock.call("smtp-relay.active")]
+        want = [mock.call("smtp-relay.active")]  # type: ignore[assignment]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -1402,13 +1402,13 @@ class TestCharm(unittest.TestCase):
         want = "inet:10.48.129.221:8892 inet:10.48.129.221:8892"
         self.assertEqual(want, charm._get_milters())
         relation_ids.assert_called_with("milter")
-        want = [mock.call("milter:54"), mock.call("milter:55")]
+        want = [mock.call("milter:54"), mock.call("milter:55")]  # type: ignore[assignment]
         related_units.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(related_units.mock_calls))
         want = [
             mock.call(rid="milter:54", unit="smtp-dkim-signing-charm/4"),
             mock.call(rid="milter:55", unit="smtp-dkim-signing-charm/4"),
-        ]
+        ]  # type: ignore[assignment]
         relation_get.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(relation_get.mock_calls))
 
