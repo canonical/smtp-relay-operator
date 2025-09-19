@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Conftest."""
+"""Fixtures for charm integration tests."""
 
 import typing
 from collections.abc import Generator
