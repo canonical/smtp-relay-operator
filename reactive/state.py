@@ -2,16 +2,22 @@
 # See LICENSE file for licensing details.
 
 """Charm state."""
-import dataclasses
 import itertools
 import logging
-import re
-import typing
-import yaml
 from enum import Enum
+from ipaddress import ip_network
+from typing import Any
 
+import yaml
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    IPvAnyNetwork,
+    ValidationError,
+)
 from typing_extensions import Annotated
-from pydantic import BaseModel, EmailStr, Field, field_validator, IPvAnyNetwork, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +107,7 @@ class AccessMapValue(Enum):
     RESTRICTED = "restricted"
 
 
-def _parse_map(raw_map: str) -> dict[str, str]:
+def _parse_map(raw_map: str | None) -> dict[str, str]:
     """Parse map input.
 
     Returns:
@@ -110,7 +116,7 @@ def _parse_map(raw_map: str) -> dict[str, str]:
     return yaml.safe_load(raw_map) if raw_map else {}
 
 
-def _parse_access_map(raw_map: str) -> dict[str, AccessMapValue]:
+def _parse_access_map(raw_map: str | None) -> dict[str, AccessMapValue]:
     """Parse access map input.
 
     Args:
@@ -123,7 +129,7 @@ def _parse_access_map(raw_map: str) -> dict[str, AccessMapValue]:
     return {key: AccessMapValue(value) for key, value in parsed_map.items()}
 
 
-def _parse_list(raw_list: str) -> list[str]:
+def _parse_list(raw_list: str | None) -> list[str]:
     """Parse list input.
 
     Args:
@@ -135,7 +141,6 @@ def _parse_list(raw_list: str) -> list[str]:
     return yaml.safe_load(raw_list) if raw_list else []
 
 
-@dataclasses.dataclass()
 class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
     """The Indico operator charm state.
 
@@ -176,11 +181,13 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         virtual_alias_maps_type: The virtual alias map type.
     """
 
+    model_config = ConfigDict(regex_engine="python-re")  # noqa: DCO063
+
     additional_smtpd_recipient_restrictions: list[str]
     admin_email: EmailStr | None
     allowed_relay_networks: list[IPvAnyNetwork]
     append_x_envelope_to: bool
-    domain: str
+    domain: str = Field(pattern=rf"^(?:$|{HOSTNAME_REGEX})$")
     enable_rate_limits: bool
     enable_reject_unknown_sender_domain: bool
     enable_smtp_auth: bool
@@ -208,133 +215,8 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     virtual_alias_maps_type: PostfixLookupTableType
     connection_limit: int = Field(ge=0)
 
-    def __init__(  # pylint: disable=too-many-arguments, too-many-positional-arguments
-        self,
-        additional_smtpd_recipient_restrictions: list[str],
-        admin_email: EmailStr | None,
-        allowed_relay_networks: list[IPvAnyNetwork],
-        append_x_envelope_to: bool,
-        domain: str,
-        enable_rate_limits: bool,
-        enable_reject_unknown_sender_domain: bool,
-        enable_smtp_auth: bool,
-        enable_spf: bool,
-        header_checks: list[str],
-        relay_access_sources: list[str],
-        relay_domains: list[Annotated[str, Field(min_length=1)]],
-        restrict_recipients: dict[str, AccessMapValue],
-        restrict_senders: dict[str, AccessMapValue],
-        relay_host: Annotated[str, Field(min_length=1)] | None,
-        relay_recipient_maps: dict[str, str],
-        restrict_sender_access: list[Annotated[str, Field(min_length=1)]],
-        sender_login_maps: dict[str, str],
-        smtp_auth_users: list[str],
-        smtp_header_checks: list[str],
-        spf_skip_addresses: list[IPvAnyNetwork],
-        tls_ciphers: SmtpTlsCipherGrade | None,
-        tls_exclude_ciphers: list[Annotated[str, Field(min_length=1)]],
-        tls_policy_maps: dict[str, str],
-        tls_protocols: list[Annotated[str, Field(min_length=1)]],
-        tls_security_level: SmtpTlsSecurityLevel | None,
-        transport_maps: dict[str, str],
-        virtual_alias_domains: list[Annotated[str, Field(min_length=1)]],
-        virtual_alias_maps: dict[str, str],
-        virtual_alias_maps_type: PostfixLookupTableType,
-        connection_limit: int = Field(ge=0)
-    ):
-        """Initialize a new instance of the State class.
-
-        Args:
-            additional_smtpd_recipient_restrictions: List of additional recipient restrictions.
-            admin_email: Administrator's email address where root@ emails will go to.
-            allowed_relay_networks: List of allowed networks to relay without authenticating.
-            append_x_envelope_to: Append the X-Envelope-To header.
-            connection_limit: Maximum number of SMTP connections allowed.
-            domain: Primary domain for hostname generation.
-            enable_rate_limits: Enable default rate limiting features.
-            enable_reject_unknown_sender_domain: Reject email when sender's domain cannot be
-                resolved.
-            enable_smtp_auth: If SMTP authentication is enabled.
-            enable_spf: If SPF checks are enabled.
-            header_checks: Header checks to perform on inbound email.
-            relay_access_sources: List of  entries to restrict access based on CIDR source.
-            relay_domains: List of destination domains to relay mail to.
-            restrict_recipients: Access map for restrictions by recipient address or domain.
-            restrict_senders: Access map for restrictions by sender address or domain.
-            relay_host: SMTP relay host to forward mail to.
-            relay_recipient_maps: Map that alias mail addresses or domains to
-                addresses.
-            restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
-            sender_login_maps: List of authenticated users that can send mail.
-            smtp_auth_users: List of user and crypt password hashe pairs separated by ':'.
-            smtp_header_checks: List of header checks to perform on outbound email.
-            spf_skip_addresses: List of CIDR addresses to skip SPF checks.
-            tls_ciphers: Minimum TLS cipher grade for TLS encryption.
-            tls_exclude_ciphers: List of TLS ciphers or cipher types to exclude from the cipher
-                list.
-            tls_policy_maps:Map for TLS policy.
-            tls_protocols: List of TLS protocols accepted by the Postfix SMTP.
-            tls_security_level: The TLS security level.
-            transport_maps: Map for recipient address to message delivery transport
-                or next-hop destination.
-            virtual_alias_domains: List of domains for which all addresses are aliased.
-            virtual_alias_maps: Map of aliases of mail addresses or domains to other local or
-                remote addresses.
-            virtual_alias_maps_type: The virtual alias map type.
-        """
-        super().__init__(
-            additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
-            admin_email=admin_email,
-            allowed_relay_networks=allowed_relay_networks,
-            append_x_envelope_to=append_x_envelope_to,
-            domain=domain,
-            enable_rate_limits=enable_rate_limits,
-            enable_reject_unknown_sender_domain=enable_reject_unknown_sender_domain,
-            enable_smtp_auth=enable_smtp_auth,
-            enable_spf=enable_spf,
-            header_checks=header_checks,
-            relay_access_sources=relay_access_sources,
-            relay_domains=relay_domains,
-            restrict_recipients=restrict_recipients,
-            restrict_senders=restrict_senders,
-            relay_host=relay_host,
-            relay_recipient_maps=relay_recipient_maps,
-            restrict_sender_access=restrict_sender_access,
-            sender_login_maps=sender_login_maps,
-            smtp_auth_users=smtp_auth_users,
-            smtp_header_checks=smtp_header_checks,
-            spf_skip_addresses=spf_skip_addresses,
-            tls_ciphers=tls_ciphers,
-            tls_exclude_ciphers=tls_exclude_ciphers,
-            tls_policy_maps=tls_policy_maps,
-            tls_protocols=tls_protocols,
-            tls_security_level=tls_security_level,
-            transport_maps=transport_maps,
-            virtual_alias_domains=virtual_alias_domains,
-            virtual_alias_maps=virtual_alias_maps,
-            virtual_alias_maps_type=virtual_alias_maps_type,
-            connection_limit=connection_limit
-        )
-
-    # Validation is done in this method instead of using a pydantic model because
-    # regex is not fully supported.
-    @field_validator("domain", mode="before")
     @classmethod
-    def validate(cls, value: str) -> None:
-        """Validate the precondition to initialize this state component.
-
-        Raises:
-            ValueError: if the value is invalid.
-        """
-        if not value == "" and not re.match(HOSTNAME_REGEX, value):
-            logger.error(
-                "The domain (%s) does not match regex: %s", value, HOSTNAME_REGEX
-            )
-            raise ValueError("The domain is invalid.")
-        return value
-
-    @classmethod
-    def from_charm(cls, config: dict[str, typing.Any]) -> "State":
+    def from_charm(cls, config: dict[str, Any]) -> "State":
         """Initialize the state from charm.
 
         Args:
@@ -348,9 +230,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         """
         try:
             allowed_relay_networks = [
-                IPvAnyNetwork(value)
-                for value
-                in _parse_list(config.get("allowed_relay_networks"))
+                ip_network(value) for value in _parse_list(config.get("allowed_relay_networks"))
             ]
             additional_smtpd_recipient_restrictions = _parse_list(
                 config.get("additional_smtpd_recipient_restrictions")
@@ -377,15 +257,15 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
                 additional_smtpd_recipient_restrictions=additional_smtpd_recipient_restrictions,
                 admin_email=config.get("admin_email"),
                 allowed_relay_networks=allowed_relay_networks,
-                append_x_envelope_to=config.get("append_x_envelope_to"),
-                connection_limit=config.get("connection_limit"),
-                domain=config.get("domain"),
-                enable_rate_limits=config.get("enable_rate_limits"),
+                append_x_envelope_to=config.get("append_x_envelope_to"),  # type: ignore[arg-type]
+                connection_limit=config.get("connection_limit"),  # type: ignore[arg-type]
+                domain=config.get("domain"),  # type: ignore[arg-type]
+                enable_rate_limits=config.get("enable_rate_limits"),  # type: ignore[arg-type]
                 enable_reject_unknown_sender_domain=config.get(
                     "enable_reject_unknown_sender_domain"
-                ),
-                enable_smtp_auth=config.get("enable_smtp_auth"),
-                enable_spf=config.get("enable_spf"),
+                ),  # type: ignore[arg-type]
+                enable_smtp_auth=config.get("enable_smtp_auth"),  # type: ignore[arg-type]
+                enable_spf=config.get("enable_spf"),  # type: ignore[arg-type]
                 header_checks=header_checks,
                 relay_access_sources=relay_access_sources,
                 relay_domains=relay_domains,
@@ -397,7 +277,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
                 sender_login_maps=sender_login_maps,
                 smtp_auth_users=smtp_auth_users,
                 smtp_header_checks=smtp_header_checks,
-                spf_skip_addresses=spf_skip_addresses,
+                spf_skip_addresses=spf_skip_addresses,  # type: ignore[arg-type]
                 tls_ciphers=(
                     SmtpTlsCipherGrade(config.get("tls_ciphers"))
                     if config.get("tls_ciphers")
