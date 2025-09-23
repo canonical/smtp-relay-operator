@@ -99,6 +99,9 @@ class SMTPRelayCharm(ops.CharmBase):
         # Ensure service is running.
         systemd.service_start("dovecot")
 
+    def _generate_fqdn(self, domain: str) -> str:
+        return f"{self.unit.name.replace('/', '-')}.{domain}"
+
     def _configure_smtp_relay(
         self,
         charm_state: State,
@@ -109,7 +112,7 @@ class SMTPRelayCharm(ops.CharmBase):
         ops.MaintenanceStatus("Setting up SMTP relay")
 
         tls_config_paths = get_tls_config_paths(tls_dh_params)
-        fqdn = _generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
+        fqdn = self._generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
         hostname = socket.gethostname()
         milters = self._get_milters()
 
@@ -273,10 +276,6 @@ def configure_policyd_spf(
     utils.write_file(contents, policyd_spf_config)
 
     reactive.set_flag("smtp-relay.policyd-spf.configured")
-
-
-def _generate_fqdn(domain: str) -> str:
-    return f"{hookenv.local_unit().replace('/', '-')}.{domain}"
 
 
 @reactive.when("smtp-relay.configured")
