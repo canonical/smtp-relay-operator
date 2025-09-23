@@ -7,11 +7,14 @@ import hashlib
 import os
 import socket
 import subprocess  # nosec
+from typing import Any
 
 from charmhelpers.core import hookenv, host
 from charms import reactive
 from charms.layer import status
+import ops
 
+from lib.charms.operator_libs_linux.v1 import systemd
 from reactive import utils
 from reactive.dovecot import (
     construct_dovecot_config_file_content,
@@ -26,22 +29,66 @@ from reactive.state import State
 from reactive.tls import get_tls_config_paths
 
 
-@reactive.hook("upgrade-charm")
-def upgrade_charm() -> None:
-    """Reconfigure the charm on upgrade by clearing relevant flags."""
-    status.maintenance("forcing reconfiguration on upgrade-charm")
-    reactive.clear_flag("smtp-relay.active")
-    reactive.clear_flag("smtp-relay.auth.configured")
-    reactive.clear_flag("smtp-relay.configured")
-    reactive.clear_flag("smtp-relay.installed")
+class SMTPRelayCharm(ops.CharmBase):
+    def __init__(self, *args: Any) -> None:
+        super().__init__(*args)
 
+        self.framework.observe(self.on.upgrade_charm, self._reconcile)
+        self.framework.observe(self.on.install, self._reconcile)
+        self.framework.observe(self.on.config_changed, self._reconcile)
+        self.framework.observe(self.on.peer_relation_changed, self._reconcile)
+        self.framework.observe(self.on.peer_relation_joined, self._reconcile)
 
-@reactive.when_not("smtp-relay.installed")
-def install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
-    """Configure logging and mark SMTP relay as installed."""
-    reactive.set_flag("smtp-relay.installed")
+    def _reconcile(self, event: ops.EventBase) -> None:
+        self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
+        charm_state = State.from_charm(self.config)
 
-    _configure_smtp_relay_logging(logrotate_conf_path)
+        self._install()
+        self._configure_smtp_auth(charm_state)
+
+    def _install(
+        logrotate_conf_path: str = "/etc/logrotate.d/rsyslog",
+    ) -> None:  # TODO: check if redundant
+        """Configure logging."""
+        _configure_smtp_relay_logging(logrotate_conf_path)
+
+    def _configure_smtp_auth(
+        self,
+        charm_state: State,
+        dovecot_config: str = "/etc/dovecot/dovecot.conf",
+        dovecot_users: str = "/etc/dovecot/users",
+    ) -> None:
+        """Ensure SMTP authentication is configured or disabled via Dovecot as per charm settings."""
+
+        ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
+
+        contents = construct_dovecot_config_file_content(
+            dovecot_users, charm_state.enable_smtp_auth
+        )
+        changed = utils.write_file(contents, dovecot_config)
+
+        if charm_state.smtp_auth_users:
+            contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
+            utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
+
+        if not charm_state.enable_smtp_auth:
+            ops.MaintenanceStatus("SMTP authentication not enabled, ensuring ports are closed")
+            self.unit.close_port("tcp", 465)
+            self.unit.close_port("tcp", 587)
+            systemd.service_stop("dovecot")
+            # XXX: mask systemd service disable
+            return
+
+        ops.MaintenanceStatus("Opening additional ports for SMTP authentication")
+        self.unit.open_port("tcp", 465)
+        self.unit.open_port("tcp", 587)
+
+        if changed:
+            ops.MaintenanceStatus("Restarting Dovecot due to config changes")
+            systemd.service_reload("dovecot")
+
+        # Ensure service is running.
+        systemd.service_start("dovecot")
 
 
 def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
@@ -50,98 +97,6 @@ def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
     utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
     contents = utils.update_logrotate_conf(logrotate_conf_path)
     utils.write_file(contents, logrotate_conf_path)
-
-
-@reactive.hook("peer-relation-joined", "peer-relation-changed")
-def peer_relation_changed() -> None:
-    """Invalidate SMTP relay configuration upon peer relation changes."""
-    reactive.clear_flag("smtp-relay.configured")
-
-
-@reactive.when_any(
-    "config.changed.enable_smtp_auth",
-    "config.changed.smtp_auth_users",
-)
-def config_changed_smtp_auth() -> None:
-    """Invalidate auth configuration when SMTP auth settings have changed."""
-    reactive.clear_flag("smtp-relay.auth.configured")
-
-
-@reactive.when("smtp-relay.installed")
-@reactive.when_not("smtp-relay.auth.configured")
-def configure_smtp_auth(
-    dovecot_config: str = "/etc/dovecot/dovecot.conf", dovecot_users: str = "/etc/dovecot/users"
-) -> None:
-    """Ensure SMTP authentication is configured or disabled via Dovecot as per charm settings."""
-    reactive.clear_flag("smtp-relay.active")
-    reactive.clear_flag("smtp-relay.configured")
-    charm_state = State.from_charm(hookenv.config())
-
-    status.maintenance("Setting up SMTP authentication (dovecot)")
-
-    contents = construct_dovecot_config_file_content(dovecot_users, charm_state.enable_smtp_auth)
-    changed = utils.write_file(contents, dovecot_config)
-
-    if charm_state.smtp_auth_users:
-        contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
-        utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
-
-    if not charm_state.enable_smtp_auth:
-        status.maintenance("SMTP authentication not enabled, ensuring ports are closed")
-        hookenv.close_port(465, "TCP")
-        hookenv.close_port(587, "TCP")
-        host.service_stop("dovecot")
-        # XXX: mask systemd service disable
-
-        reactive.set_flag("smtp-relay.auth.configured")
-        return
-
-    status.maintenance("Opening additional ports for SMTP authentication")
-    hookenv.open_port(465, "TCP")
-    hookenv.open_port(587, "TCP")
-
-    if changed:
-        status.maintenance("Restarting Dovecot due to config changes")
-        host.service_reload("dovecot")
-    # Ensure service is running.
-    host.service_start("dovecot")
-
-    reactive.set_flag("smtp-relay.auth.configured")
-
-
-@reactive.when_any(
-    "config.changed.admin_email",
-    "config.changed.additional_smtpd_recipient_restrictions",
-    "config.changed.allowed_relay_networks",
-    "config.changed.append_x_envelope_to",
-    "config.changed.connection_limit",
-    "config.changed.domain",
-    "config.changed.enable_rate_limits",
-    "config.changed.enable_smtp_auth",
-    "config.changed.enable_spf",
-    "config.changed.header_checks",
-    "config.changed.relay_access_sources",
-    "config.changed.relay_domains",
-    "config.changed.relay_host",
-    "config.changed.relay_recipient_maps",
-    "config.changed.restrict_recipients",
-    "config.changed.restrict_senders",
-    "config.changed.restrict_sender_access",
-    "config.changed.sender_login_maps",
-    "config.changed.smtp_header_checks",
-    "config.changed.tls_ciphers",
-    "config.changed.tls_exclude_ciphers",
-    "config.changed.tls_policy_maps",
-    "config.changed.tls_protocols",
-    "config.changed.tls_security_level",
-    "config.changed.transport_maps",
-    "config.changed.virtual_alias_domains",
-    "config.changed.virtual_alias_maps",
-    "config.changed.virtual_alias_maps_type",
-)
-def config_changed() -> None:
-    """Clear configured flag upon config changes so SMTP relay is reconfigured."""
-    reactive.clear_flag("smtp-relay.configured")
 
 
 @reactive.hook("milter-relation-joined", "milter-relation-changed")
