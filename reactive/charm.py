@@ -246,36 +246,20 @@ class SMTPRelayCharm(ops.CharmBase):
         if changed:
             subprocess.call(["newaliases"])  # nosec
 
+    @staticmethod
+    def _configure_policyd_spf(
+        charm_state: State,
+        policyd_spf_config: str = "/etc/postfix-policyd-spf-python/policyd-spf.conf",
+    ) -> None:
+        """Configure Postfix SPF policy server (policyd-spf) based on charm state."""
+        if not charm_state.enable_spf:
+            ops.MaintenanceStatus("Postfix policy server for SPF checking (policyd-spf) disabled")
+            return
 
-@reactive.when_any(
-    "config.changed.enable_spf",
-    "config.changed.spf_skip_addresses",
-)
-def config_changed_policyd_spf() -> None:
-    """Clear SPF policy‑configured flag when SPF‑related config options change."""
-    reactive.clear_flag("smtp-relay.policyd-spf.configured")
+        ops.MaintenanceStatus("Setting up Postfix policy server for SPF checking (policyd-spf)")
 
-
-@reactive.when("smtp-relay.installed")
-@reactive.when_not("smtp-relay.policyd-spf.configured")
-def configure_policyd_spf(
-    policyd_spf_config: str = "/etc/postfix-policyd-spf-python/policyd-spf.conf",
-) -> None:
-    """Configure Postfix SPF policy server (policyd-spf) based on charm state and configuration."""
-    reactive.clear_flag("smtp-relay.active")
-    charm_state = State.from_charm(hookenv.config())
-
-    if not charm_state.enable_spf:
-        status.maintenance("Postfix policy server for SPF checking (policyd-spf) disabled")
-        reactive.set_flag("smtp-relay.policyd-spf.configured")
-        return
-
-    status.maintenance("Setting up Postfix policy server for SPF checking (policyd-spf)")
-
-    contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
-    utils.write_file(contents, policyd_spf_config)
-
-    reactive.set_flag("smtp-relay.policyd-spf.configured")
+        contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
+        utils.write_file(contents, policyd_spf_config)
 
 
 @reactive.when("smtp-relay.configured")
