@@ -7,12 +7,13 @@ import hashlib
 import os
 import socket
 import subprocess  # nosec
+from pathlib import Path
 from typing import Any
 
-from charmhelpers.core import hookenv, host
+import ops
+from charmhelpers.core import hookenv
 from charms import reactive
 from charms.layer import status
-import ops
 
 from lib.charms.operator_libs_linux.v1 import systemd
 from reactive import utils
@@ -21,16 +22,20 @@ from reactive.dovecot import (
     construct_dovecot_user_file_content,
 )
 from reactive.postfix import (
+    PostfixMap,
+    build_postfix_maps,
     construct_policyd_spf_config_file_content,
     construct_postfix_config_file_content,
-    ensure_postmap_files,
 )
 from reactive.state import State
 from reactive.tls import get_tls_config_paths
 
 
 class SMTPRelayCharm(ops.CharmBase):
+    """SMTP Relay."""
+
     def __init__(self, *args: Any) -> None:
+        """SMTP Relay."""
         super().__init__(*args)
 
         self.framework.observe(self.on.upgrade_charm, self._reconcile)
@@ -38,19 +43,24 @@ class SMTPRelayCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.peer_relation_changed, self._reconcile)
         self.framework.observe(self.on.peer_relation_joined, self._reconcile)
+        self.framework.observe(self.on.milter_relation_changed, self._reconcile)
+        self.framework.observe(self.on.milter_relation_joined, self._reconcile)
 
-    def _reconcile(self, event: ops.EventBase) -> None:
+    def _reconcile(self, _: ops.EventBase) -> None:
         self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
         charm_state = State.from_charm(self.config)
 
         self._install()
         self._configure_smtp_auth(charm_state)
+        self._configure_smtp_relay(charm_state)
 
-    def _install(
-        logrotate_conf_path: str = "/etc/logrotate.d/rsyslog",
-    ) -> None:  # TODO: check if redundant
+    @staticmethod
+    def _install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
         """Configure logging."""
-        _configure_smtp_relay_logging(logrotate_conf_path)
+        utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
+        utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
+        contents = utils.update_logrotate_conf(logrotate_conf_path)
+        utils.write_file(contents, logrotate_conf_path)
 
     def _configure_smtp_auth(
         self,
@@ -58,8 +68,7 @@ class SMTPRelayCharm(ops.CharmBase):
         dovecot_config: str = "/etc/dovecot/dovecot.conf",
         dovecot_users: str = "/etc/dovecot/users",
     ) -> None:
-        """Ensure SMTP authentication is configured or disabled via Dovecot as per charm settings."""
-
+        """Ensure SMTP authentication is configured or disabled via Dovecot."""
         ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
 
         contents = construct_dovecot_config_file_content(
@@ -90,77 +99,149 @@ class SMTPRelayCharm(ops.CharmBase):
         # Ensure service is running.
         systemd.service_start("dovecot")
 
+    def _configure_smtp_relay(
+        self,
+        charm_state: State,
+        postfix_conf_dir: str = "/etc/postfix",
+        tls_dh_params: str = "/etc/ssl/private/dhparams.pem",
+    ) -> None:
+        """Generate and apply SMTP relay (Postfix) configuration."""
+        ops.MaintenanceStatus("Setting up SMTP relay")
 
-def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
-    """Configure logging for the SMTP relay."""
-    utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
-    utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
-    contents = utils.update_logrotate_conf(logrotate_conf_path)
-    utils.write_file(contents, logrotate_conf_path)
+        tls_config_paths = get_tls_config_paths(tls_dh_params)
+        fqdn = _generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
+        hostname = socket.gethostname()
+        milters = self._get_milters()
 
+        contents = construct_postfix_config_file_content(
+            charm_state=charm_state,
+            tls_dh_params_path=tls_config_paths.tls_dh_params,
+            tls_cert_path=tls_config_paths.tls_cert,
+            tls_key_path=tls_config_paths.tls_key,
+            tls_cert_key_path=tls_config_paths.tls_cert_key,
+            fqdn=fqdn,
+            hostname=hostname,
+            milters=milters,
+            template_path="templates/postfix_main_cf.tmpl",
+        )
+        changed = utils.write_file(contents, os.path.join(postfix_conf_dir, "main.cf"))
 
-@reactive.hook("milter-relation-joined", "milter-relation-changed")
-def milter_relation_changed() -> None:
-    """Invalidate SMTP relay configuration when milter relation changes or joins."""
-    reactive.clear_flag("smtp-relay.configured")
+        contents = construct_postfix_config_file_content(
+            charm_state=charm_state,
+            tls_dh_params_path=tls_config_paths.tls_dh_params,
+            tls_cert_path=tls_config_paths.tls_cert,
+            tls_key_path=tls_config_paths.tls_key,
+            tls_cert_key_path=tls_config_paths.tls_cert_key,
+            fqdn=fqdn,
+            hostname=hostname,
+            milters=milters,
+            template_path="templates/postfix_master_cf.tmpl",
+        )
+        changed = (
+            utils.write_file(contents, os.path.join(postfix_conf_dir, "master.cf")) or changed
+        )
+        postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
+        changed = self._apply_postfix_maps(postfix_maps.values()) or changed
 
+        self._update_aliases(charm_state.admin_email)
 
-@reactive.when("smtp-relay.installed")
-@reactive.when("smtp-relay.auth.configured")
-@reactive.when_not("smtp-relay.configured")
-def configure_smtp_relay(
-    postfix_conf_dir: str = "/etc/postfix", tls_dh_params: str = "/etc/ssl/private/dhparams.pem"
-) -> None:
-    """Generate and apply SMTP relay (Postfix) configuration."""
-    reactive.clear_flag("smtp-relay.active")
-    charm_state = State.from_charm(hookenv.config())
+        systemd.service_start("postfix")
+        if changed:
+            ops.MaintenanceStatus("Reloading postfix due to config changes")
+            systemd.service_reload("postfix")
+            self.unit.open_port("tcp", 25)
+        # Ensure service is running.
+        systemd.service_start("postfix")
 
-    status.maintenance("Setting up SMTP relay")
+    @staticmethod
+    def _apply_postfix_maps(postfix_maps: list[PostfixMap]):
+        any_changed = False
+        for postfix_map in postfix_maps:
+            changed = False
+            if not postfix_map.path.exists():
+                postfix_map.path.touch()
+                changed = True
+            changed = utils.write_file(postfix_map.content, str(postfix_map.path)) or changed
+            if changed and postfix_map.type == "hash":
+                subprocess.call(["postmap", postfix_map.source])
 
-    tls_config_paths = get_tls_config_paths(tls_dh_params)
-    fqdn = _generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
-    hostname = socket.gethostname()
-    milters = _get_milters()
+            any_changed
+        return changed
 
-    contents = construct_postfix_config_file_content(
-        charm_state=charm_state,
-        tls_dh_params_path=tls_config_paths.tls_dh_params,
-        tls_cert_path=tls_config_paths.tls_cert,
-        tls_key_path=tls_config_paths.tls_key,
-        tls_cert_key_path=tls_config_paths.tls_cert_key,
-        fqdn=fqdn,
-        hostname=hostname,
-        milters=milters,
-        template_path="templates/postfix_main_cf.tmpl",
-    )
-    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, "main.cf"))
+    @staticmethod
+    def _calculate_offset(seed: str, length: int = 2) -> int:
+        result = hashlib.md5(seed.encode("utf-8")).hexdigest()[:length]  # nosec
+        return int(result, 16)
 
-    contents = construct_postfix_config_file_content(
-        charm_state=charm_state,
-        tls_dh_params_path=tls_config_paths.tls_dh_params,
-        tls_cert_path=tls_config_paths.tls_cert,
-        tls_key_path=tls_config_paths.tls_key,
-        tls_cert_key_path=tls_config_paths.tls_cert_key,
-        fqdn=fqdn,
-        hostname=hostname,
-        milters=milters,
-        template_path="templates/postfix_master_cf.tmpl",
-    )
-    changed = utils.write_file(contents, os.path.join(postfix_conf_dir, "master.cf")) or changed
+    def _get_peers(self) -> list[str]:
+        """Build a sorted list of all peer unit names."""
+        peers = {self.unit.name}
 
-    changed = ensure_postmap_files(postfix_conf_dir, charm_state) or changed
+        peer_relation = self.model.get_relation("peer")
+        if peer_relation:
+            peers |= {unit.name for unit in peer_relation.units}
 
-    _update_aliases(charm_state.admin_email)
+        # Sorting ensures a consistent, stable order on all units.
+        # The index of this list becomes the unit's "rank".
+        return sorted(peers)
 
-    host.service_start("postfix")
-    if changed:
-        status.maintenance("Reloading postfix due to config changes")
-        host.service_reload("postfix")
-        hookenv.open_port(25, "TCP")
-    # Ensure service is running.
-    host.service_start("postfix")
+    def _get_milters(self) -> str:
+        # TODO: We'll bring up a balancer in front of the list of
+        # backend/related milters but for now, let's just map 1-to-1 and
+        # try spread depending on how many available units.
 
-    reactive.set_flag("smtp-relay.configured")
+        peers = self._get_peers()
+        index = peers.index(self.unit.name)
+        # We want to ensure multiple applications related to the same set
+        # of milters are better spread across them. e.g. smtp-relay-A with
+        # 2 units, smtp-relay-B also with 2 units, but dkim-signing with 5
+        # units. We don't want only the first 2 dkim-signing units to be
+        # used.
+        offset = index + self._calculate_offset(self.app.name)
+
+        result = []
+
+        for relation in self.model.relations["milter"]:
+            if not relation.units:
+                continue
+
+            remote_units = sorted(relation.units, key=lambda u: u.name)
+            selected_unit = remote_units[offset % len(remote_units)]
+
+            address = relation.data[selected_unit]["ingress-address"]
+            # Default to TCP/8892
+            port = relation.data[selected_unit].get("port", 8892)
+
+            if address:
+                result.append(f"inet:{address}:{port}")
+
+        return " ".join(result)
+
+    @staticmethod
+    def _update_aliases(admin_email: str | None, aliases_path: str = "/etc/aliases") -> None:
+        path = Path(aliases_path)
+
+        aliases = []
+        if path.is_file():
+            with path.open("r", encoding="utf-8") as f:
+                aliases = f.readlines()
+
+        add_devnull = True
+        new_aliases = []
+        for line in aliases:
+            if add_devnull and line.startswith("devnull:"):
+                add_devnull = False
+            if not line.startswith("root:"):
+                new_aliases.append(line)
+
+        if add_devnull:
+            new_aliases.append("devnull:       /dev/null\n")
+        if admin_email:
+            new_aliases.append(f"root:          {admin_email}\n")
+
+        changed = utils.write_file("".join(new_aliases), aliases_path)
+        if changed:
+            subprocess.call(["newaliases"])  # nosec
 
 
 @reactive.when_any(
@@ -198,49 +279,6 @@ def _generate_fqdn(domain: str) -> str:
     return f"{hookenv.local_unit().replace('/', '-')}.{domain}"
 
 
-def _calculate_offset(seed: str, length: int = 2) -> int:
-    result = hashlib.md5(seed.encode("utf-8")).hexdigest()[0:length]  # nosec
-    return int(result, 16)
-
-
-def _get_peers() -> list:
-    # Build a list of peer units so we can map it to milters.
-    peers = [hookenv.local_unit()]
-    if hookenv.relation_ids("peer"):
-        peers += hookenv.related_units(hookenv.relation_ids("peer")[0])
-    return sorted(set(peers))
-
-
-def _get_milters() -> str:
-    # TODO: We'll bring up a balancer in front of the list of
-    # backend/related milters but for now, let's just map 1-to-1 and
-    # try spread depending on how many available units.
-
-    peers = _get_peers()
-    index = peers.index(hookenv.local_unit())
-    # We want to ensure multiple applications related to the same set
-    # of milters are better spread across them. e.g. smtp-relay-A with
-    # 2 units, smtp-relay-B also with 2 units, but dkim-signing with 5
-    # units. We don't want only the first 2 dkim-signing units to be
-    # used.
-    offset = index + _calculate_offset(hookenv.application_name())
-
-    result = []
-
-    for relid in hookenv.relation_ids("milter"):
-        units = sorted(hookenv.related_units(relid))
-        if not units:
-            continue
-        unit = units[offset % len(units)]
-        reldata = hookenv.relation_get(rid=relid, unit=unit)
-        addr = reldata["ingress-address"]
-        # Default to TCP/8892
-        port = reldata.get("port", 8892)
-        result.append(f"inet:{addr}:{port}")
-
-    return " ".join(result)
-
-
 @reactive.when("smtp-relay.configured")
 @reactive.when_not("smtp-relay.active")
 def set_active(version_file: str = "version") -> None:
@@ -264,30 +302,3 @@ def set_active(version_file: str = "version") -> None:
 
     status.active(f"Ready{postfix_cf_hash}{users_hash}{revision}")
     reactive.set_flag("smtp-relay.active")
-
-
-def _update_aliases(admin_email: str | None, aliases_path: str = "/etc/aliases") -> None:
-    aliases = []
-    try:
-        with open(aliases_path, "r", encoding="utf-8") as f:
-            aliases = f.readlines()
-    except FileNotFoundError:
-        pass
-
-    add_devnull = True
-    new_aliases = []
-    for line in aliases:
-        if line.startswith("devnull:"):
-            add_devnull = False
-        if line.startswith("root:"):
-            continue
-        new_aliases.append(line)
-
-    if add_devnull:
-        new_aliases.append("devnull:       /dev/null\n")
-    if admin_email:
-        new_aliases.append(f"root:          {admin_email}\n")
-
-    changed = utils.write_file("".join(new_aliases), aliases_path)
-    if changed:
-        subprocess.call(["newaliases"])  # nosec

@@ -3,8 +3,7 @@
 
 """Postfix Service Layer."""
 
-import os
-import subprocess  # nosec
+from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 from reactive import utils
@@ -129,25 +128,27 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
     return utils.render_jinja2_template(context, template_path)
 
 
-def _create_update_map(content: str, postmap: str) -> bool:
-    changed = False
+class PostfixMap(NamedTuple):
+    """Represents a Postfix lookup table and its source file content.
 
-    (pmtype, pmfname) = postmap.split(":")
-    if not os.path.exists(pmfname):
-        with open(pmfname, "a", encoding="utf-8"):
-            os.utime(pmfname, None)
-        changed = True
+    Attributes:
+        type: The type of the Postfix lookup table (e.g., 'hash').
+        path: The path to the map's source file.
+        content: The content to be written to the map's source file.
+        source: The Postfix lookup table source string
+    """
 
-    contents = f"{utils.JUJU_HEADER}{content}\n"
-    changed = utils.write_file(contents, pmfname) or changed
+    type: str
+    path: Path
+    content: str
 
-    if changed and pmtype == "hash":
-        subprocess.call(["postmap", postmap])  # nosec
+    @property
+    def source(self) -> str:
+        """Return the full Postfix lookup table source string."""
+        return f"{self.type}:{self.path}"
 
-    return changed
 
-
-def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
+def build_postfix_maps(postfix_conf_dir: str, charm_state: "State") -> dict[str, PostfixMap]:
     """Ensure various postfix files exist and are up-to-date with the current charm state.
 
     Args:
@@ -155,102 +156,88 @@ def ensure_postmap_files(postfix_conf_dir: str, charm_state: "State") -> bool:
         charm_state: current charm state.
 
     Returns:
-        True if any map was created or updated.
+        A dictionary mapping map names to the generated PostfixMap objects.
     """
+    postfix_conf_dir_path = Path(postfix_conf_dir)
 
-    class PostmapEntry(NamedTuple):
-        """A container for the postmap and its content.
-
-        Attributes:
-            postmap: The full Postfix lookup table string.
-            content: The content to be written to the map's source file.
-        """
-
-        postmap: str
-        content: str
-
-        @classmethod
-        def create(cls, pmap_type: str, pmap_name: str, content: str) -> "PostmapEntry":
-            return cls(
-                postmap=f"{pmap_type}:{os.path.join(postfix_conf_dir, pmap_name)}",
-                content=content,
-            )
+    def _create_map(type: str, name: str, content: str) -> PostfixMap:
+        return PostfixMap(
+            type=type,
+            path=postfix_conf_dir_path / name,
+            content=f"{utils.JUJU_HEADER}\n{content}\n",
+        )
 
     # Create a map of all the maps we may need to create/update from the charm state.
     maps = {
-        "append_envelope_to_header": PostmapEntry.create(
+        "append_envelope_to_header": _create_map(
             "regexp",
             "append_envelope_to_header",
             "/^(.*)$/ PREPEND X-Envelope-To: $1",
         ),
-        "header_checks": PostmapEntry.create(
+        "header_checks": _create_map(
             "regexp",
             "header_checks",
             ";".join(charm_state.header_checks),
         ),
-        "relay_access_sources": PostmapEntry.create(
+        "relay_access_sources": _create_map(
             "cidr",
             "relay_access",
             "\n".join(charm_state.relay_access_sources),
         ),
-        "relay_recipient_maps": PostmapEntry.create(
+        "relay_recipient_maps": _create_map(
             "hash",
             "relay_recipient",
             "\n".join(
                 [f"{key} {value}" for key, value in charm_state.relay_recipient_maps.items()]
             ),
         ),
-        "restrict_recipients": PostmapEntry.create(
+        "restrict_recipients": _create_map(
             "hash",
             "restricted_recipients",
             "\n".join(
                 [f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()]
             ),
         ),
-        "restrict_senders": PostmapEntry.create(
+        "restrict_senders": _create_map(
             "hash",
             "restricted_senders",
             "\n".join(
                 [f"{key} {value.value}" for key, value in charm_state.restrict_senders.items()]
             ),
         ),
-        "sender_access": PostmapEntry.create(
+        "sender_access": _create_map(
             "hash",
             "access",
             "".join([f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]),
         ),
-        "sender_login_maps": PostmapEntry.create(
+        "sender_login_maps": _create_map(
             "hash",
             "sender_login",
             "\n".join([f"{key} {value}" for key, value in charm_state.sender_login_maps.items()]),
         ),
-        "smtp_header_checks": PostmapEntry.create(
+        "smtp_header_checks": _create_map(
             "regexp",
             "smtp_header_checks",
             ";".join(charm_state.smtp_header_checks),
         ),
-        "tls_policy_maps": PostmapEntry.create(
+        "tls_policy_maps": _create_map(
             "hash",
             "tls_policy",
             "\n".join([f"{key} {value}" for key, value in charm_state.tls_policy_maps.items()]),
         ),
-        "transport_maps": PostmapEntry.create(
+        "transport_maps": _create_map(
             "hash",
             "transport",
             "\n".join([f"{key} {value}" for key, value in charm_state.transport_maps.items()]),
         ),
-        "virtual_alias_maps": PostmapEntry.create(
+        "virtual_alias_maps": _create_map(
             charm_state.virtual_alias_maps_type.value,
             "virtual_alias",
             "\n".join([f"{key} {value}" for key, value in charm_state.virtual_alias_maps.items()]),
         ),
     }
 
-    # Ensure various maps exists before starting/restarting postfix.
-    changed = False
-    for entry in maps.values():
-        changed = _create_update_map(entry.content, entry.postmap) or changed
-    return changed
+    return maps
 
 
 def construct_policyd_spf_config_file_content(spf_skip_addresses: "list[IPvAnyNetwork]") -> str:
