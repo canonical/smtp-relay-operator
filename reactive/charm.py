@@ -268,9 +268,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
     @staticmethod
     def _get_charm_revision(self, version_file: str = "version") -> str:
-        """
-        Gets a formatted charm version string from the 'version' file.
-        """
+        """Get a formatted charm version string from the 'version' file."""
         version_file_path = Path(version_file).resolve()
 
         if not version_file_path.is_file():
