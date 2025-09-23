@@ -39,9 +39,7 @@ class SMTPRelayCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.peer_relation_changed, self._reconcile)
-        self.framework.observe(self.on.peer_relation_joined, self._reconcile)
         self.framework.observe(self.on.milter_relation_changed, self._reconcile)
-        self.framework.observe(self.on.milter_relation_joined, self._reconcile)
 
     def _reconcile(self, _: ops.EventBase) -> None:
         self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
@@ -68,7 +66,7 @@ class SMTPRelayCharm(ops.CharmBase):
         dovecot_users: str = "/etc/dovecot/users",
     ) -> None:
         """Ensure SMTP authentication is configured or disabled via Dovecot."""
-        ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
+        self.unit.status = ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
 
         contents = construct_dovecot_config_file_content(
             dovecot_users, charm_state.enable_smtp_auth
@@ -80,19 +78,23 @@ class SMTPRelayCharm(ops.CharmBase):
             utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
 
         if not charm_state.enable_smtp_auth:
-            ops.MaintenanceStatus("SMTP authentication not enabled, ensuring ports are closed")
+            self.unit.status = ops.MaintenanceStatus(
+                "SMTP authentication not enabled, ensuring ports are closed"
+            )
             self.unit.close_port("tcp", 465)
             self.unit.close_port("tcp", 587)
             systemd.service_stop("dovecot")
             # XXX: mask systemd service disable
             return
 
-        ops.MaintenanceStatus("Opening additional ports for SMTP authentication")
+        self.unit.status = ops.MaintenanceStatus(
+            "Opening additional ports for SMTP authentication"
+        )
         self.unit.open_port("tcp", 465)
         self.unit.open_port("tcp", 587)
 
         if changed:
-            ops.MaintenanceStatus("Restarting Dovecot due to config changes")
+            self.unit.status = ops.MaintenanceStatus("Restarting Dovecot due to config changes")
             systemd.service_reload("dovecot")
 
         # Ensure service is running.
@@ -108,7 +110,7 @@ class SMTPRelayCharm(ops.CharmBase):
         tls_dh_params: str = "/etc/ssl/private/dhparams.pem",
     ) -> None:
         """Generate and apply SMTP relay (Postfix) configuration."""
-        ops.MaintenanceStatus("Setting up SMTP relay")
+        self.unit.status = ops.MaintenanceStatus("Setting up SMTP relay")
 
         tls_config_paths = get_tls_config_paths(tls_dh_params)
         fqdn = self._generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
@@ -149,7 +151,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
         systemd.service_start("postfix")
         if changed:
-            ops.MaintenanceStatus("Reloading postfix due to config changes")
+            self.unit.status = ops.MaintenanceStatus("Reloading postfix due to config changes")
             systemd.service_reload("postfix")
             self.unit.open_port("tcp", 25)
         # Ensure service is running.
@@ -245,17 +247,21 @@ class SMTPRelayCharm(ops.CharmBase):
         if changed:
             subprocess.call(["newaliases"])  # nosec
 
-    @staticmethod
     def _configure_policyd_spf(
+        self,
         charm_state: State,
         policyd_spf_config: str = "/etc/postfix-policyd-spf-python/policyd-spf.conf",
     ) -> None:
         """Configure Postfix SPF policy server (policyd-spf) based on charm state."""
         if not charm_state.enable_spf:
-            ops.MaintenanceStatus("Postfix policy server for SPF checking (policyd-spf) disabled")
+            self.unit.status = ops.MaintenanceStatus(
+                "Postfix policy server for SPF checking (policyd-spf) disabled"
+            )
             return
 
-        ops.MaintenanceStatus("Setting up Postfix policy server for SPF checking (policyd-spf)")
+        self.unit.status = ops.MaintenanceStatus(
+            "Setting up Postfix policy server for SPF checking (policyd-spf)"
+        )
 
         contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
         utils.write_file(contents, policyd_spf_config)
@@ -286,4 +292,4 @@ class SMTPRelayCharm(ops.CharmBase):
         postfix_cf_hash = ""
         users_hash = ""
 
-        ops.ActiveStatus(f"Ready{postfix_cf_hash}{users_hash}{revision}")
+        self.unit.status = ops.ActiveStatus(f"Ready{postfix_cf_hash}{users_hash}{revision}")
