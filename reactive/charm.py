@@ -11,9 +11,6 @@ from pathlib import Path
 from typing import Any
 
 import ops
-from charmhelpers.core import hookenv
-from charms import reactive
-from charms.layer import status
 
 from lib.charms.operator_libs_linux.v1 import systemd
 from reactive import utils
@@ -53,6 +50,8 @@ class SMTPRelayCharm(ops.CharmBase):
         self._install()
         self._configure_smtp_auth(charm_state)
         self._configure_smtp_relay(charm_state)
+        self._configure_policyd_spf(charm_state)
+        self._set_active()
 
     @staticmethod
     def _install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
@@ -261,27 +260,30 @@ class SMTPRelayCharm(ops.CharmBase):
         contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
         utils.write_file(contents, policyd_spf_config)
 
+    @staticmethod
+    def _get_charm_revision(self, version_file: str = "version") -> str:
+        """
+        Gets a formatted charm version string from the 'version' file.
+        """
+        version_file_path = Path(version_file).resolve()
 
-@reactive.when("smtp-relay.configured")
-@reactive.when_not("smtp-relay.active")
-def set_active(version_file: str = "version") -> None:
-    """Set the charm's status to active, including version and configuration details."""
-    revision = ""
-    if os.path.exists(version_file):
-        with open(version_file, encoding="utf-8") as f:
+        if not version_file_path.is_file():
+            return ""
+
+        with version_file_path.open(encoding="utf-8") as f:
             line = f.readline().strip()
         # We only want the first 10 characters, that's enough to tell
         # which version of the charm we're using. But include the
         # entire version if it's 'dirty' according to charm build.
         if len(line) > 10 and not line.endswith("-dirty"):
-            revision = f" (source version/commit {line[:10]}…)"
-        else:
-            revision = f" (source version/commit {line})"
+            return f" (source version/commit {line[:10]}…)"
+        return f" (source version/commit {line})"
 
-    # XXX include postfix main.cf hash and dovecot users
-    # (maybe first 8 chars too? comes before the revision one)
-    postfix_cf_hash = ""
-    users_hash = ""
+    def _set_active(self) -> None:
+        revision = self._get_charm_revision()
+        # XXX include postfix main.cf hash and dovecot users
+        # (maybe first 8 chars too? comes before the revision one)
+        postfix_cf_hash = ""
+        users_hash = ""
 
-    status.active(f"Ready{postfix_cf_hash}{users_hash}{revision}")
-    reactive.set_flag("smtp-relay.active")
+        ops.ActiveStatus(f"Ready{postfix_cf_hash}{users_hash}{revision}")
