@@ -46,11 +46,14 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus(str(ex))
             return
 
-        self._install()
-        self._configure_smtp_auth(charm_state)
-        self._configure_smtp_relay(charm_state)
-        self._configure_policyd_spf(charm_state)
-        self.unit.status = ops.ActiveStatus()
+        try:
+            self._install()
+            self._configure_smtp_auth(charm_state)
+            self._configure_smtp_relay(charm_state)
+            self._configure_policyd_spf(charm_state)
+            self.unit.status = ops.ActiveStatus()
+        except Exception as ex:
+            self.unit.status = ops.ErrorStatus(str(ex))
 
     @staticmethod
     def _install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
