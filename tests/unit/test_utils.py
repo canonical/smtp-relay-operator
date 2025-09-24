@@ -9,6 +9,7 @@ from pathlib import Path
 
 import utils
 
+
 class TestLibUtils(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
