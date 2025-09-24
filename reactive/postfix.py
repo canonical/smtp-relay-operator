@@ -4,7 +4,7 @@
 """Postfix Service Layer."""
 
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from reactive import utils
 
@@ -60,7 +60,7 @@ def _smtpd_recipient_restrictions(charm_state: "State") -> list[str]:
     return smtpd_recipient_restrictions
 
 
-def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
+def construct_postfix_config_params(  # pylint: disable=too-many-arguments
     *,
     charm_state: "State",
     tls_dh_params_path: str,
@@ -70,9 +70,8 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
     fqdn: str,
     hostname: str,
     milters: str,
-    template_path: str,
-) -> str:
-    """Prepare the context and render the Postfix configuration files.
+) -> dict[str, Any]:
+    """Prepare the context for rendering Postfix configuration files.
 
     Args:
         charm_state: The current state of the charm.
@@ -83,12 +82,11 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
         fqdn: Fully Qualified Domain Name of the system.
         hostname: Hostname of the system.
         milters: String representing the milters to be used by Postfix.
-        template_path: Path to the Jinja2 template for rendering the configuration.
 
     Returns:
-        str: The rendered Postfix configuration file content as a string.
+        str: The context for remndering Postfix configuration file content.
     """
-    context = {
+    return {
         "JUJU_HEADER": utils.JUJU_HEADER,
         "fqdn": fqdn,
         "hostname": hostname,
@@ -124,8 +122,6 @@ def construct_postfix_config_file_content(  # pylint: disable=too-many-arguments
         "virtual_alias_maps": bool(charm_state.virtual_alias_maps),
         "virtual_alias_maps_type": charm_state.virtual_alias_maps_type.value,
     }
-
-    return utils.render_jinja2_template(context, template_path)
 
 
 class PostfixMap(NamedTuple):

@@ -21,7 +21,7 @@ from reactive.postfix import (
     PostfixMap,
     build_postfix_maps,
     construct_policyd_spf_config_file_content,
-    construct_postfix_config_file_content,
+    construct_postfix_config_params,
 )
 from reactive.state import State
 from reactive.tls import get_tls_config_paths
@@ -114,7 +114,7 @@ class SMTPRelayCharm(ops.CharmBase):
         hostname = socket.gethostname()
         milters = self._get_milters()
 
-        contents = construct_postfix_config_file_content(
+        context = construct_postfix_config_params(
             charm_state=charm_state,
             tls_dh_params_path=tls_config_paths.tls_dh_params,
             tls_cert_path=tls_config_paths.tls_cert,
@@ -123,21 +123,12 @@ class SMTPRelayCharm(ops.CharmBase):
             fqdn=fqdn,
             hostname=hostname,
             milters=milters,
-            template_path="templates/postfix_main_cf.tmpl",
         )
+        contents = utils.render_jinja2_template(context, "templates/postfix_main_cf.tmpl")
         changed = utils.write_file(contents, Path(postfix_conf_dir) / "main.cf")
+        contents = utils.render_jinja2_template(context, "templates/postfix_master_cf.tmpl")
+        changed = utils.write_file(contents, Path(postfix_conf_dir) / "master.cf")
 
-        contents = construct_postfix_config_file_content(
-            charm_state=charm_state,
-            tls_dh_params_path=tls_config_paths.tls_dh_params,
-            tls_cert_path=tls_config_paths.tls_cert,
-            tls_key_path=tls_config_paths.tls_key,
-            tls_cert_key_path=tls_config_paths.tls_cert_key,
-            fqdn=fqdn,
-            hostname=hostname,
-            milters=milters,
-            template_path="templates/postfix_master_cf.tmpl",
-        )
         changed = utils.write_file(contents, Path(postfix_conf_dir) / "master.cf") or changed
         postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
         changed = self._apply_postfix_maps(list(postfix_maps.values())) or changed
@@ -149,7 +140,6 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.MaintenanceStatus("Reloading postfix due to config changes")
             systemd.service_reload("postfix")
             self.unit.open_port("tcp", 25)
-        # Ensure service is running.
         systemd.service_start("postfix")
 
     @staticmethod
