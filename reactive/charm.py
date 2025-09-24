@@ -4,7 +4,6 @@
 """SMTP Relay charm."""
 
 import hashlib
-import os
 import socket
 import subprocess  # nosec
 from pathlib import Path
@@ -126,7 +125,7 @@ class SMTPRelayCharm(ops.CharmBase):
             milters=milters,
             template_path="templates/postfix_main_cf.tmpl",
         )
-        changed = utils.write_file(contents, os.path.join(postfix_conf_dir, "main.cf"))
+        changed = utils.write_file(contents, Path(postfix_conf_dir) / "main.cf")
 
         contents = construct_postfix_config_file_content(
             charm_state=charm_state,
@@ -139,9 +138,7 @@ class SMTPRelayCharm(ops.CharmBase):
             milters=milters,
             template_path="templates/postfix_master_cf.tmpl",
         )
-        changed = (
-            utils.write_file(contents, os.path.join(postfix_conf_dir, "master.cf")) or changed
-        )
+        changed = utils.write_file(contents, Path(postfix_conf_dir) / "master.cf") or changed
         postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
         changed = self._apply_postfix_maps(list(postfix_maps.values())) or changed
 
