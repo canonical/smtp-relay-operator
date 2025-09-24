@@ -79,7 +79,9 @@ class SMTPRelayCharm(ops.CharmBase):
 
         if charm_state.smtp_auth_users:
             contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
-            utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot")
+            changed = (
+                utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot") or changed
+            )
 
         if not charm_state.enable_smtp_auth:
             self.unit.status = ops.MaintenanceStatus(
