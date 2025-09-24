@@ -145,7 +145,7 @@ class SMTPRelayCharm(ops.CharmBase):
             utils.write_file(contents, os.path.join(postfix_conf_dir, "master.cf")) or changed
         )
         postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
-        changed = self._apply_postfix_maps(postfix_maps.values()) or changed
+        changed = self._apply_postfix_maps(list(postfix_maps.values())) or changed
 
         self._update_aliases(charm_state.admin_email)
 
@@ -267,7 +267,7 @@ class SMTPRelayCharm(ops.CharmBase):
         utils.write_file(contents, policyd_spf_config)
 
     @staticmethod
-    def _get_charm_revision(self, version_file: str = "version") -> str:
+    def _get_charm_revision(version_file: str = "version") -> str:
         """Get a formatted charm version string from the 'version' file."""
         version_file_path = Path(version_file).resolve()
 
