@@ -23,7 +23,7 @@ from reactive.postfix import (
     construct_policyd_spf_config_file_content,
     construct_postfix_config_params,
 )
-from reactive.state import State
+from reactive.state import ConfigurationError, State
 from reactive.tls import get_tls_config_paths
 
 
@@ -40,7 +40,11 @@ class SMTPRelayCharm(ops.CharmBase):
 
     def _reconcile(self, _: ops.EventBase) -> None:
         self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
-        charm_state = State.from_charm(self.config)
+        try:
+            charm_state = State.from_charm(self.config)
+        except ConfigurationError as ex:
+            self.unit.status = ops.BlockedStatus(str(ex))
+            return
 
         self._install()
         self._configure_smtp_auth(charm_state)
