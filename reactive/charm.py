@@ -136,9 +136,8 @@ class SMTPRelayCharm(ops.CharmBase):
         contents = utils.render_jinja2_template(context, "templates/postfix_main_cf.tmpl")
         changed = utils.write_file(contents, Path(postfix_conf_dir) / "main.cf")
         contents = utils.render_jinja2_template(context, "templates/postfix_master_cf.tmpl")
-        changed = utils.write_file(contents, Path(postfix_conf_dir) / "master.cf")
-
         changed = utils.write_file(contents, Path(postfix_conf_dir) / "master.cf") or changed
+
         postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
         changed = self._apply_postfix_maps(list(postfix_maps.values())) or changed
 
@@ -156,12 +155,12 @@ class SMTPRelayCharm(ops.CharmBase):
         any_changed = False
         for postfix_map in postfix_maps:
             changed = False
-            if not postfix_map.path.exists():
+            if not postfix_map.path.is_file():
                 postfix_map.path.touch()
                 changed = True
             changed = utils.write_file(postfix_map.content, str(postfix_map.path)) or changed
             if changed and postfix_map.type == "hash":
-                subprocess.call(["postmap", postfix_map.source])
+                subprocess.check_call(["postmap", postfix_map.source])
 
             any_changed = any_changed or changed
         return changed
@@ -239,7 +238,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
         changed = utils.write_file("".join(new_aliases), aliases_path)
         if changed:
-            subprocess.call(["newaliases"])  # nosec
+            subprocess.check_call(["newaliases"])
 
     def _configure_policyd_spf(
         self,
