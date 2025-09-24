@@ -5,136 +5,10 @@
 
 import ipaddress
 from pathlib import Path
-from unittest.mock import Mock, call, patch
 
 import pytest
 
 from reactive import postfix, state, utils
-
-
-@patch("reactive.postfix.subprocess.call")
-@patch("reactive.postfix.os.utime")
-@patch("reactive.postfix.utils.write_file")
-class TestCreateUpdateMap:
-
-    def test_pmfname_file_not_exists(
-        self,
-        mock_write_file: Mock,
-        mock_os_utime: Mock,
-        _mock_call: Mock,
-        tmp_path: Path,
-    ) -> None:
-        """
-        arrange: path to non-existing pmfname file.
-        act: call _create_update_map.
-        assert:
-            - file created
-            - write_file called
-            - return change
-        """
-        mock_write_file.return_value = True
-        non_existing_file_path = tmp_path / "pmfname"
-        postmap = f"hash:{non_existing_file_path}"
-
-        result = postfix._create_update_map("contents", postmap)
-
-        mock_os_utime.assert_called_once_with(str(non_existing_file_path), None)
-        mock_write_file.assert_called_once_with(
-            utils.JUJU_HEADER + "contents\n",
-            str(non_existing_file_path),
-        )
-        assert result is True
-
-    def test_pmfname_file_exists_no_change(
-        self,
-        mock_write_file: Mock,
-        mock_os_utime: Mock,
-        _mock_call: Mock,
-        tmp_path: Path,
-    ) -> None:
-        """
-        arrange: path to existing pmfname file having same content to be written.
-        act: call _create_update_map.
-        assert:
-            - no file creation
-            - write_file called
-            - return no change
-        """
-        mock_write_file.return_value = False
-        exising_file_path = tmp_path / "pmfname"
-        exising_file_path.write_text("stuff")
-        postmap = f"hash:{exising_file_path}"
-
-        result = postfix._create_update_map("contents", postmap)
-
-        mock_os_utime.assert_not_called()
-        mock_write_file.assert_called_once_with(
-            utils.JUJU_HEADER + "contents\n",
-            str(exising_file_path),
-        )
-        assert result is False
-
-    def test_pmfname_file_exists_change_hash_type(
-        self,
-        mock_write_file: Mock,
-        mock_os_utime: Mock,
-        mock_call: Mock,
-        tmp_path: Path,
-    ) -> None:
-        """
-        arrange: path to existing pmfname and pmap_name is hash.
-        act: call _create_update_map.
-        assert:
-            - no file creation
-            - write_file called
-            - postmap command called
-            - return change.
-        """
-        mock_write_file.return_value = True
-        exising_file_path = tmp_path / "pmfname"
-        exising_file_path.write_text("stuff")
-        postmap = f"hash:{exising_file_path}"
-
-        result = postfix._create_update_map("contents", postmap)
-
-        mock_os_utime.assert_not_called()
-        mock_write_file.assert_called_once_with(
-            utils.JUJU_HEADER + "contents\n",
-            str(exising_file_path),
-        )
-        mock_call.asset_called_once_with(["postmap", postmap])
-        assert result is True
-
-    def test_pmfname_file_exists_change_not_hash_type(
-        self,
-        mock_write_file: Mock,
-        mock_os_utime: Mock,
-        mock_call: Mock,
-        tmp_path: Path,
-    ) -> None:
-        """
-        arrange: path to existing pmfname and pmap_name is not shash.
-        act: call _create_update_map.
-        assert:
-            - no file creation
-            - call write_file
-            - postmap command not called
-            - return change.
-        """
-        mock_write_file.return_value = True
-        exising_file_path = tmp_path / "pmfname"
-        exising_file_path.write_text("stuff")
-        postmap = f"cidr:{exising_file_path}"
-
-        result = postfix._create_update_map("contents", postmap)
-
-        mock_os_utime.assert_not_called()
-        mock_write_file.assert_called_once_with(
-            utils.JUJU_HEADER + "contents\n",
-            str(exising_file_path),
-        )
-        mock_call.assert_not_called()
-        assert result is True
 
 
 @pytest.mark.parametrize(
@@ -429,88 +303,102 @@ def test_construct_policyd_spf_content() -> None:
     assert result == expected
 
 
-@patch("reactive.postfix._create_update_map")
-class TestEnsurePostmapFiles:
+def test_build_postfix_maps_returns_correct_data() -> None:
+    """
+    arrange: Define the charm state and expected dictionary of PostfixMap objects.
+    act: Call build_postfix_maps.
+    assert: The returned dictionary is identical to the expected dictionary.
+    """
+    charm_config = {
+        # Values directly used by the function under test
+        "header_checks": "- '/^Subject:/ WARN'",
+        "relay_access_sources": "- 192.168.1.0/24",
+        "relay_recipient_maps": "user@example.com: OK",
+        "restrict_recipients": "bad@example.com: REJECT",
+        "restrict_senders": "spammer@example.com: REJECT",
+        "restrict_sender_access": "- unwanted.com",
+        "sender_login_maps": "sender@example.com: user@example.com",
+        "smtp_header_checks": "- '/^Received:/ IGNORE'",
+        "tls_policy_maps": "example.com: secure",
+        "transport_maps": "domain.com: smtp:relay.example.com",
+        "virtual_alias_maps": "alias@example.com: real@example.com",
+        "virtual_alias_maps_type": "hash",
+        # Values required for State object instantiation
+        "domain": "example.domain.com",
+        "append_x_envelope_to": False,
+        "enable_rate_limits": False,
+        "enable_reject_unknown_sender_domain": False,
+        "enable_smtp_auth": False,
+        "enable_spf": False,
+        "connection_limit": 0,
+    }
+    charm_state = state.State.from_charm(config=charm_config)
+    postfix_conf_dir = "/etc/postfix"
 
-    def setup_method(self) -> None:
-        charm_config = {
-            # Values directly used by the function under test
-            "header_checks": "- '/^Subject:/ WARN'",
-            "relay_access_sources": "- 192.168.1.0/24",
-            "relay_recipient_maps": "user@example.com: OK",
-            "restrict_recipients": "bad@example.com: REJECT",
-            "restrict_senders": "spammer@example.com: REJECT",
-            "restrict_sender_access": "- unwanted.com",
-            "sender_login_maps": "sender@example.com: user@example.com",
-            "smtp_header_checks": "- '/^Received:/ IGNORE'",
-            "tls_policy_maps": "example.com: secure",
-            "transport_maps": "domain.com: smtp:relay.example.com",
-            "virtual_alias_maps": "alias@example.com: real@example.com",
-            "virtual_alias_maps_type": "hash",
-            # Values required for State object instantiation
-            "domain": "example.domain.com",
-            "append_x_envelope_to": False,
-            "enable_rate_limits": False,
-            "enable_reject_unknown_sender_domain": False,
-            "enable_smtp_auth": False,
-            "enable_spf": False,
-            "connection_limit": 0,
-        }
+    conf_path = Path(postfix_conf_dir)
+    expected_maps = {
+        "append_envelope_to_header": postfix.PostfixMap(
+            type="regexp",
+            path=conf_path / "append_envelope_to_header",
+            content=f"{utils.JUJU_HEADER}\n/^(.*)$/ PREPEND X-Envelope-To: $1\n",
+        ),
+        "header_checks": postfix.PostfixMap(
+            type="regexp",
+            path=conf_path / "header_checks",
+            content=f"{utils.JUJU_HEADER}\n/^Subject:/ WARN\n",
+        ),
+        "relay_access_sources": postfix.PostfixMap(
+            type="cidr",
+            path=conf_path / "relay_access",
+            content=f"{utils.JUJU_HEADER}\n192.168.1.0/24\n",
+        ),
+        "relay_recipient_maps": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "relay_recipient",
+            content=f"{utils.JUJU_HEADER}\nuser@example.com OK\n",
+        ),
+        "restrict_recipients": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "restricted_recipients",
+            content=f"{utils.JUJU_HEADER}\nbad@example.com REJECT\n",
+        ),
+        "restrict_senders": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "restricted_senders",
+            content=f"{utils.JUJU_HEADER}\nspammer@example.com REJECT\n",
+        ),
+        "sender_access": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "access",
+            content=f"{utils.JUJU_HEADER}\n{'unwanted.com':35} OK\n\n",
+        ),
+        "sender_login_maps": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "sender_login",
+            content=f"{utils.JUJU_HEADER}\nsender@example.com user@example.com\n",
+        ),
+        "smtp_header_checks": postfix.PostfixMap(
+            type="regexp",
+            path=conf_path / "smtp_header_checks",
+            content=f"{utils.JUJU_HEADER}\n/^Received:/ IGNORE\n",
+        ),
+        "tls_policy_maps": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "tls_policy",
+            content=f"{utils.JUJU_HEADER}\nexample.com secure\n",
+        ),
+        "transport_maps": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "transport",
+            content=f"{utils.JUJU_HEADER}\ndomain.com smtp:relay.example.com\n",
+        ),
+        "virtual_alias_maps": postfix.PostfixMap(
+            type="hash",
+            path=conf_path / "virtual_alias",
+            content=f"{utils.JUJU_HEADER}\nalias@example.com real@example.com\n",
+        ),
+    }
 
-        self.charm_state = state.State.from_charm(config=charm_config)
+    maps = postfix.build_postfix_maps(postfix_conf_dir, charm_state)
 
-    def test_all_maps_are_processed(self, mock_create_update_map: Mock) -> None:
-        """
-        arrange: Create a charm_state with data for all possible maps.
-        act: Call ensure_postmap_files.
-        assert: The _create_update_map helper is called for each map with the
-                correctly formatted content and path.
-        """
-        postfix_conf_dir = "/etc/postfix"
-
-        expected_calls = [
-            call(
-                "/^(.*)$/ PREPEND X-Envelope-To: $1",
-                "regexp:/etc/postfix/append_envelope_to_header",
-            ),
-            call("/^Subject:/ WARN", "regexp:/etc/postfix/header_checks"),
-            call("192.168.1.0/24", "cidr:/etc/postfix/relay_access"),
-            call("user@example.com OK", "hash:/etc/postfix/relay_recipient"),
-            call("bad@example.com REJECT", "hash:/etc/postfix/restricted_recipients"),
-            call("spammer@example.com REJECT", "hash:/etc/postfix/restricted_senders"),
-            call(f"{'unwanted.com':35} OK\n", "hash:/etc/postfix/access"),
-            call("sender@example.com user@example.com", "hash:/etc/postfix/sender_login"),
-            call("/^Received:/ IGNORE", "regexp:/etc/postfix/smtp_header_checks"),
-            call("example.com secure", "hash:/etc/postfix/tls_policy"),
-            call("domain.com smtp:relay.example.com", "hash:/etc/postfix/transport"),
-            call("alias@example.com real@example.com", "hash:/etc/postfix/virtual_alias"),
-        ]
-
-        postfix.ensure_postmap_files(postfix_conf_dir, self.charm_state)
-
-        assert mock_create_update_map.call_count == len(expected_calls)
-        mock_create_update_map.assert_has_calls(expected_calls, any_order=True)
-
-    @pytest.mark.parametrize(
-        ("side_effects", "expected_return"),
-        [
-            pytest.param([False] * 12, False, id="no_changes_returns_false"),
-            pytest.param([False] * 5 + [True] + [False] * 6, True, id="one_change_returns_true"),
-        ],
-    )
-    def test_return_value(
-        self,
-        mock_create_update_map: Mock,
-        side_effects: list[bool],
-        expected_return: bool,
-    ) -> None:
-        """
-        arrange: Mock the _create_update_map helper to return various boolean values.
-        act: Call ensure_postmap_files.
-        assert: The function correctly aggregates the boolean results.
-        """
-        mock_create_update_map.side_effect = side_effects
-
-        result = postfix.ensure_postmap_files("/etc/postfix", self.charm_state)
-
-        assert result is expected_return
+    assert maps == expected_maps
