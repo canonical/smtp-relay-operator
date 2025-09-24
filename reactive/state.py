@@ -4,6 +4,7 @@
 """Charm state."""
 import itertools
 import logging
+from collections.abc import Mapping
 from enum import Enum
 from ipaddress import ip_network
 from typing import Any
@@ -216,7 +217,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
     connection_limit: int = Field(ge=0)
 
     @classmethod
-    def from_charm(cls, config: dict[str, Any]) -> "State":
+    def from_charm(cls, config: Mapping[str, Any]) -> "State":
         """Initialize the state from charm.
 
         Args:

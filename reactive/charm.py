@@ -158,7 +158,7 @@ class SMTPRelayCharm(ops.CharmBase):
         systemd.service_start("postfix")
 
     @staticmethod
-    def _apply_postfix_maps(postfix_maps: list[PostfixMap]):
+    def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> bool:
         any_changed = False
         for postfix_map in postfix_maps:
             changed = False
