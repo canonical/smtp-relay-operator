@@ -9,7 +9,7 @@ from typing import cast
 import pytest
 import yaml
 
-from reactive import state
+import state
 
 
 def test_state():

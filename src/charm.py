@@ -11,20 +11,20 @@ from typing import Any
 
 import ops
 
-from lib.charms.operator_libs_linux.v1 import systemd
-from reactive import utils
-from reactive.dovecot import (
+import utils
+from dovecot import (
     construct_dovecot_config_file_content,
     construct_dovecot_user_file_content,
 )
-from reactive.postfix import (
+from lib.charms.operator_libs_linux.v1 import systemd
+from postfix import (
     PostfixMap,
     build_postfix_maps,
     construct_policyd_spf_config_file_content,
     construct_postfix_config_params,
 )
-from reactive.state import ConfigurationError, State
-from reactive.tls import get_tls_config_paths
+from state import ConfigurationError, State
+from tls import get_tls_config_paths
 
 
 class SMTPRelayCharm(ops.CharmBase):

@@ -8,7 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from reactive import postfix, state, utils
+import postfix
+import state
+import utils
 
 
 @pytest.mark.parametrize(

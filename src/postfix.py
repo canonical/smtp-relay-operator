@@ -6,10 +6,11 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-from reactive import utils
+import utils
 
 if TYPE_CHECKING:
     from pydantic import IPvAnyNetwork
+
     from state import State
 
 
