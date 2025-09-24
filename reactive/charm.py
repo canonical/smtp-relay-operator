@@ -49,7 +49,7 @@ class SMTPRelayCharm(ops.CharmBase):
         self._configure_smtp_auth(charm_state)
         self._configure_smtp_relay(charm_state)
         self._configure_policyd_spf(charm_state)
-        self._set_active()
+        self.unit.status = ops.ActiveStatus()
 
     @staticmethod
     def _install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
@@ -169,7 +169,7 @@ class SMTPRelayCharm(ops.CharmBase):
             if changed and postfix_map.type == "hash":
                 subprocess.call(["postmap", postfix_map.source])
 
-            any_changed
+            any_changed = any_changed or changed
         return changed
 
     @staticmethod
@@ -265,29 +265,3 @@ class SMTPRelayCharm(ops.CharmBase):
 
         contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
         utils.write_file(contents, policyd_spf_config)
-
-    @staticmethod
-    def _get_charm_revision(version_file: str = "version") -> str:
-        """Get a formatted charm version string from the 'version' file."""
-        version_file_path = Path(version_file).resolve()
-
-        if not version_file_path.is_file():
-            return ""
-
-        with version_file_path.open(encoding="utf-8") as f:
-            line = f.readline().strip()
-        # We only want the first 10 characters, that's enough to tell
-        # which version of the charm we're using. But include the
-        # entire version if it's 'dirty' according to charm build.
-        if len(line) > 10 and not line.endswith("-dirty"):
-            return f" (source version/commit {line[:10]}…)"
-        return f" (source version/commit {line})"
-
-    def _set_active(self) -> None:
-        revision = self._get_charm_revision()
-        # XXX include postfix main.cf hash and dovecot users
-        # (maybe first 8 chars too? comes before the revision one)
-        postfix_cf_hash = ""
-        users_hash = ""
-
-        self.unit.status = ops.ActiveStatus(f"Ready{postfix_cf_hash}{users_hash}{revision}")
