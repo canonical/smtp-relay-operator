@@ -35,8 +35,6 @@ class SMTPRelayCharm(ops.CharmBase):
         """SMTP Relay."""
         super().__init__(*args)
 
-        self.framework.observe(self.on.upgrade_charm, self._reconcile)
-        self.framework.observe(self.on.install, self._reconcile)
         self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.peer_relation_changed, self._reconcile)
         self.framework.observe(self.on.milter_relation_changed, self._reconcile)
