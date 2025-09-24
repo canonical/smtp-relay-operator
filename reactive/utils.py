@@ -65,7 +65,7 @@ def copy_file(source_path: str, destination_path: str, perms: int = 0o644) -> bo
 
 def write_file(
     content: str,
-    destination_path: str,
+    destination_path: str | Path,
     perms: int = 0o644,
     group: str | None = None,
 ) -> bool:
@@ -77,21 +77,18 @@ def write_file(
         perms: permissions.
         group: file group.
     """
-    path = Path(destination_path)
+    path = destination_path if isinstance(destination_path, Path) else Path(destination_path)
 
-    if path.exists() and path.read_text("utf-8") == content:
+    if path.is_file() and path.read_text("utf-8") == content:
         return False
 
     owner = pwd.getpwuid(os.getuid()).pw_name
     if group is None:
         group = grp.getgrgid(pwd.getpwnam(owner).pw_gid).gr_name
-    temp_path = path.with_suffix(".new")
-    temp_path.write_text(content, "utf-8")
-    temp_path.chmod(perms)
+    path.write_text(content, "utf-8")
+    path.chmod(perms)
 
-    shutil.chown(temp_path, user=owner, group=group)
-
-    temp_path.rename(path)
+    shutil.chown(path, user=owner, group=group)
     return True
 
 
