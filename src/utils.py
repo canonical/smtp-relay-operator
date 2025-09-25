@@ -16,16 +16,16 @@ import jinja2
 JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"
 
 
-def update_logrotate_conf(path: str) -> str:
+def update_logrotate_conf(path: Path) -> str:
     """Update existing logrotate config with log retention settings.
 
     Args:
         path: path to the logrotate configuration.
     """
-    if not Path(path).exists():
+    if not path.is_file():
         return ""
 
-    config = Path(path).read_text(encoding="utf-8")
+    config = path.read_text(encoding="utf-8")
     new = []
     regex = re.compile(r"^(\s+)(daily|weekly|monthly|rotate|dateext)")
     for line in config.splitlines():

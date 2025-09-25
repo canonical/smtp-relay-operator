@@ -16,6 +16,7 @@ from dovecot import (
     construct_dovecot_config_file_content,
     construct_dovecot_user_file_content,
 )
+from lib.charms.operator_libs_linux.v0 import apt
 from lib.charms.operator_libs_linux.v1 import systemd
 from postfix import (
     PostfixMap,
@@ -26,6 +27,10 @@ from postfix import (
 from state import ConfigurationError, State
 from tls import get_tls_config_paths
 
+APT_PACKAGES = ["dovecot-common", "postfix-policyd-spf-python", "postfix"]
+
+LOGROTATE_CONF_PATH = Path("/etc/logrotate.d/rsyslog")
+
 
 class SMTPRelayCharm(ops.CharmBase):
     """SMTP Relay."""
@@ -34,9 +39,16 @@ class SMTPRelayCharm(ops.CharmBase):
         """SMTP Relay."""
         super().__init__(*args)
 
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.peer_relation_changed, self._reconcile)
         self.framework.observe(self.on.milter_relation_changed, self._reconcile)
+
+    def _on_install(self, _: ops.InstallEvent) -> None:
+        """Handle the install event."""
+        self.unit.status = ops.MaintenanceStatus("Installing packages")
+        apt.add_package(APT_PACKAGES)
+        self._configure_logrotate()
 
     def _reconcile(self, _: ops.EventBase) -> None:
         self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
@@ -47,7 +59,6 @@ class SMTPRelayCharm(ops.CharmBase):
             return
 
         try:
-            self._install()
             self._configure_smtp_auth(charm_state)
             self._configure_smtp_relay(charm_state)
             self._configure_policyd_spf(charm_state)
@@ -56,7 +67,7 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.ErrorStatus(str(ex))
 
     @staticmethod
-    def _install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
+    def _configure_logrotate(logrotate_conf_path: Path = LOGROTATE_CONF_PATH) -> None:
         """Configure logging."""
         utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
         utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
