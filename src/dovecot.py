@@ -3,7 +3,7 @@
 
 """Dovecot Service Layer."""
 
-from reactive import utils
+import utils
 
 
 def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_auth: bool) -> str:
