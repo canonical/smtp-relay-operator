@@ -19,3 +19,5 @@ parts:
 charm-libs:
   - lib: operator_libs_linux.systemd
     version: "1"
+  - lib: operator_libs_linux.apt
+    version: "0"
