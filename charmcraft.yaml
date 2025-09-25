@@ -15,3 +15,7 @@ parts:
   charm:
     build-snaps:
       - charm/3.x/stable
+
+charm-libs:
+  - lib: operator_libs_linux.systemd
+    version: "1"
