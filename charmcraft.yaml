@@ -13,11 +13,5 @@ bases:
         architectures: [amd64, arm64, ppc64el, s390x]
 parts:
   charm:
-    source: "."
-    plugin: "reactive"
     build-snaps:
       - charm/3.x/stable
-    reactive-charm-build-arguments:
-      - --binary-wheels-from-source
-      - --verbose
-      - --debug
