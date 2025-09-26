@@ -16,12 +16,14 @@ import jinja2
 JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"
 
 
-def update_logrotate_conf(path: Path) -> str:
+def update_logrotate_conf(logrotate_path: str | os.PathLike) -> str:
     """Update existing logrotate config with log retention settings.
 
     Args:
         path: path to the logrotate configuration.
     """
+    path = Path(logrotate_path)
+
     if not path.is_file():
         return ""
 
@@ -51,7 +53,11 @@ def update_logrotate_conf(path: Path) -> str:
     return "\n".join(new)
 
 
-def copy_file(source_path: str, destination_path: str, perms: int = 0o644) -> bool:
+def copy_file(
+    source_path: str | os.PathLike,
+    destination_path: str | os.PathLike,
+    perms: int = 0o644,
+) -> bool:
     """Copy file.
 
     Args:
@@ -59,13 +65,14 @@ def copy_file(source_path: str, destination_path: str, perms: int = 0o644) -> bo
         destination_path: destination path.
         perms: permissions.
     """
+
     content = Path(source_path).read_text(encoding="utf-8")
     return write_file(content, destination_path, perms=perms)
 
 
 def write_file(
     content: str,
-    destination_path: str | Path,
+    destination_path: str | os.PathLike,
     perms: int = 0o644,
     group: str | None = None,
 ) -> bool:
@@ -77,7 +84,7 @@ def write_file(
         perms: permissions.
         group: file group.
     """
-    path = destination_path if isinstance(destination_path, Path) else Path(destination_path)
+    path = Path(destination_path)
 
     if path.is_file() and path.read_text("utf-8") == content:
         return False
