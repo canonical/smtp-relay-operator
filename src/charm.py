@@ -29,7 +29,18 @@ from tls import get_tls_config_paths
 
 APT_PACKAGES = ["dovecot-common", "postfix-policyd-spf-python", "postfix"]
 
-LOGROTATE_CONF_PATH = Path("/etc/logrotate.d/rsyslog")
+DEFAULT_LOGROTATE_CONF_FILEPATH = Path("/etc/logrotate.d/rsyslog")
+
+DEFAULT_DOVECOT_CONFIG_FILEPATH = Path("/etc/dovecot/dovecot.conf")
+DEFAULT_DOVECOT_USERS_FILEPATH = Path("/etc/dovecot/users")
+
+DEFAULT_ALIASES_FILEPATH = Path("/etc/aliases")
+
+DEFAULT_POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
+
+DEFAULT_POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
+
+DEFAULT_TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
 
 
 class SMTPRelayCharm(ops.CharmBase):
@@ -67,7 +78,9 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.ErrorStatus(str(ex))
 
     @staticmethod
-    def _configure_logrotate(logrotate_conf_path: Path = LOGROTATE_CONF_PATH) -> None:
+    def _configure_logrotate(
+        logrotate_conf_path: Path = DEFAULT_LOGROTATE_CONF_FILEPATH,
+    ) -> None:
         """Configure logging."""
         utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
         utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
@@ -77,8 +90,8 @@ class SMTPRelayCharm(ops.CharmBase):
     def _configure_smtp_auth(
         self,
         charm_state: State,
-        dovecot_config: str = "/etc/dovecot/dovecot.conf",
-        dovecot_users: str = "/etc/dovecot/users",
+        dovecot_config: Path = DEFAULT_DOVECOT_CONFIG_FILEPATH,
+        dovecot_users: Path = DEFAULT_DOVECOT_USERS_FILEPATH,
     ) -> None:
         """Ensure SMTP authentication is configured or disabled via Dovecot."""
         self.unit.status = ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
@@ -123,8 +136,8 @@ class SMTPRelayCharm(ops.CharmBase):
     def _configure_smtp_relay(
         self,
         charm_state: State,
-        postfix_conf_dir: str = "/etc/postfix",
-        tls_dh_params: str = "/etc/ssl/private/dhparams.pem",
+        postfix_conf_dir: Path = DEFAULT_POSTFIX_CONF_DIRPATH,
+        tls_dh_params: Path = DEFAULT_TLS_DH_PARAMS_FILEPATH,
     ) -> None:
         """Generate and apply SMTP relay (Postfix) configuration."""
         self.unit.status = ops.MaintenanceStatus("Setting up SMTP relay")
@@ -226,12 +239,14 @@ class SMTPRelayCharm(ops.CharmBase):
         return " ".join(result)
 
     @staticmethod
-    def _update_aliases(admin_email: str | None, aliases_path: str = "/etc/aliases") -> None:
-        path = Path(aliases_path)
+    def _update_aliases(
+        admin_email: str | None,
+        aliases_path: Path = DEFAULT_ALIASES_FILEPATH,
+    ) -> None:
 
         aliases = []
-        if path.is_file():
-            with path.open("r", encoding="utf-8") as f:
+        if aliases_path.is_file():
+            with aliases_path.open("r", encoding="utf-8") as f:
                 aliases = f.readlines()
 
         add_devnull = True
@@ -254,7 +269,7 @@ class SMTPRelayCharm(ops.CharmBase):
     def _configure_policyd_spf(
         self,
         charm_state: State,
-        policyd_spf_config: str = "/etc/postfix-policyd-spf-python/policyd-spf.conf",
+        policyd_spf_config: Path = DEFAULT_POLICYD_SPF_FILEPATH,
     ) -> None:
         """Configure Postfix SPF policy server (policyd-spf) based on charm state."""
         if not charm_state.enable_spf:
