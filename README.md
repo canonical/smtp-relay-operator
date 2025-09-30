@@ -23,19 +23,6 @@ Features include (not limited to):
 
 For information about how to deploy, integrate, and manage this charm, see the Official [smtp-relay Operator Documentation](https://charmhub.io/smtp-relay/docs).
 
-
-## Get started
-
-Provision a Juju environment then deploy two units with:
-```
-juju deploy -n2 smtp-relay
-```
-
-To horizontally scale, add more read-only standbys with:
-```
-juju add-unit smtp-relay
-```
-
 ## Learn more
 * [Read more](https://charmhub.io/smtp-relay) <!--Link to the charm's official documentation-->
 * [Developer documentation](https://www.postfix.org/documentation.html) <!--Link to any developer documentation-->
