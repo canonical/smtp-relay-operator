@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -16,8 +18,8 @@ from dovecot import (
     construct_dovecot_config_file_content,
     construct_dovecot_user_file_content,
 )
-from lib.charms.operator_libs_linux.v0 import apt
-from lib.charms.operator_libs_linux.v1 import systemd
+from charms.operator_libs_linux.v0 import apt
+from charms.operator_libs_linux.v1 import systemd
 from postfix import (
     PostfixMap,
     build_postfix_maps,
