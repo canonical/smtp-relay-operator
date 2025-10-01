@@ -286,3 +286,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
         contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
         utils.write_file(contents, policyd_spf_config)
+
+
+if __name__ == "__main__":
+    ops.main(SMTPRelayCharm)
