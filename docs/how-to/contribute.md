@@ -6,5 +6,5 @@ Our documentation is also available alongside the [source code on GitHub](https:
 You may open a pull request with your documentation changes, or you can
 [file a bug](https://github.com/canonical/smtp-relay-operator/issues) to provide constructive feedback or suggestions.
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md)
+See [CONTRIBUTING.md](https://github.com/canonical/smtp-relay-operator/blob/main/CONTRIBUTING.md)
 for information on contributing to the source code.
