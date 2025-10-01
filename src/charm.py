@@ -29,7 +29,7 @@ from postfix import (
 from state import ConfigurationError, State
 from tls import get_tls_config_paths
 
-APT_PACKAGES = ["dovecot-common", "postfix-policyd-spf-python", "postfix"]
+APT_PACKAGES = ["dovecot-core", "postfix-policyd-spf-python", "postfix"]
 
 DEFAULT_LOGROTATE_CONF_FILEPATH = Path("/etc/logrotate.d/rsyslog")
 
