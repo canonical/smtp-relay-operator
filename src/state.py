@@ -143,7 +143,7 @@ def _parse_list(raw_list: str | None) -> list[str]:
 
 
 class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
-    """The Indico operator charm state.
+    """The SMTP Relay operator charm state.
 
     Attributes:
         additional_smtpd_recipient_restrictions: List of additional recipient restrictions.
