@@ -16,6 +16,6 @@ The charm doesn't support DKIM functionality. In order to sign and verify email,
 
 ## Risks
 
-The charm deploy a Postfix server acting as SMTP Relay, and as such, it might handle snsitive information.
+The charm deploy a Postfix server acting as SMTP Relay, and as such, it might handle sensitive information.
 
 You should limit who has access to the service.
