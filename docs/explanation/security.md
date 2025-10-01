@@ -1,4 +1,6 @@
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
 # Security in SMTP Relay
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 This document covers the security aspects of the SMTP Relay charm itself.
 
