@@ -20,7 +20,7 @@ def update_logrotate_conf(logrotate_path: str | os.PathLike) -> str:
     """Update existing logrotate config with log retention settings.
 
     Args:
-        path: path to the logrotate configuration.
+        logrotate_path: path to the logrotate configuration.
     """
     path = Path(logrotate_path)
 
@@ -65,7 +65,6 @@ def copy_file(
         destination_path: destination path.
         perms: permissions.
     """
-
     content = Path(source_path).read_text(encoding="utf-8")
     return write_file(content, destination_path, perms=perms)
 

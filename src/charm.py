@@ -12,14 +12,14 @@ from pathlib import Path
 from typing import Any
 
 import ops
+from charms.operator_libs_linux.v0 import apt
+from charms.operator_libs_linux.v1 import systemd
 
 import utils
 from dovecot import (
     construct_dovecot_config_file_content,
     construct_dovecot_user_file_content,
 )
-from charms.operator_libs_linux.v0 import apt
-from charms.operator_libs_linux.v1 import systemd
 from postfix import (
     PostfixMap,
     build_postfix_maps,
@@ -76,7 +76,7 @@ class SMTPRelayCharm(ops.CharmBase):
             self._configure_smtp_relay(charm_state)
             self._configure_policyd_spf(charm_state)
             self.unit.status = ops.ActiveStatus()
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             self.unit.status = ops.ErrorStatus(str(ex))
 
     @staticmethod

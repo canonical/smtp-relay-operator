@@ -157,9 +157,9 @@ def build_postfix_maps(postfix_conf_dir: str, charm_state: "State") -> dict[str,
     """
     postfix_conf_dir_path = Path(postfix_conf_dir)
 
-    def _create_map(type: str, name: str, content: str) -> PostfixMap:
+    def _create_map(type_: str, name: str, content: str) -> PostfixMap:
         return PostfixMap(
-            type=type,
+            type=type_,
             path=postfix_conf_dir_path / name,
             content=f"{utils.JUJU_HEADER}\n{content}\n",
         )
