@@ -60,7 +60,7 @@ class SMTPRelayCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle the install event."""
         self.unit.status = ops.MaintenanceStatus("Installing packages")
-        apt.add_package(APT_PACKAGES)
+        apt.add_package(APT_PACKAGES, update_cache=True)
         self._configure_logrotate()
 
     def _reconcile(self, _: ops.EventBase) -> None:
@@ -68,7 +68,7 @@ class SMTPRelayCharm(ops.CharmBase):
         try:
             charm_state = State.from_charm(self.config)
         except ConfigurationError as ex:
-            self.unit.status = ops.BlockedStatus(str(ex))
+            self.unit.status = ops.BlockedStatus("Invalid config")
             return
 
         try:
@@ -77,7 +77,7 @@ class SMTPRelayCharm(ops.CharmBase):
             self._configure_policyd_spf(charm_state)
             self.unit.status = ops.ActiveStatus()
         except Exception as ex:  # pylint: disable=broad-except
-            self.unit.status = ops.ErrorStatus(str(ex))
+            self.unit.status = ops.BlockedStatus(str(ex))
 
     @staticmethod
     def _configure_logrotate(
@@ -115,8 +115,7 @@ class SMTPRelayCharm(ops.CharmBase):
             )
             self.unit.close_port("tcp", 465)
             self.unit.close_port("tcp", 587)
-            systemd.service_stop("dovecot")
-            # XXX: mask systemd service disable
+            systemd.service_pause("dovecot")
             return
 
         self.unit.status = ops.MaintenanceStatus(
@@ -125,12 +124,13 @@ class SMTPRelayCharm(ops.CharmBase):
         self.unit.open_port("tcp", 465)
         self.unit.open_port("tcp", 587)
 
+        if not systemd.service_running("dovecot"):
+            systemd.service_resume("dovecot")
+            return
+
         if changed:
             self.unit.status = ops.MaintenanceStatus("Restarting Dovecot due to config changes")
             systemd.service_reload("dovecot")
-
-        # Ensure service is running.
-        systemd.service_start("dovecot")
 
     def _generate_fqdn(self, domain: str) -> str:
         return f"{self.unit.name.replace('/', '-')}.{domain}"
@@ -169,12 +169,15 @@ class SMTPRelayCharm(ops.CharmBase):
 
         self._update_aliases(charm_state.admin_email)
 
-        systemd.service_start("postfix")
+        self.unit.open_port("tcp", 25)
+
+        if not systemd.service_running("postfix"):
+            systemd.service_resume("postfix")
+            return
+
         if changed:
             self.unit.status = ops.MaintenanceStatus("Reloading postfix due to config changes")
             systemd.service_reload("postfix")
-            self.unit.open_port("tcp", 25)
-        systemd.service_start("postfix")
 
     @staticmethod
     def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> bool:
