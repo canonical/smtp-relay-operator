@@ -67,7 +67,7 @@ class SMTPRelayCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
         try:
             charm_state = State.from_charm(self.config)
-        except ConfigurationError as ex:
+        except ConfigurationError:
             self.unit.status = ops.BlockedStatus("Invalid config")
             return
 

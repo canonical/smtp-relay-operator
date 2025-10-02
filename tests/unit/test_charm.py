@@ -4,7 +4,7 @@
 """Unit tests for the SMTP Relay charm."""
 
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 import ops.testing
 import pytest
