@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from reactive import dovecot
+import dovecot
 
 
 @pytest.mark.parametrize(

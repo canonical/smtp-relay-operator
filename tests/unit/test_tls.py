@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from reactive import tls
+import tls
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -79,8 +79,8 @@ class TestGetTlsConfigPaths:
             pytest.param(True, id="with_dhparams"),
         ],
     )
-    @patch("reactive.tls.subprocess.call")
-    @patch("reactive.tls._get_autocert_cn", return_value="")
+    @patch("tls.subprocess.call")
+    @patch("tls._get_autocert_cn", return_value="")
     def test_path_logic_without_autocert(
         self,
         _mock_get_autocert_cn: Mock,
@@ -110,9 +110,9 @@ class TestGetTlsConfigPaths:
         assert result.tls_key == "/etc/ssl/private/ssl-cert-snakeoil.key"
         assert result.tls_dh_params == str(dhparams_path)
 
-    @patch("reactive.tls.subprocess.call")
-    @patch("reactive.tls._get_autocert_cn", return_value="smtp.example.com")
-    @patch("reactive.tls.os.path.exists", return_value=False)
+    @patch("tls.subprocess.call")
+    @patch("tls._get_autocert_cn", return_value="smtp.example.com")
+    @patch("tls.os.path.exists", return_value=False)
     def test_path_logic_with_autocert(
         self,
         _mock_exists: Mock,

@@ -2,22 +2,26 @@
 # See LICENSE file for licensing details.
 
 type: "charm"
-bases:
-    - build-on:
-      - name: "ubuntu"
-        channel: "22.04"
-        architectures: [amd64]
-      run-on:
-      - name: "ubuntu"
-        channel: "22.04"
-        architectures: [amd64, arm64, ppc64el, s390x]
+base: ubuntu@24.04
+platforms:
+  amd64:
+
 parts:
   charm:
-    source: "."
-    plugin: "reactive"
+    plugin: charm
+    source: .
     build-snaps:
-      - charm/3.x/stable
-    reactive-charm-build-arguments:
-      - --binary-wheels-from-source
-      - --verbose
-      - --debug
+      - rustup
+    override-build: |
+      rustup default stable
+      craftctl default
+    build-packages:
+      - libffi-dev
+      - libssl-dev
+      - pkg-config
+
+charm-libs:
+  - lib: operator_libs_linux.apt
+    version: "0"
+  - lib: operator_libs_linux.systemd
+    version: "1"

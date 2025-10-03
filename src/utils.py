@@ -7,25 +7,27 @@ import grp
 import os
 import pwd
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
 import jinja2
-from charmhelpers.core import host
 
 JUJU_HEADER = "# This file is Juju managed - do not edit by hand #\n\n"
 
 
-def update_logrotate_conf(path: str) -> str:
+def update_logrotate_conf(logrotate_path: str | os.PathLike) -> str:
     """Update existing logrotate config with log retention settings.
 
     Args:
-        path: path to the logrotate configuration.
+        logrotate_path: path to the logrotate configuration.
     """
-    if not Path(path).exists():
+    path = Path(logrotate_path)
+
+    if not path.is_file():
         return ""
 
-    config = Path(path).read_text(encoding="utf-8")
+    config = path.read_text(encoding="utf-8")
     new = []
     regex = re.compile(r"^(\s+)(daily|weekly|monthly|rotate|dateext)")
     for line in config.splitlines():
@@ -51,7 +53,11 @@ def update_logrotate_conf(path: str) -> str:
     return "\n".join(new)
 
 
-def copy_file(source_path: str, destination_path: str, perms: int = 0o644) -> bool:
+def copy_file(
+    source_path: str | os.PathLike,
+    destination_path: str | os.PathLike,
+    perms: int = 0o644,
+) -> bool:
     """Copy file.
 
     Args:
@@ -64,7 +70,10 @@ def copy_file(source_path: str, destination_path: str, perms: int = 0o644) -> bo
 
 
 def write_file(
-    content: str, destination_path: str, perms: int = 0o644, group: str | None = None
+    content: str,
+    destination_path: str | os.PathLike,
+    perms: int = 0o644,
+    group: str | None = None,
 ) -> bool:
     """Write file only on changes and return True if changes written.
 
@@ -74,26 +83,18 @@ def write_file(
         perms: permissions.
         group: file group.
     """
-    # Compare and only write out file on change.
-    try:
-        dest = Path(destination_path).read_text(encoding="utf-8")
-        if content == dest:
-            return False
-    except FileNotFoundError:
-        pass
+    path = Path(destination_path)
+
+    if path.is_file() and path.read_text("utf-8") == content:
+        return False
 
     owner = pwd.getpwuid(os.getuid()).pw_name
     if group is None:
         group = grp.getgrgid(pwd.getpwnam(owner).pw_gid).gr_name
+    path.write_text(content, "utf-8")
+    path.chmod(perms)
 
-    host.write_file(
-        path=f"{destination_path}.new",
-        content=content,
-        perms=perms,
-        owner=owner,
-        group=group,
-    )
-    Path(f"{destination_path}.new").rename(destination_path)
+    shutil.chown(path, user=owner, group=group)
     return True
 
 

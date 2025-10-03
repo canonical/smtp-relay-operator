@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from reactive import utils
+import utils
 
 
 class TestLibUtils(unittest.TestCase):

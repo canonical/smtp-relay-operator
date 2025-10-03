@@ -24,4 +24,5 @@ header:
     - 'pyproject.toml'
     - 'zap_rules.tsv'
     - 'files/50-default.conf'
+    - 'lib/**'
   comment: on-failure
