@@ -423,3 +423,35 @@ class TestUpdateAliases:
 
         assert non_existing_path.is_file()
         assert non_existing_path.read_text() == "devnull:       /dev/null\n"
+
+    @pytest.mark.parametrize(
+        "enable_spf",
+        [
+            pytest.param(True, id="enable-spf"),
+            pytest.param(False, id="disable-spf"),
+        ],
+    )
+    @patch("charm.utils.write_file", new=Mock())
+    @patch("charm.SMTPRelayCharm._configure_smtp_relay", new=Mock())
+    @patch("charm.SMTPRelayCharm._configure_smtp_auth", new=Mock())
+    @patch("charm.construct_policyd_spf_config_file_content")
+    def test_configure_policyd_spf(
+        self,
+        mock_construct_policyd_spf_config_file_content: Mock,
+        enable_spf: bool,
+        context: Context[SMTPRelayCharm],
+        tmp_path: Path,
+    ) -> None:
+        charm_state = State(
+            config={
+                "enable_spf": enable_spf,
+                "spf_skip_addresses": "- 10.0.114.0/24",
+            }
+        )
+
+        out = context.run(context.on.config_changed(), charm_state)
+        if enable_spf:
+            mock_construct_policyd_spf_config_file_content.assert_called_once()
+        else:
+            mock_construct_policyd_spf_config_file_content.assert_not_called()
+        assert out.unit_status == ops.testing.ActiveStatus()
