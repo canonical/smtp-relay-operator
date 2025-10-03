@@ -28,13 +28,11 @@ DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
 )
 
 
-@patch("charm.utils.write_file")
-@patch("charm.utils.copy_file")
+@patch("charm.utils.write_file", new=Mock())
+@patch("charm.utils.copy_file", new=Mock())
 @patch("charm.apt.add_package")
 def test_install(
     mock_add_package: Mock,
-    _mock_copy_file: Mock,
-    _mock_write_file: Mock,
     context: Context[SMTPRelayCharm],
 ) -> None:
     """Test that the install handler is called."""
@@ -50,10 +48,11 @@ def test_install(
 
 class TestReconcile:
 
-    @patch("charm.State.from_charm", side_effect=ConfigurationError("Invalid configuration"))
+    @patch(
+        "charm.State.from_charm", new=Mock(side_effect=ConfigurationError("Invalid configuration"))
+    )
     def test_invalid_config(
         self,
-        _state_from_config: Mock,
         context: Context[SMTPRelayCharm],
     ) -> None:
         """Test that invalid config blocks the charm."""
@@ -71,14 +70,11 @@ class TestReconcile:
         @patch("charm.construct_dovecot_user_file_content")
         @patch("charm.construct_dovecot_config_file_content")
         @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf")
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay")
-        @patch("charm.utils.write_file")
+        @patch("charm.SMTPRelayCharm._configure_policyd_spf", new=Mock())
+        @patch("charm.SMTPRelayCharm._configure_smtp_relay", new=Mock())
+        @patch("charm.utils.write_file", new=Mock())
         def test_no_auth(
             self,
-            _mock_write_file: Mock,
-            mock_configure_smtp_relay: Mock,
-            mock_configure_policyd_spf: Mock,
             mock_systemd: "systemd",
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
@@ -116,14 +112,11 @@ class TestReconcile:
         @patch("charm.construct_dovecot_user_file_content")
         @patch("charm.construct_dovecot_config_file_content")
         @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf")
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay")
-        @patch("charm.utils.write_file")
+        @patch("charm.SMTPRelayCharm._configure_policyd_spf", new=Mock())
+        @patch("charm.SMTPRelayCharm._configure_smtp_relay", new=Mock())
+        @patch("charm.utils.write_file", new=Mock())
         def test_with_auth_dovecot_not_running(
             self,
-            _mock_write_file: Mock,
-            mock_configure_smtp_relay: Mock,
-            mock_configure_policyd_spf: Mock,
             mock_systemd: "systemd",
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
@@ -154,14 +147,12 @@ class TestReconcile:
         @patch("charm.construct_dovecot_user_file_content")
         @patch("charm.construct_dovecot_config_file_content")
         @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf")
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay")
+        @patch("charm.SMTPRelayCharm._configure_policyd_spf", new=Mock())
+        @patch("charm.SMTPRelayCharm._configure_smtp_relay", new=Mock())
         @patch("charm.utils.write_file")
         def test_with_auth_dovecot_running(
             self,
             mock_write_file: Mock,
-            mock_configure_smtp_relay: Mock,
-            mock_configure_policyd_spf: Mock,
             mock_systemd: "systemd",
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
