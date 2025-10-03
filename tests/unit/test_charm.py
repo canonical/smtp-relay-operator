@@ -12,9 +12,13 @@ import pytest
 from ops.testing import Context, State
 from scenario import TCPPort
 
-from src.charm import DEFAULT_ALIASES_FILEPATH, DEFAULT_DOVECOT_USERS_FILEPATH, SMTPRelayCharm
-from state import ConfigurationError
 import tls
+from src.charm import (
+    DEFAULT_ALIASES_FILEPATH,
+    DEFAULT_DOVECOT_USERS_FILEPATH,
+    SMTPRelayCharm,
+)
+from state import ConfigurationError
 
 if TYPE_CHECKING:
     from charms.operator_libs_linux.v1 import systemd
