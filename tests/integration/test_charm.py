@@ -13,6 +13,8 @@ import time
 import jubilant
 import pytest
 import requests
+import yaml
+from passlib.hash import sha512_crypt
 
 logger = logging.getLogger(__name__)
 
@@ -71,3 +73,72 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
 
     # Clean up mailcatcher
     requests.delete(f"{mailcatcher_url}/{messages[0]['id']}", timeout=5)
+
+
+@pytest.mark.abort_on_fail
+def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
+    """
+    arrange: Deploy smtp-relay charm with SMTP authentication enabled and a test user.
+    act: Attempt to send an email without authentication then with authentication.
+    assert: Unauthenticated email sending is refused, authenticated email sending is accepted
+    """
+
+    status = juju.status()
+    unit = list(status.apps[smtp_relay_app].units.values())[0]
+    unit_ip = unit.public_address
+    mailcatcher_url = "http://127.0.0.1:1080"
+
+    username = "testuser"
+    password = "testpassword"
+    hashed_password = sha512_crypt.hash(password)
+    auth_users_yaml = yaml.dump([f"{username}:{hashed_password}"])
+
+    juju.config(
+        smtp_relay_app,
+        {
+            "enable_smtp_auth": "true",
+            "smtp_auth_users": auth_users_yaml,
+            "relay_host": f"[{machine_ip_address}]",
+            "enable_reject_unknown_sender_domain": "false",
+        },
+    )
+
+    juju.wait(
+        lambda s: s.apps[smtp_relay_app].is_active,
+        error=jubilant.any_blocked,
+        timeout=5 * 60,
+    )
+
+    # Unauthenticated send refused
+    with pytest.raises(smtplib.SMTPRecipientsRefused):
+        with smtplib.SMTP(unit_ip, 587, timeout=10) as server:
+            server.starttls()
+            server.sendmail(
+                from_addr="unauthenticated@example.com",
+                to_addrs=["recipient@example.com"],
+                msg="Subject: Auth Fail Test",
+            )
+
+    requests.delete(f"{mailcatcher_url}/messages", timeout=5)
+
+    # Authenticated send succeed
+    with smtplib.SMTP(unit_ip, 587, timeout=10) as server:
+        server.starttls()
+        server.login(username, password)
+        server.sendmail(
+            from_addr="authenticated@example.com",
+            to_addrs=["recipient@example.com"],
+            msg="Subject: Auth Success Test",
+        )
+
+    messages = []
+    for _ in range(5):
+        messages = requests.get(f"{mailcatcher_url}/messages", timeout=5).json()
+        if messages:
+            break
+        time.sleep(1)
+    assert len(messages) == 1
+    assert messages[0]["recipients"] == ["<recipient@example.com>"]
+
+    # Clean up mailcatcher
+    requests.delete(f"{mailcatcher_url}/messages/{messages[0]['id']}", timeout=5)
