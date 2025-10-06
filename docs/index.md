@@ -45,7 +45,14 @@ Thinking about using the SMTP Relay Operator for your next project? [Get in touc
 # Contents 
 
 1. [How-to](how-to)
+   1. [Back up and restore](how-to/backup-restore.md)
    1. [Contribute](how-to/contribute.md)
+   1. [Redeploy](how-to/redeploy.md)
+   1. [Upgrade](how-to/upgrade.md)
 1. [Reference](reference)
-  1. [Actions](reference/actions.md)
-  1. [External access](reference/external_access.md)
+   1. [Actions](reference/actions.md)
+   1. [Configurations](reference/configurations.md)
+   1. [External access](reference/external_access.md)
+1. [Explanation](explanation)
+   1. [Charm architecture](explanation/charm-architecture.md)
+   1. [Security](explanation/security.md) 
