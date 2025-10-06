@@ -36,10 +36,7 @@ DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
 @patch("charm.utils.write_file", Mock())
 @patch("charm.utils.copy_file", Mock())
 @patch("charm.apt.add_package")
-def test_install(
-    mock_add_package: Mock,
-    context: Context[SMTPRelayCharm],
-) -> None:
+def test_install(mock_add_package: Mock, context: Context[SMTPRelayCharm]) -> None:
     """
     arrange: Set up a charm state.
     act: Run the install event hook on the charm.
@@ -49,7 +46,7 @@ def test_install(
 
     out = context.run(context.on.install(), charm_state)
 
-    assert out.unit_status == ops.testing.MaintenanceStatus("Installing packages")
+    assert out.unit_status == ops.testing.WaitingStatus()
     mock_add_package.assert_called_once_with(
         ["dovecot-core", "postfix-policyd-spf-python", "postfix"],
         update_cache=True,
@@ -60,10 +57,7 @@ class TestReconcile:
     """Unit tests for the _reconcile method"""
 
     @patch("charm.State.from_charm", Mock(side_effect=ConfigurationError("Invalid configuration")))
-    def test_invalid_config(
-        self,
-        context: Context[SMTPRelayCharm],
-    ) -> None:
+    def test_invalid_config(self, context: Context[SMTPRelayCharm]) -> None:
         """
         arrange: Invalid charm config.
         act: Run the config-changed event hook on the charm.
@@ -74,6 +68,21 @@ class TestReconcile:
         out = context.run(context.on.config_changed(), charm_state)
 
         assert out.unit_status == ops.testing.BlockedStatus("Invalid config")
+
+    @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
+    @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock(side_effect=Exception()))
+    @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
+    def test_unexpected_error(self, context: Context[SMTPRelayCharm]) -> None:
+        """
+        arrange: _configure_smtp_relay raises an unexpected exception.
+        act: Run the config-changed event hook.
+        assert: The unit status is set to blocked with the generic error message.
+        """
+        charm_state = State(config={}, leader=True)
+
+        out = context.run(context.on.config_changed(), charm_state)
+
+        assert out.unit_status == ops.testing.BlockedStatus("Unexpected Error")
 
     class TestConfigureSMTPAuth:
         """Unit tests for _configure_smtp_auth."""
@@ -274,7 +283,7 @@ class TestReconcile:
                         remote_units_data={
                             0: {"ingress-address": "10.0.0.10"},
                             1: {"ingress-address": "10.0.0.11", "port": "9999"},
-                            2: {"ingress-address": "10.0.0.12"},
+                            2: {},
                         },
                     ),
                     ops.testing.Relation(
@@ -282,6 +291,17 @@ class TestReconcile:
                         remote_units_data={
                             0: {"ingress-address": "10.0.1.10"},
                             1: {"ingress-address": "10.0.1.11", "port": "9999"},
+                        },
+                    ),
+                    ops.testing.Relation(
+                        "milter",
+                        remote_units_data={},
+                    ),
+                    ops.testing.Relation(
+                        "milter",
+                        remote_units_data={
+                            0: {"ingress-address": "10.0.1.10"},
+                            1: {},
                         },
                     ),
                     ops.testing.PeerRelation(
@@ -308,7 +328,6 @@ class TestReconcile:
         @patch("charm.socket.gethostname", Mock(return_value="hostname"))
         @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
         @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
-        @patch("charm.construct_postfix_config_params", Mock(return_value={}))
         @patch("charm.systemd", Mock(return_value=Mock(return_value=True)))
         @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
         @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())

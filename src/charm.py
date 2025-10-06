@@ -62,6 +62,7 @@ class SMTPRelayCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Installing packages")
         apt.add_package(APT_PACKAGES, update_cache=True)
         self._configure_logrotate()
+        self.unit.status = ops.WaitingStatus()
 
     def _reconcile(self, _: ops.EventBase) -> None:
         self.unit.status = ops.MaintenanceStatus("Reconciling SMTP relay")
@@ -77,7 +78,7 @@ class SMTPRelayCharm(ops.CharmBase):
             self._configure_policyd_spf(charm_state)
             self.unit.status = ops.ActiveStatus()
         except Exception as ex:  # pylint: disable=broad-except
-            self.unit.status = ops.BlockedStatus(str(ex))
+            self.unit.status = ops.BlockedStatus("Unexpected Error")
 
     @staticmethod
     def _configure_logrotate(
@@ -234,7 +235,7 @@ class SMTPRelayCharm(ops.CharmBase):
             remote_units = sorted(relation.units, key=lambda u: u.name)
             selected_unit = remote_units[offset % len(remote_units)]
 
-            address = relation.data[selected_unit]["ingress-address"]
+            address = relation.data[selected_unit].get("ingress-address")
             # Default to TCP/8892
             port = relation.data[selected_unit].get("port", 8892)
 
@@ -291,5 +292,5 @@ class SMTPRelayCharm(ops.CharmBase):
         utils.write_file(contents, policyd_spf_config)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: nocover
     ops.main(SMTPRelayCharm)
