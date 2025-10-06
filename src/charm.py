@@ -29,20 +29,34 @@ from postfix import (
 from state import ConfigurationError, State
 from tls import get_tls_config_paths
 
+# System Dependencies
 APT_PACKAGES = ["dovecot-core", "postfix-policyd-spf-python", "postfix"]
 
-DEFAULT_LOGROTATE_CONF_FILEPATH = Path("/etc/logrotate.d/rsyslog")
 
+# Postfix Configuration
+POSTFIX_NAME = "postfix"
+POSTFIX_PORT = ops.Port("tcp", 25)
+DEFAULT_POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
+DEFAULT_ALIASES_FILEPATH = Path("/etc/aliases")
+DEFAULT_POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
+DEFAULT_TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
+DEFAULT_MILTER_PORT = ops.Port("tcp", 8892)
+
+
+# Dovecot Configuration
+DOVECOT_NAME = "dovecot"
+DOVECOT_PORTS = (ops.Port("tcp", 465), ops.Port("tcp", 587))
 DEFAULT_DOVECOT_CONFIG_FILEPATH = Path("/etc/dovecot/dovecot.conf")
 DEFAULT_DOVECOT_USERS_FILEPATH = Path("/etc/dovecot/users")
 
-DEFAULT_ALIASES_FILEPATH = Path("/etc/aliases")
 
-DEFAULT_POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
+# Logging Configuration
+DEFAULT_LOGROTATE_CONF_FILEPATH = Path("/etc/logrotate.d/rsyslog")
 
-DEFAULT_POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
 
-DEFAULT_TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
+# Relations
+MILTER_RELATION_NAME = "milter"
+PEER_RELATION_NAME = "peer"
 
 
 class SMTPRelayCharm(ops.CharmBase):
@@ -54,8 +68,8 @@ class SMTPRelayCharm(ops.CharmBase):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._reconcile)
-        self.framework.observe(self.on.peer_relation_changed, self._reconcile)
-        self.framework.observe(self.on.milter_relation_changed, self._reconcile)
+        self.framework.observe(self.on[PEER_RELATION_NAME].relation_changed, self._reconcile)
+        self.framework.observe(self.on[MILTER_RELATION_NAME].relation_changed, self._reconcile)
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle the install event."""
@@ -107,31 +121,32 @@ class SMTPRelayCharm(ops.CharmBase):
         if charm_state.smtp_auth_users:
             contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
             changed = (
-                utils.write_file(contents, dovecot_users, perms=0o640, group="dovecot") or changed
+                utils.write_file(contents, dovecot_users, perms=0o640, group=DOVECOT_NAME)
+                or changed
             )
 
         if not charm_state.enable_smtp_auth:
             self.unit.status = ops.MaintenanceStatus(
                 "SMTP authentication not enabled, ensuring ports are closed"
             )
-            self.unit.close_port("tcp", 465)
-            self.unit.close_port("tcp", 587)
-            systemd.service_pause("dovecot")
+            for port in DOVECOT_PORTS:
+                self.unit.close_port(port.protocol, port.port)
+            systemd.service_pause(DOVECOT_NAME)
             return
 
         self.unit.status = ops.MaintenanceStatus(
             "Opening additional ports for SMTP authentication"
         )
-        self.unit.open_port("tcp", 465)
-        self.unit.open_port("tcp", 587)
+        for port in DOVECOT_PORTS:
+            self.unit.open_port(port.protocol, port.port)
 
-        if not systemd.service_running("dovecot"):
-            systemd.service_resume("dovecot")
+        if not systemd.service_running(DOVECOT_NAME):
+            systemd.service_resume(DOVECOT_NAME)
             return
 
         if changed:
             self.unit.status = ops.MaintenanceStatus("Restarting Dovecot due to config changes")
-            systemd.service_reload("dovecot")
+            systemd.service_reload(DOVECOT_NAME)
 
     def _generate_fqdn(self, domain: str) -> str:
         return f"{self.unit.name.replace('/', '-')}.{domain}"
@@ -170,15 +185,15 @@ class SMTPRelayCharm(ops.CharmBase):
 
         self._update_aliases(charm_state.admin_email)
 
-        self.unit.open_port("tcp", 25)
+        self.unit.open_port(POSTFIX_PORT.protocol, POSTFIX_PORT.port)
 
-        if not systemd.service_running("postfix"):
-            systemd.service_resume("postfix")
+        if not systemd.service_running(POSTFIX_NAME):
+            systemd.service_resume(POSTFIX_NAME)
             return
 
         if changed:
             self.unit.status = ops.MaintenanceStatus("Reloading postfix due to config changes")
-            systemd.service_reload("postfix")
+            systemd.service_reload(POSTFIX_NAME)
 
     @staticmethod
     def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> bool:
@@ -204,7 +219,7 @@ class SMTPRelayCharm(ops.CharmBase):
         """Build a sorted list of all peer unit names."""
         peers = {self.unit.name}
 
-        peer_relation = self.model.get_relation("peer")
+        peer_relation = self.model.get_relation(PEER_RELATION_NAME)
         if peer_relation:
             peers |= {unit.name for unit in peer_relation.units}
 
@@ -228,7 +243,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
         result = []
 
-        for relation in self.model.relations["milter"]:
+        for relation in self.model.relations[MILTER_RELATION_NAME]:
             if not relation.units:
                 continue
 
@@ -237,7 +252,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
             address = relation.data[selected_unit].get("ingress-address")
             # Default to TCP/8892
-            port = relation.data[selected_unit].get("port", 8892)
+            port = relation.data[selected_unit].get("port", DEFAULT_MILTER_PORT.port)
 
             if address:
                 result.append(f"inet:{address}:{port}")
