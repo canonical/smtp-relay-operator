@@ -85,7 +85,7 @@ class TestReconcile:
         @patch("charm.construct_dovecot_config_file_content")
         @patch("charm.systemd")
         @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay", ())
+        @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock())
         @patch("charm.utils.write_file", Mock())
         def test_no_auth(
             self,
@@ -506,7 +506,6 @@ class TestUpdateAliases:
 @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
 @patch("charm.construct_policyd_spf_config_file_content")
 def test_configure_policyd_spf(
-    self,
     mock_construct_policyd_spf_config_file_content: Mock,
     enable_spf: bool,
     context: Context[SMTPRelayCharm],
