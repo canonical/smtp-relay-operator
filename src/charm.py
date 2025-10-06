@@ -189,7 +189,7 @@ class SMTPRelayCharm(ops.CharmBase):
                 changed = True
             changed = utils.write_file(postfix_map.content, str(postfix_map.path)) or changed
             if changed and postfix_map.type == "hash":
-                subprocess.check_call(["postmap", postfix_map.source])
+                subprocess.check_call(["postmap", postfix_map.source])  # nosec
 
             any_changed = any_changed or changed
         return changed
@@ -269,7 +269,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
         changed = utils.write_file("".join(new_aliases), aliases_path)
         if changed:
-            subprocess.check_call(["newaliases"])
+            subprocess.check_call(["newaliases"])  # nosec
 
     def _configure_policyd_spf(
         self,
