@@ -6,6 +6,7 @@
 """SMTP Relay charm."""
 
 import hashlib
+import logging
 import socket
 import subprocess  # nosec
 from pathlib import Path
@@ -29,11 +30,16 @@ from postfix import (
 from state import ConfigurationError, State
 from tls import get_tls_config_paths
 
+logger = logging.getLogger(__name__)
+
+
 # System Dependencies
-APT_PACKAGES = ["dovecot-core", "postfix-policyd-spf-python", "postfix"]
+APT_PACKAGES = [
+    "dovecot-core",
+    "postfix",
+    "postfix-policyd-spf-python",
+]
 
-
-# Postfix Configuration
 POSTFIX_NAME = "postfix"
 POSTFIX_PORT = ops.Port("tcp", 25)
 DEFAULT_POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
@@ -42,19 +48,13 @@ DEFAULT_POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf
 DEFAULT_TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
 DEFAULT_MILTER_PORT = ops.Port("tcp", 8892)
 
-
-# Dovecot Configuration
 DOVECOT_NAME = "dovecot"
 DOVECOT_PORTS = (ops.Port("tcp", 465), ops.Port("tcp", 587))
 DEFAULT_DOVECOT_CONFIG_FILEPATH = Path("/etc/dovecot/dovecot.conf")
 DEFAULT_DOVECOT_USERS_FILEPATH = Path("/etc/dovecot/users")
 
-
-# Logging Configuration
 DEFAULT_LOGROTATE_CONF_FILEPATH = Path("/etc/logrotate.d/rsyslog")
 
-
-# Relations
 MILTER_RELATION_NAME = "milter"
 PEER_RELATION_NAME = "peer"
 
@@ -91,7 +91,8 @@ class SMTPRelayCharm(ops.CharmBase):
             self._configure_smtp_relay(charm_state)
             self._configure_policyd_spf(charm_state)
             self.unit.status = ops.ActiveStatus()
-        except Exception:  # pylint: disable=broad-except
+        except Exception as ex:  # pylint: disable=broad-except
+            logger.error(str(ex))
             self.unit.status = ops.BlockedStatus("Unexpected Error")
 
     @staticmethod

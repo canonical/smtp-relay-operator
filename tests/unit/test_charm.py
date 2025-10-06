@@ -48,7 +48,7 @@ def test_install(mock_add_package: Mock, context: Context[SMTPRelayCharm]) -> No
 
     assert out.unit_status == ops.testing.WaitingStatus()
     mock_add_package.assert_called_once_with(
-        ["dovecot-core", "postfix-policyd-spf-python", "postfix"],
+        ["dovecot-core", "postfix", "postfix-policyd-spf-python"],
         update_cache=True,
     )
 
