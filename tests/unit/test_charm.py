@@ -3,7 +3,6 @@
 
 """Unit tests for the SMTP Relay charm."""
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
@@ -21,6 +20,8 @@ from src.charm import (
 from state import ConfigurationError
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from charms.operator_libs_linux.v1 import systemd
 
 
@@ -460,7 +461,7 @@ class TestUpdateAliases:
         admin_email_address: str | None,
         initial_content: str,
         expected_content: str,
-        tmp_path: Path,
+        tmp_path: "Path",
     ) -> None:
         """
         arrange: Parametrize different initial contents.
@@ -480,7 +481,7 @@ class TestUpdateAliases:
         assert aliases_path.read_text() == expected_content
 
     @patch("charm.subprocess.check_call", Mock())
-    def test_update_aliases_no_file(self, tmp_path: Path) -> None:
+    def test_update_aliases_no_file(self, tmp_path: "Path") -> None:
         """
         arrange: Define a path for an aliases file that does not exist.
         act: Call the internal _update_aliases method.

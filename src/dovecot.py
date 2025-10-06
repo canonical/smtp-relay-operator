@@ -3,10 +3,17 @@
 
 """Dovecot Service Layer."""
 
+from typing import TYPE_CHECKING
+
 import utils
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def construct_dovecot_config_file_content(dovecot_users_path: str, enable_smtp_auth: bool) -> str:
+
+def construct_dovecot_config_file_content(
+    dovecot_users_path: str | Path, enable_smtp_auth: bool
+) -> str:
     """Prepare the context and render the dovecot.conf file content.
 
     Args:
