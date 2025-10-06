@@ -4,7 +4,7 @@
 """Postfix Service Layer."""
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import utils
 
@@ -71,7 +71,7 @@ def construct_postfix_config_params(  # pylint: disable=too-many-arguments
     fqdn: str,
     hostname: str,
     milters: str,
-) -> dict[str, Any]:
+) -> dict[str, str | int | bool | None]:
     """Prepare the context for rendering Postfix configuration files.
 
     Args:
