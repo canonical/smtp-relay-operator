@@ -82,7 +82,6 @@ def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_add
     act: Attempt to send an email without authentication then with authentication.
     assert: Unauthenticated email sending is refused, authenticated email sending is accepted
     """
-
     status = juju.status()
     unit = list(status.apps[smtp_relay_app].units.values())[0]
     unit_ip = unit.public_address
