@@ -89,7 +89,7 @@ def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_add
     mailcatcher_url = "http://127.0.0.1:1080"
 
     username = "testuser"
-    password = "testpassword"
+    password = "testpassword"  # nosec
     hashed_password = sha512_crypt.hash(password)
     auth_users_yaml = yaml.dump([f"{username}:{hashed_password}"])
 
