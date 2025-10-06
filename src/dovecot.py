@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 def construct_dovecot_config_file_content(
-    dovecot_users_path: str | "Path", enable_smtp_auth: bool
+    dovecot_users_path: "str | Path", enable_smtp_auth: bool
 ) -> str:
     """Prepare the context and render the dovecot.conf file content.
 
