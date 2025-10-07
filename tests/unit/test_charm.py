@@ -193,7 +193,6 @@ class TestReconcile:
             act: Run the config-changed event hook on the charm.
             assert: Reloads the dovecot service only if the configuration file was modified.
             """
-
             charm_state = State(config={"enable_smtp_auth": True}, leader=True)
             mock_systemd.service_running.return_value = True
 
