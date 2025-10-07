@@ -69,21 +69,6 @@ class TestReconcile:
 
         assert out.unit_status == ops.testing.BlockedStatus("Invalid config")
 
-    @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-    @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock(side_effect=Exception()))
-    @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-    def test_unexpected_error(self, context: Context[SMTPRelayCharm]) -> None:
-        """
-        arrange: _configure_smtp_relay raises an unexpected exception.
-        act: Run the config-changed event hook.
-        assert: The unit status is set to blocked with the generic error message.
-        """
-        charm_state = State(config={}, leader=True)
-
-        out = context.run(context.on.config_changed(), charm_state)
-
-        assert out.unit_status == ops.testing.BlockedStatus("Unexpected Error")
-
     class TestConfigureSMTPAuth:
         """Unit tests for _configure_smtp_auth."""
 

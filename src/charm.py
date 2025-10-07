@@ -86,14 +86,12 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Invalid config")
             return
 
-        try:
-            self._configure_smtp_auth(charm_state)
-            self._configure_smtp_relay(charm_state)
-            self._configure_policyd_spf(charm_state)
-            self.unit.status = ops.ActiveStatus()
-        except Exception as ex:  # pylint: disable=broad-except
-            logger.error(str(ex))
-            self.unit.status = ops.BlockedStatus("Unexpected Error")
+
+        self._configure_smtp_auth(charm_state)
+        self._configure_smtp_relay(charm_state)
+        self._configure_policyd_spf(charm_state)
+        self.unit.status = ops.ActiveStatus()
+
 
     @staticmethod
     def _configure_logrotate(
