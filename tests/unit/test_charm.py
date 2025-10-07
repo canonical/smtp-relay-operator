@@ -4,7 +4,7 @@
 """Unit tests for the SMTP Relay charm."""
 
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import ops.testing
 import pytest
@@ -311,15 +311,13 @@ class TestReconcile:
             assert TCPPort(25) in out.opened_ports
 
         @patch("charm.subprocess.check_call")
-        @patch("charm.Path.touch", Mock())
-        @patch("charm.Path.is_file", Mock(return_value=False))
         @patch("charm.socket.gethostname", Mock(return_value="hostname"))
         @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
         @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
         @patch("charm.systemd", Mock(return_value=Mock(return_value=True)))
         @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
         @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-        @patch("charm.utils.write_file", Mock(return_value=False))
+        @patch("charm.utils.write_file", Mock(return_value=True))
         def test_apply_postfix_maps(
             self, mock_check_call: Mock, context: Context[SMTPRelayCharm]
         ) -> None:
@@ -332,7 +330,18 @@ class TestReconcile:
 
             out = context.run(context.on.config_changed(), charm_state)
 
-            assert mock_check_call.call_count == 8
+            mock_check_call.assert_has_calls(
+                [
+                    call(["postmap", "hash:/etc/postfix/relay_recipient"]),
+                    call(["postmap", "hash:/etc/postfix/restricted_recipients"]),
+                    call(["postmap", "hash:/etc/postfix/restricted_senders"]),
+                    call(["postmap", "hash:/etc/postfix/access"]),
+                    call(["postmap", "hash:/etc/postfix/sender_login"]),
+                    call(["postmap", "hash:/etc/postfix/tls_policy"]),
+                    call(["postmap", "hash:/etc/postfix/transport"]),
+                    call(["postmap", "hash:/etc/postfix/virtual_alias"]),
+                ],
+            )
 
             assert out.unit_status == ops.testing.ActiveStatus()
             assert TCPPort(25) in out.opened_ports

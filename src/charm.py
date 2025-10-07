@@ -192,11 +192,7 @@ class SMTPRelayCharm(ops.CharmBase):
     @staticmethod
     def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> None:
         for postfix_map in postfix_maps:
-            changed = False
-            if not postfix_map.path.is_file():
-                postfix_map.path.touch()
-                changed = True
-            changed = utils.write_file(postfix_map.content, str(postfix_map.path)) or changed
+            changed = utils.write_file(postfix_map.content, str(postfix_map.path))
             if changed and postfix_map.type == "hash":
                 subprocess.check_call(["postmap", postfix_map.source])  # nosec
 
