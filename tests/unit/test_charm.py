@@ -11,12 +11,8 @@ import pytest
 from ops.testing import Context, State
 from scenario import TCPPort
 
+import charm
 import tls
-from src.charm import (
-    DEFAULT_ALIASES_FILEPATH,
-    DEFAULT_DOVECOT_USERS_FILEPATH,
-    SMTPRelayCharm,
-)
 from state import ConfigurationError
 
 if TYPE_CHECKING:
@@ -36,7 +32,7 @@ DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
 @patch("charm.utils.write_file", Mock())
 @patch("charm.utils.copy_file", Mock())
 @patch("charm.apt.add_package")
-def test_install(mock_add_package: Mock, context: Context[SMTPRelayCharm]) -> None:
+def test_install(mock_add_package: Mock, context: Context[charm.SMTPRelayCharm]) -> None:
     """
     arrange: Set up a charm state.
     act: Run the install event hook on the charm.
@@ -57,7 +53,7 @@ class TestReconcile:
     """Unit tests for the _reconcile method"""
 
     @patch("charm.State.from_charm", Mock(side_effect=ConfigurationError("Invalid configuration")))
-    def test_invalid_config(self, context: Context[SMTPRelayCharm]) -> None:
+    def test_invalid_config(self, context: Context[charm.SMTPRelayCharm]) -> None:
         """
         arrange: Invalid charm config.
         act: Run the config-changed event hook on the charm.
@@ -88,7 +84,7 @@ class TestReconcile:
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
             smtp_auth_users: str,
-            context: Context[SMTPRelayCharm],
+            context: Context[charm.SMTPRelayCharm],
         ) -> None:
             """
             arrange: Charm with SMTP auth disabled.
@@ -107,7 +103,7 @@ class TestReconcile:
             out = context.run(context.on.config_changed(), charm_state)
 
             mock_construct_dovecot_config_file_content.assert_called_once_with(
-                DEFAULT_DOVECOT_USERS_FILEPATH, False
+                charm.DOVECOT_USERS_FILEPATH, False
             )
 
             assert {TCPPort(465), TCPPort(587)}.isdisjoint(out.opened_ports)
@@ -134,7 +130,7 @@ class TestReconcile:
             mock_systemd: "systemd",
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
-            context: Context[SMTPRelayCharm],
+            context: Context[charm.SMTPRelayCharm],
         ) -> None:
             """
             arrange: Charm with SMTP auth enabled and dovecot not running.
@@ -148,7 +144,7 @@ class TestReconcile:
             out = context.run(context.on.config_changed(), charm_state)
 
             mock_construct_dovecot_config_file_content.assert_called_once_with(
-                DEFAULT_DOVECOT_USERS_FILEPATH, True
+                charm.DOVECOT_USERS_FILEPATH, True
             )
             assert {TCPPort(465), TCPPort(587)}.issubset(out.opened_ports)
 
@@ -171,7 +167,7 @@ class TestReconcile:
             mock_systemd: "systemd",
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
-            context: Context[SMTPRelayCharm],
+            context: Context[charm.SMTPRelayCharm],
         ) -> None:
             """
             arrange: Charm with SMTP auth enabled and with dovecot running.
@@ -184,7 +180,7 @@ class TestReconcile:
             out = context.run(context.on.config_changed(), charm_state)
 
             mock_construct_dovecot_config_file_content.assert_called_once_with(
-                DEFAULT_DOVECOT_USERS_FILEPATH, True
+                charm.DOVECOT_USERS_FILEPATH, True
             )
             assert {TCPPort(465), TCPPort(587)}.issubset(out.opened_ports)
 
@@ -198,7 +194,7 @@ class TestReconcile:
         """Unit tests for _configure_smtp_relay"""
 
         @patch("charm.subprocess.check_call", Mock())
-        @patch("charm.Path.is_file", lambda x: {DEFAULT_ALIASES_FILEPATH: False}.get(x, True))
+        @patch("charm.Path.is_file", lambda x: {charm.ALIASES_FILEPATH: False}.get(x, True))
         @patch("charm.socket.gethostname", Mock(return_value="hostname"))
         @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
         @patch("charm.construct_postfix_config_params", return_value={})
@@ -209,7 +205,7 @@ class TestReconcile:
         def test_generate_fqdn(
             self,
             mock_construct_postfix_config_params: Mock,
-            context: Context[SMTPRelayCharm],
+            context: Context[charm.SMTPRelayCharm],
         ) -> None:
             """
             arrange: Configure the charm with a specific domain.
@@ -227,7 +223,7 @@ class TestReconcile:
             assert TCPPort(25) in out.opened_ports
 
         @patch("charm.subprocess.check_call", Mock())
-        @patch("charm.Path.is_file", lambda x: {DEFAULT_ALIASES_FILEPATH: False}.get(x, True))
+        @patch("charm.Path.is_file", lambda x: {charm.ALIASES_FILEPATH: False}.get(x, True))
         @patch("charm.socket.gethostname", Mock(return_value="hostname"))
         @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
         @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
@@ -239,7 +235,7 @@ class TestReconcile:
         def test_get_milters(
             self,
             mock_construct_postfix_config_params: Mock,
-            context: Context[SMTPRelayCharm],
+            context: Context[charm.SMTPRelayCharm],
         ) -> None:
             """
             arrange: Set up a charm state with active milter relations containing
@@ -303,7 +299,7 @@ class TestReconcile:
         @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
         @patch("charm.utils.write_file", Mock(return_value=True))
         def test_apply_postfix_maps(
-            self, mock_check_call: Mock, context: Context[SMTPRelayCharm]
+            self, mock_check_call: Mock, context: Context[charm.SMTPRelayCharm]
         ) -> None:
             """
             arrange: Set up a charm state where postfix map files do not exist.
@@ -351,7 +347,7 @@ class TestReconcile:
             self,
             mock_systemd: "systemd",
             service_running: bool,
-            context: Context[SMTPRelayCharm],
+            context: Context[charm.SMTPRelayCharm],
         ) -> None:
             """
             arrange: Parameterize the postfix service state and the configuration changing.
@@ -399,7 +395,7 @@ class TestUpdateAliases:
         """
         mock_write_file.return_value = changed
 
-        SMTPRelayCharm._update_aliases("admin@email.com")
+        charm.SMTPRelayCharm._update_aliases("admin@email.com")
         if changed:
             mock_check_call.assert_called_once_with(["newaliases"])
         else:
@@ -449,16 +445,20 @@ class TestUpdateAliases:
         initial_content: str,
         expected_content: str,
         tmp_path: "Path",
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """
         arrange: Parametrize different initial contents.
         act: Call the internal _update_aliases method.
         assert: The content of the aliases file is updated to the expected state.
         """
+
         aliases_path = tmp_path / "aliases"
         aliases_path.write_text(initial_content)
 
-        SMTPRelayCharm._update_aliases(admin_email_address, aliases_path)
+        monkeypatch.setattr(charm, "ALIASES_FILEPATH", aliases_path)
+
+        charm.SMTPRelayCharm._update_aliases(admin_email_address)
 
         if not admin_email_address:
             expected_content = "\n".join(
@@ -468,15 +468,20 @@ class TestUpdateAliases:
         assert aliases_path.read_text() == expected_content
 
     @patch("charm.subprocess.check_call", Mock())
-    def test_update_aliases_no_file(self, tmp_path: "Path") -> None:
+    def test_update_aliases_no_file(
+        self,
+        tmp_path: "Path",
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """
         arrange: Define a path for an aliases file that does not exist.
         act: Call the internal _update_aliases method.
         assert: The method creates the aliases file with the correct default content.
         """
         non_existing_path = tmp_path / "aliases"
+        monkeypatch.setattr(charm, "ALIASES_FILEPATH", non_existing_path)
 
-        SMTPRelayCharm._update_aliases(None, non_existing_path)
+        charm.SMTPRelayCharm._update_aliases(None)
 
         assert non_existing_path.is_file()
         assert non_existing_path.read_text() == "devnull:       /dev/null\n"
@@ -496,7 +501,7 @@ class TestUpdateAliases:
 def test_configure_policyd_spf(
     mock_construct_policyd_spf_config_file_content: Mock,
     enable_spf: bool,
-    context: Context[SMTPRelayCharm],
+    context: Context[charm.SMTPRelayCharm],
 ) -> None:
     """
     arrange: Configure the charm state with SPF enabled or disabled.

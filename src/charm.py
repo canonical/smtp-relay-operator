@@ -33,7 +33,6 @@ from tls import get_tls_config_paths
 logger = logging.getLogger(__name__)
 
 
-# System Dependencies
 APT_PACKAGES = [
     "dovecot-core",
     "postfix",
@@ -45,11 +44,11 @@ FILES_DIRPATH = Path("files")
 
 POSTFIX_NAME = "postfix"
 POSTFIX_PORT = ops.Port("tcp", 25)
-DEFAULT_POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
-DEFAULT_ALIASES_FILEPATH = Path("/etc/aliases")
-DEFAULT_POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
-DEFAULT_TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
-DEFAULT_MILTER_PORT = ops.Port("tcp", 8892)
+POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
+ALIASES_FILEPATH = Path("/etc/aliases")
+POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
+TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
+MILTER_PORT = ops.Port("tcp", 8892)
 MAIN_CF = "main.cf"
 MAIN_CF_TPL = "postfix_main_cf.tmpl"
 MASTER_CF = "master.cf"
@@ -57,8 +56,8 @@ MASTER_CF_TPL = "postfix_master_cf.tmpl"
 
 DOVECOT_NAME = "dovecot"
 DOVECOT_PORTS = (ops.Port("tcp", 465), ops.Port("tcp", 587))
-DEFAULT_DOVECOT_CONFIG_FILEPATH = Path("/etc/dovecot/dovecot.conf")
-DEFAULT_DOVECOT_USERS_FILEPATH = Path("/etc/dovecot/users")
+DOVECOT_CONFIG_FILEPATH = Path("/etc/dovecot/dovecot.conf")
+DOVECOT_USERS_FILEPATH = Path("/etc/dovecot/users")
 
 LOG_ROTATE_SYSLOG = Path("/etc/logrotate.d/rsyslog")
 FGREPMAIL_LOGS_SRC = FILES_DIRPATH / "fgrepmail-logs.py"
@@ -107,23 +106,20 @@ class SMTPRelayCharm(ops.CharmBase):
         self._configure_policyd_spf(charm_state)
         self.unit.status = ops.ActiveStatus()
 
-    def _configure_smtp_auth(
-        self,
-        charm_state: State,
-        dovecot_config: Path = DEFAULT_DOVECOT_CONFIG_FILEPATH,
-        dovecot_users: Path = DEFAULT_DOVECOT_USERS_FILEPATH,
-    ) -> None:
+    def _configure_smtp_auth(self, charm_state: State) -> None:
         """Ensure SMTP authentication is configured or disabled via Dovecot."""
         self.unit.status = ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
 
         contents = construct_dovecot_config_file_content(
-            dovecot_users, charm_state.enable_smtp_auth
+            DOVECOT_USERS_FILEPATH, charm_state.enable_smtp_auth
         )
-        utils.write_file(contents, dovecot_config)
+        utils.write_file(contents, DOVECOT_CONFIG_FILEPATH)
 
         if charm_state.smtp_auth_users:
             contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
-            utils.write_file(contents, dovecot_users, perms=0o640, group=DOVECOT_NAME)
+            utils.write_file(
+                contents, DOVECOT_USERS_FILEPATH, perms=0o640, group=DOVECOT_NAME
+            )
 
         if not charm_state.enable_smtp_auth:
             self.unit.status = ops.MaintenanceStatus(
@@ -149,16 +145,11 @@ class SMTPRelayCharm(ops.CharmBase):
     def _generate_fqdn(self, domain: str) -> str:
         return f"{self.unit.name.replace('/', '-')}.{domain}"
 
-    def _configure_smtp_relay(
-        self,
-        charm_state: State,
-        postfix_conf_dir: Path = DEFAULT_POSTFIX_CONF_DIRPATH,
-        tls_dh_params: Path = DEFAULT_TLS_DH_PARAMS_FILEPATH,
-    ) -> None:
+    def _configure_smtp_relay(self, charm_state: State) -> None:
         """Generate and apply SMTP relay (Postfix) configuration."""
         self.unit.status = ops.MaintenanceStatus("Setting up SMTP relay")
 
-        tls_config_paths = get_tls_config_paths(tls_dh_params)
+        tls_config_paths = get_tls_config_paths(TLS_DH_PARAMS_FILEPATH)
         fqdn = self._generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
         hostname = socket.gethostname()
         milters = self._get_milters()
@@ -174,11 +165,11 @@ class SMTPRelayCharm(ops.CharmBase):
             milters=milters,
         )
         contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MAIN_CF_TPL)
-        utils.write_file(contents, postfix_conf_dir / MAIN_CF)
+        utils.write_file(contents, POSTFIX_CONF_DIRPATH / MAIN_CF)
         contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MASTER_CF_TPL)
-        utils.write_file(contents, postfix_conf_dir / MASTER_CF)
+        utils.write_file(contents, POSTFIX_CONF_DIRPATH / MASTER_CF)
 
-        postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
+        postfix_maps = build_postfix_maps(POSTFIX_CONF_DIRPATH, charm_state)
         self._apply_postfix_maps(list(postfix_maps.values()))
 
         self._update_aliases(charm_state.admin_email)
@@ -240,7 +231,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
             address = relation.data[selected_unit].get("ingress-address")
             # Default to TCP/8892
-            port = relation.data[selected_unit].get("port", DEFAULT_MILTER_PORT.port)
+            port = relation.data[selected_unit].get("port", MILTER_PORT.port)
 
             if address:
                 result.append(f"inet:{address}:{port}")
@@ -248,14 +239,11 @@ class SMTPRelayCharm(ops.CharmBase):
         return " ".join(result)
 
     @staticmethod
-    def _update_aliases(
-        admin_email: str | None,
-        aliases_path: Path = DEFAULT_ALIASES_FILEPATH,
-    ) -> None:
+    def _update_aliases(admin_email: str | None) -> None:
 
         aliases = []
-        if aliases_path.is_file():
-            with aliases_path.open("r", encoding="utf-8") as f:
+        if ALIASES_FILEPATH.is_file():
+            with ALIASES_FILEPATH.open("r", encoding="utf-8") as f:
                 aliases = f.readlines()
 
         add_devnull = True
@@ -271,15 +259,11 @@ class SMTPRelayCharm(ops.CharmBase):
         if admin_email:
             new_aliases.append(f"root:          {admin_email}\n")
 
-        changed = utils.write_file("".join(new_aliases), aliases_path)
+        changed = utils.write_file("".join(new_aliases), ALIASES_FILEPATH)
         if changed:
             subprocess.check_call(["newaliases"])  # nosec
 
-    def _configure_policyd_spf(
-        self,
-        charm_state: State,
-        policyd_spf_config: Path = DEFAULT_POLICYD_SPF_FILEPATH,
-    ) -> None:
+    def _configure_policyd_spf(self, charm_state: State) -> None:
         """Configure Postfix SPF policy server (policyd-spf) based on charm state."""
         if not charm_state.enable_spf:
             self.unit.status = ops.MaintenanceStatus(
@@ -292,7 +276,7 @@ class SMTPRelayCharm(ops.CharmBase):
         )
 
         contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
-        utils.write_file(contents, policyd_spf_config)
+        utils.write_file(contents, POLICYD_SPF_FILEPATH)
 
 
 if __name__ == "__main__":  # pragma: nocover
