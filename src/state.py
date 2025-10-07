@@ -88,10 +88,12 @@ class PostfixLookupTableType(Enum):
     Attributes:
         HASH: "hash"
         REGEXP: "regexp"
+        CIDR: "cidr"
     """
 
     HASH = "hash"
     REGEXP = "regexp"
+    CIDR = "cidr"
 
 
 class AccessMapValue(Enum):

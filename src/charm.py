@@ -27,7 +27,7 @@ from postfix import (
     construct_policyd_spf_config_file_content,
     construct_postfix_config_params,
 )
-from state import ConfigurationError, State
+from state import ConfigurationError, PostfixLookupTableType, State
 from tls import get_tls_config_paths
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,9 @@ APT_PACKAGES = [
     "postfix-policyd-spf-python",
 ]
 
+TEMPLATES_DIRPATH = Path("templates")
+FILES_DIRPATH = Path("files")
+
 POSTFIX_NAME = "postfix"
 POSTFIX_PORT = ops.Port("tcp", 25)
 DEFAULT_POSTFIX_CONF_DIRPATH = Path("/etc/postfix")
@@ -47,13 +50,21 @@ DEFAULT_ALIASES_FILEPATH = Path("/etc/aliases")
 DEFAULT_POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
 DEFAULT_TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
 DEFAULT_MILTER_PORT = ops.Port("tcp", 8892)
+MAIN_CF = "main.cf"
+MAIN_CF_TPL = "postfix_main_cf.tmpl"
+MASTER_CF = "master.cf"
+MASTER_CF_TPL = "postfix_master_cf.tmpl"
 
 DOVECOT_NAME = "dovecot"
 DOVECOT_PORTS = (ops.Port("tcp", 465), ops.Port("tcp", 587))
 DEFAULT_DOVECOT_CONFIG_FILEPATH = Path("/etc/dovecot/dovecot.conf")
 DEFAULT_DOVECOT_USERS_FILEPATH = Path("/etc/dovecot/users")
 
-DEFAULT_LOGROTATE_CONF_FILEPATH = Path("/etc/logrotate.d/rsyslog")
+LOG_ROTATE_SYSLOG = Path("/etc/logrotate.d/rsyslog")
+FGREPMAIL_LOGS_SRC = FILES_DIRPATH / "fgrepmail-logs.py"
+FGREPMAIL_LOGS_DST = Path("/usr/local/bin/fgrepmail-logs")
+RSYSLOG_CONF_SRC = FILES_DIRPATH / "50-default.conf"
+RSYSLOG_CONF_DST = Path("/etc/rsyslog.d/50-default.conf")
 
 MILTER_RELATION_NAME = "milter"
 PEER_RELATION_NAME = "peer"
@@ -75,7 +86,12 @@ class SMTPRelayCharm(ops.CharmBase):
         """Handle the install event."""
         self.unit.status = ops.MaintenanceStatus("Installing packages")
         apt.add_package(APT_PACKAGES, update_cache=True)
-        self._configure_logrotate()
+
+        utils.copy_file(FGREPMAIL_LOGS_SRC, FGREPMAIL_LOGS_DST, perms=0o755)
+        utils.copy_file(RSYSLOG_CONF_SRC, RSYSLOG_CONF_DST, perms=0o644)
+        contents = utils.update_logrotate_conf(LOG_ROTATE_SYSLOG)
+        utils.write_file(contents, LOG_ROTATE_SYSLOG)
+
         self.unit.status = ops.WaitingStatus()
 
     def _reconcile(self, _: ops.EventBase) -> None:
@@ -86,22 +102,10 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Invalid config")
             return
 
-
         self._configure_smtp_auth(charm_state)
         self._configure_smtp_relay(charm_state)
         self._configure_policyd_spf(charm_state)
         self.unit.status = ops.ActiveStatus()
-
-
-    @staticmethod
-    def _configure_logrotate(
-        logrotate_conf_path: Path = DEFAULT_LOGROTATE_CONF_FILEPATH,
-    ) -> None:
-        """Configure logging."""
-        utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
-        utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
-        contents = utils.update_logrotate_conf(logrotate_conf_path)
-        utils.write_file(contents, logrotate_conf_path)
 
     def _configure_smtp_auth(
         self,
@@ -169,10 +173,10 @@ class SMTPRelayCharm(ops.CharmBase):
             hostname=hostname,
             milters=milters,
         )
-        contents = utils.render_jinja2_template(context, "templates/postfix_main_cf.tmpl")
-        utils.write_file(contents, Path(postfix_conf_dir) / "main.cf")
-        contents = utils.render_jinja2_template(context, "templates/postfix_master_cf.tmpl")
-        utils.write_file(contents, Path(postfix_conf_dir) / "master.cf")
+        contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MAIN_CF_TPL)
+        utils.write_file(contents, postfix_conf_dir / MAIN_CF)
+        contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MASTER_CF_TPL)
+        utils.write_file(contents, postfix_conf_dir / MASTER_CF)
 
         postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
         self._apply_postfix_maps(list(postfix_maps.values()))
@@ -191,7 +195,7 @@ class SMTPRelayCharm(ops.CharmBase):
     def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> None:
         for postfix_map in postfix_maps:
             changed = utils.write_file(postfix_map.content, str(postfix_map.path))
-            if changed and postfix_map.type == "hash":
+            if changed and postfix_map.type == PostfixLookupTableType.HASH:
                 subprocess.check_call(["postmap", postfix_map.source])  # nosec
 
     @staticmethod

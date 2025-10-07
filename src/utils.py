@@ -100,7 +100,7 @@ def write_file(
 
 def render_jinja2_template(
     context: dict[str, Any],
-    template_path: str,
+    template_path: str | os.PathLike,
     base_path: str | None = None,
 ) -> str:
     """Render jinja2 template given the context.
@@ -112,5 +112,5 @@ def render_jinja2_template(
     """
     base = Path(base_path) if base_path else Path(__file__).resolve().parent.parent
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(base), autoescape=True)
-    template = env.get_template(template_path)
+    template = env.get_template(str(template_path))
     return template.render(context)

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 import utils
+from state import PostfixLookupTableType
 
 if TYPE_CHECKING:
     from pydantic import IPvAnyNetwork
@@ -135,14 +136,14 @@ class PostfixMap(NamedTuple):
         source: The Postfix lookup table source string
     """
 
-    type: str
+    type: PostfixLookupTableType
     path: Path
     content: str
 
     @property
     def source(self) -> str:
         """Return the full Postfix lookup table source string."""
-        return f"{self.type}:{self.path}"
+        return f"{self.type.value}:{self.path}"
 
 
 def build_postfix_maps(postfix_conf_dir: str, charm_state: "State") -> dict[str, PostfixMap]:
@@ -157,7 +158,10 @@ def build_postfix_maps(postfix_conf_dir: str, charm_state: "State") -> dict[str,
     """
     postfix_conf_dir_path = Path(postfix_conf_dir)
 
-    def _create_map(type_: str, name: str, content: str) -> PostfixMap:
+    def _create_map(type_: str | PostfixLookupTableType, name: str, content: str) -> PostfixMap:
+        type_ = (
+            type_ if isinstance(type_, PostfixLookupTableType) else PostfixLookupTableType(type_)
+        )
         return PostfixMap(
             type=type_,
             path=postfix_conf_dir_path / name,
@@ -167,63 +171,63 @@ def build_postfix_maps(postfix_conf_dir: str, charm_state: "State") -> dict[str,
     # Create a map of all the maps we may need to create/update from the charm state.
     maps = {
         "append_envelope_to_header": _create_map(
-            "regexp",
+            PostfixLookupTableType.REGEXP,
             "append_envelope_to_header",
             "/^(.*)$/ PREPEND X-Envelope-To: $1",
         ),
         "header_checks": _create_map(
-            "regexp",
+            PostfixLookupTableType.REGEXP,
             "header_checks",
             ";".join(charm_state.header_checks),
         ),
         "relay_access_sources": _create_map(
-            "cidr",
+            PostfixLookupTableType.CIDR,
             "relay_access",
             "\n".join(charm_state.relay_access_sources),
         ),
         "relay_recipient_maps": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "relay_recipient",
             "\n".join(
                 [f"{key} {value}" for key, value in charm_state.relay_recipient_maps.items()]
             ),
         ),
         "restrict_recipients": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "restricted_recipients",
             "\n".join(
                 [f"{key} {value.value}" for key, value in charm_state.restrict_recipients.items()]
             ),
         ),
         "restrict_senders": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "restricted_senders",
             "\n".join(
                 [f"{key} {value.value}" for key, value in charm_state.restrict_senders.items()]
             ),
         ),
         "sender_access": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "access",
             "".join([f"{domain:35} OK\n" for domain in charm_state.restrict_sender_access]),
         ),
         "sender_login_maps": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "sender_login",
             "\n".join([f"{key} {value}" for key, value in charm_state.sender_login_maps.items()]),
         ),
         "smtp_header_checks": _create_map(
-            "regexp",
+            PostfixLookupTableType.REGEXP,
             "smtp_header_checks",
             ";".join(charm_state.smtp_header_checks),
         ),
         "tls_policy_maps": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "tls_policy",
             "\n".join([f"{key} {value}" for key, value in charm_state.tls_policy_maps.items()]),
         ),
         "transport_maps": _create_map(
-            "hash",
+            PostfixLookupTableType.HASH,
             "transport",
             "\n".join([f"{key} {value}" for key, value in charm_state.transport_maps.items()]),
         ),

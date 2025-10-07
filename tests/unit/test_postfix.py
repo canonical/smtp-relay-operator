@@ -340,62 +340,62 @@ def test_build_postfix_maps_returns_correct_data() -> None:
     conf_path = Path(postfix_conf_dir)
     expected_maps = {
         "append_envelope_to_header": postfix.PostfixMap(
-            type="regexp",
+            type=state.PostfixLookupTableType.REGEXP,
             path=conf_path / "append_envelope_to_header",
             content=f"{utils.JUJU_HEADER}\n/^(.*)$/ PREPEND X-Envelope-To: $1\n",
         ),
         "header_checks": postfix.PostfixMap(
-            type="regexp",
+            type=state.PostfixLookupTableType.REGEXP,
             path=conf_path / "header_checks",
             content=f"{utils.JUJU_HEADER}\n/^Subject:/ WARN\n",
         ),
         "relay_access_sources": postfix.PostfixMap(
-            type="cidr",
+            type=state.PostfixLookupTableType.CIDR,
             path=conf_path / "relay_access",
             content=f"{utils.JUJU_HEADER}\n192.168.1.0/24\n",
         ),
         "relay_recipient_maps": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "relay_recipient",
             content=f"{utils.JUJU_HEADER}\nuser@example.com OK\n",
         ),
         "restrict_recipients": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "restricted_recipients",
             content=f"{utils.JUJU_HEADER}\nbad@example.com REJECT\n",
         ),
         "restrict_senders": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "restricted_senders",
             content=f"{utils.JUJU_HEADER}\nspammer@example.com REJECT\n",
         ),
         "sender_access": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "access",
             content=f"{utils.JUJU_HEADER}\n{'unwanted.com':35} OK\n\n",
         ),
         "sender_login_maps": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "sender_login",
             content=f"{utils.JUJU_HEADER}\nsender@example.com user@example.com\n",
         ),
         "smtp_header_checks": postfix.PostfixMap(
-            type="regexp",
+            type=state.PostfixLookupTableType.REGEXP,
             path=conf_path / "smtp_header_checks",
             content=f"{utils.JUJU_HEADER}\n/^Received:/ IGNORE\n",
         ),
         "tls_policy_maps": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "tls_policy",
             content=f"{utils.JUJU_HEADER}\nexample.com secure\n",
         ),
         "transport_maps": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "transport",
             content=f"{utils.JUJU_HEADER}\ndomain.com smtp:relay.example.com\n",
         ),
         "virtual_alias_maps": postfix.PostfixMap(
-            type="hash",
+            type=state.PostfixLookupTableType.HASH,
             path=conf_path / "virtual_alias",
             content=f"{utils.JUJU_HEADER}\nalias@example.com real@example.com\n",
         ),
