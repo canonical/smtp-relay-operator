@@ -5,7 +5,7 @@ includes:
   - layer:basic
   - layer:nagios
   - layer:status
-repo: lp:smtp-relay-charm
+repo: lp:postfix-relay-charm
 options:
   basic:
     packages:

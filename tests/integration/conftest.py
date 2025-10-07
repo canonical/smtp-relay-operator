@@ -25,8 +25,8 @@ def deploy_smtp_relay_fixture(
     smtp_relay_charm: str,
     juju: jubilant.Juju,
 ) -> str:
-    """Deploy smtp-relay."""
-    smtp_relay_app_name = "smtp-relay"
+    """Deploy postfix-relay."""
+    smtp_relay_app_name = "postfix-relay"
 
     if not juju.status().apps.get(smtp_relay_app_name):
         juju.deploy(

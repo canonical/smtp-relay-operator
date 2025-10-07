@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""SMTP Relay charm."""
+"""Postfix relay charm."""
 
 import hashlib
 import os
@@ -30,22 +30,22 @@ from reactive.tls import get_tls_config_paths
 def upgrade_charm() -> None:
     """Reconfigure the charm on upgrade by clearing relevant flags."""
     status.maintenance("forcing reconfiguration on upgrade-charm")
-    reactive.clear_flag("smtp-relay.active")
-    reactive.clear_flag("smtp-relay.auth.configured")
-    reactive.clear_flag("smtp-relay.configured")
-    reactive.clear_flag("smtp-relay.installed")
+    reactive.clear_flag("postfix-relay.active")
+    reactive.clear_flag("postfix-relay.auth.configured")
+    reactive.clear_flag("postfix-relay.configured")
+    reactive.clear_flag("postfix-relay.installed")
 
 
-@reactive.when_not("smtp-relay.installed")
+@reactive.when_not("postfix-relay.installed")
 def install(logrotate_conf_path: str = "/etc/logrotate.d/rsyslog") -> None:
-    """Configure logging and mark SMTP relay as installed."""
-    reactive.set_flag("smtp-relay.installed")
+    """Configure logging and mark Postfix relay as installed."""
+    reactive.set_flag("postfix-relay.installed")
 
     _configure_smtp_relay_logging(logrotate_conf_path)
 
 
 def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
-    """Configure logging for the SMTP relay."""
+    """Configure logging for the Postfix relay."""
     utils.copy_file("files/fgrepmail-logs.py", "/usr/local/bin/fgrepmail-logs", perms=0o755)
     utils.copy_file("files/50-default.conf", "/etc/rsyslog.d/50-default.conf", perms=0o644)
     contents = utils.update_logrotate_conf(logrotate_conf_path)
@@ -54,8 +54,8 @@ def _configure_smtp_relay_logging(logrotate_conf_path: str) -> None:
 
 @reactive.hook("peer-relation-joined", "peer-relation-changed")
 def peer_relation_changed() -> None:
-    """Invalidate SMTP relay configuration upon peer relation changes."""
-    reactive.clear_flag("smtp-relay.configured")
+    """Invalidate Postfix relay configuration upon peer relation changes."""
+    reactive.clear_flag("postfix-relay.configured")
 
 
 @reactive.when_any(
@@ -64,17 +64,17 @@ def peer_relation_changed() -> None:
 )
 def config_changed_smtp_auth() -> None:
     """Invalidate auth configuration when SMTP auth settings have changed."""
-    reactive.clear_flag("smtp-relay.auth.configured")
+    reactive.clear_flag("postfix-relay.auth.configured")
 
 
-@reactive.when("smtp-relay.installed")
-@reactive.when_not("smtp-relay.auth.configured")
+@reactive.when("postfix-relay.installed")
+@reactive.when_not("postfix-relay.auth.configured")
 def configure_smtp_auth(
     dovecot_config: str = "/etc/dovecot/dovecot.conf", dovecot_users: str = "/etc/dovecot/users"
 ) -> None:
     """Ensure SMTP authentication is configured or disabled via Dovecot as per charm settings."""
-    reactive.clear_flag("smtp-relay.active")
-    reactive.clear_flag("smtp-relay.configured")
+    reactive.clear_flag("postfix-relay.active")
+    reactive.clear_flag("postfix-relay.configured")
     charm_state = State.from_charm(hookenv.config())
 
     status.maintenance("Setting up SMTP authentication (dovecot)")
@@ -93,7 +93,7 @@ def configure_smtp_auth(
         host.service_stop("dovecot")
         # XXX: mask systemd service disable
 
-        reactive.set_flag("smtp-relay.auth.configured")
+        reactive.set_flag("postfix-relay.auth.configured")
         return
 
     status.maintenance("Opening additional ports for SMTP authentication")
@@ -106,7 +106,7 @@ def configure_smtp_auth(
     # Ensure service is running.
     host.service_start("dovecot")
 
-    reactive.set_flag("smtp-relay.auth.configured")
+    reactive.set_flag("postfix-relay.auth.configured")
 
 
 @reactive.when_any(
@@ -140,27 +140,27 @@ def configure_smtp_auth(
     "config.changed.virtual_alias_maps_type",
 )
 def config_changed() -> None:
-    """Clear configured flag upon config changes so SMTP relay is reconfigured."""
-    reactive.clear_flag("smtp-relay.configured")
+    """Clear configured flag upon config changes so Postfix relay is reconfigured."""
+    reactive.clear_flag("postfix-relay.configured")
 
 
 @reactive.hook("milter-relation-joined", "milter-relation-changed")
 def milter_relation_changed() -> None:
-    """Invalidate SMTP relay configuration when milter relation changes or joins."""
-    reactive.clear_flag("smtp-relay.configured")
+    """Invalidate Postfix relay configuration when milter relation changes or joins."""
+    reactive.clear_flag("postfix-relay.configured")
 
 
-@reactive.when("smtp-relay.installed")
-@reactive.when("smtp-relay.auth.configured")
-@reactive.when_not("smtp-relay.configured")
+@reactive.when("postfix-relay.installed")
+@reactive.when("postfix-relay.auth.configured")
+@reactive.when_not("postfix-relay.configured")
 def configure_smtp_relay(
     postfix_conf_dir: str = "/etc/postfix", tls_dh_params: str = "/etc/ssl/private/dhparams.pem"
 ) -> None:
-    """Generate and apply SMTP relay (Postfix) configuration."""
-    reactive.clear_flag("smtp-relay.active")
+    """Generate and apply Postfix relay (Postfix) configuration."""
+    reactive.clear_flag("postfix-relay.active")
     charm_state = State.from_charm(hookenv.config())
 
-    status.maintenance("Setting up SMTP relay")
+    status.maintenance("Setting up Postfix relay")
 
     tls_config_paths = get_tls_config_paths(tls_dh_params)
     fqdn = _generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
@@ -205,7 +205,7 @@ def configure_smtp_relay(
     # Ensure service is running.
     host.service_start("postfix")
 
-    reactive.set_flag("smtp-relay.configured")
+    reactive.set_flag("postfix-relay.configured")
 
 
 @reactive.when_any(
@@ -214,21 +214,21 @@ def configure_smtp_relay(
 )
 def config_changed_policyd_spf() -> None:
     """Clear SPF policy‑configured flag when SPF‑related config options change."""
-    reactive.clear_flag("smtp-relay.policyd-spf.configured")
+    reactive.clear_flag("postfix-relay.policyd-spf.configured")
 
 
-@reactive.when("smtp-relay.installed")
-@reactive.when_not("smtp-relay.policyd-spf.configured")
+@reactive.when("postfix-relay.installed")
+@reactive.when_not("postfix-relay.policyd-spf.configured")
 def configure_policyd_spf(
     policyd_spf_config: str = "/etc/postfix-policyd-spf-python/policyd-spf.conf",
 ) -> None:
     """Configure Postfix SPF policy server (policyd-spf) based on charm state and configuration."""
-    reactive.clear_flag("smtp-relay.active")
+    reactive.clear_flag("postfix-relay.active")
     charm_state = State.from_charm(hookenv.config())
 
     if not charm_state.enable_spf:
         status.maintenance("Postfix policy server for SPF checking (policyd-spf) disabled")
-        reactive.set_flag("smtp-relay.policyd-spf.configured")
+        reactive.set_flag("postfix-relay.policyd-spf.configured")
         return
 
     status.maintenance("Setting up Postfix policy server for SPF checking (policyd-spf)")
@@ -236,7 +236,7 @@ def configure_policyd_spf(
     contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
     utils.write_file(contents, policyd_spf_config)
 
-    reactive.set_flag("smtp-relay.policyd-spf.configured")
+    reactive.set_flag("postfix-relay.policyd-spf.configured")
 
 
 def _generate_fqdn(domain: str) -> str:
@@ -264,8 +264,8 @@ def _get_milters() -> str:
     peers = _get_peers()
     index = peers.index(hookenv.local_unit())
     # We want to ensure multiple applications related to the same set
-    # of milters are better spread across them. e.g. smtp-relay-A with
-    # 2 units, smtp-relay-B also with 2 units, but dkim-signing with 5
+    # of milters are better spread across them. e.g. postfix-relay-A with
+    # 2 units, postfix-relay-B also with 2 units, but dkim-signing with 5
     # units. We don't want only the first 2 dkim-signing units to be
     # used.
     offset = index + _calculate_offset(hookenv.application_name())
@@ -286,8 +286,8 @@ def _get_milters() -> str:
     return " ".join(result)
 
 
-@reactive.when("smtp-relay.configured")
-@reactive.when_not("smtp-relay.active")
+@reactive.when("postfix-relay.configured")
+@reactive.when_not("postfix-relay.active")
 def set_active(version_file: str = "version") -> None:
     """Set the charm's status to active, including version and configuration details."""
     revision = ""
@@ -308,7 +308,7 @@ def set_active(version_file: str = "version") -> None:
     users_hash = ""
 
     status.active(f"Ready{postfix_cf_hash}{users_hash}{revision}")
-    reactive.set_flag("smtp-relay.active")
+    reactive.set_flag("postfix-relay.active")
 
 
 def _update_aliases(admin_email: str | None, aliases_path: str = "/etc/aliases") -> None:

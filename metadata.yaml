@@ -1,14 +1,14 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: smtp-relay
-display-name: SMTP Relay
-summary: SMTP Relay
+name: postfix-relay
+display-name: Postfix relay
+summary: Postfix relay
 maintainers:
   - https://launchpad.net/~canonical-is-devops
-docs: https://discourse.charmhub.io/t/smtp-relay-documentation-overview/16137
-issues: https://github.com/canonical/smtp-relay-operator/issues
-source: https://github.com/canonical/smtp-relay-operator
+docs: https://discourse.charmhub.io/t/postfix-relay-documentation-overview/16137
+issues: https://github.com/canonical/postfix-relay-operator/issues
+source: https://github.com/canonical/postfix-relay-operator
 description: |
   Installs an SMTP server and configures it to allow SMTP relaying for
   specific user, hosts, or networks.
@@ -20,7 +20,7 @@ series:
   - jammy
 peers:
   peer:
-    interface: smtp-relay-peer
+    interface: postfix-relay-peer
 provides:
   metrics:
     interface: postfix-metrics

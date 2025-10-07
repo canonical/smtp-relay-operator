@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""SMTP Relay charm unit tests."""
+"""Postfix relay charm unit tests."""
 import os
 import shutil
 import sys
@@ -61,12 +61,12 @@ class TestCharm(unittest.TestCase):
         patcher = mock.patch("charmhelpers.core.hookenv.application_name")
         self.mock_application_name = patcher.start()
         self.addCleanup(patcher.stop)
-        self.mock_application_name.return_value = "smtp-relay"
+        self.mock_application_name.return_value = "postfix-relay"
 
         patcher = mock.patch("charmhelpers.core.hookenv.local_unit")
         self.mock_local_unit = patcher.start()
         self.addCleanup(patcher.stop)
-        self.mock_local_unit.return_value = "smtp-relay/0"
+        self.mock_local_unit.return_value = "postfix-relay/0"
 
         patcher = mock.patch("charmhelpers.core.hookenv.config")
         self.mock_config = patcher.start()
@@ -142,10 +142,10 @@ class TestCharm(unittest.TestCase):
         status.maintenance.assert_called()
 
         want = [
-            mock.call("smtp-relay.active"),
-            mock.call("smtp-relay.auth.configured"),
-            mock.call("smtp-relay.configured"),
-            mock.call("smtp-relay.installed"),
+            mock.call("postfix-relay.active"),
+            mock.call("postfix-relay.auth.configured"),
+            mock.call("postfix-relay.configured"),
+            mock.call("postfix-relay.installed"),
         ]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
@@ -153,28 +153,28 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charms.reactive.clear_flag")
     def test_hook_relation_peers_flags(self, clear_flag):
         charm.peer_relation_changed()
-        want = [mock.call("smtp-relay.configured")]
+        want = [mock.call("postfix-relay.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
     @mock.patch("charms.reactive.clear_flag")
     def test_config_changed(self, clear_flag):
         charm.config_changed()
-        want = [mock.call("smtp-relay.configured")]
+        want = [mock.call("postfix-relay.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
     @mock.patch("charms.reactive.clear_flag")
     def test_config_changed_smtp_auth(self, clear_flag):
         charm.config_changed_smtp_auth()
-        want = [mock.call("smtp-relay.auth.configured")]
+        want = [mock.call("postfix-relay.auth.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
     @mock.patch("charms.reactive.clear_flag")
     def test_config_changed_policyd_spf(self, clear_flag):
         charm.config_changed_policyd_spf()
-        want = [mock.call("smtp-relay.policyd-spf.configured")]
+        want = [mock.call("postfix-relay.policyd-spf.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -256,11 +256,11 @@ class TestCharm(unittest.TestCase):
         self.mock_config.return_value["enable_smtp_auth"] = True
         charm.configure_smtp_auth()
 
-        want = [mock.call("smtp-relay.auth.configured")]
+        want = [mock.call("postfix-relay.auth.configured")]
         set_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(set_flag.mock_calls))
 
-        want = [mock.call("smtp-relay.active"), mock.call("smtp-relay.configured")]
+        want = [mock.call("postfix-relay.active"), mock.call("postfix-relay.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -272,11 +272,11 @@ class TestCharm(unittest.TestCase):
         self.mock_config.return_value["enable_smtp_auth"] = False
         charm.configure_smtp_auth(dovecot_config)
 
-        want = [mock.call("smtp-relay.auth.configured")]
+        want = [mock.call("postfix-relay.auth.configured")]
         set_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(set_flag.mock_calls))
 
-        want = [mock.call("smtp-relay.active"), mock.call("smtp-relay.configured")]
+        want = [mock.call("postfix-relay.active"), mock.call("postfix-relay.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -312,7 +312,7 @@ class TestCharm(unittest.TestCase):
     def test_hook_relation_milter_flags(self, set_flag, clear_flag):
         charm.milter_relation_changed()
 
-        want = [mock.call("smtp-relay.configured")]
+        want = [mock.call("postfix-relay.configured")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -1192,11 +1192,11 @@ class TestCharm(unittest.TestCase):
             got = f.read()
         self.assertEqual(want, got)
 
-        want = [mock.call("smtp-relay.policyd-spf.configured")]  # type: ignore[assignment]
+        want = [mock.call("postfix-relay.policyd-spf.configured")]  # type: ignore[assignment]
         set_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
-        want = [mock.call("smtp-relay.active")]  # type: ignore[assignment]
+        want = [mock.call("postfix-relay.active")]  # type: ignore[assignment]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -1214,11 +1214,11 @@ class TestCharm(unittest.TestCase):
         charm.configure_policyd_spf(policyd_spf_config)
         self.assertFalse(os.path.exists(policyd_spf_config))
 
-        want = [mock.call("smtp-relay.policyd-spf.configured")]
+        want = [mock.call("postfix-relay.policyd-spf.configured")]
         set_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
-        want = [mock.call("smtp-relay.active")]
+        want = [mock.call("postfix-relay.active")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
@@ -1291,32 +1291,32 @@ class TestCharm(unittest.TestCase):
         get_milters.return_value = ""
         charm.configure_smtp_relay(self.tmpdir)
 
-        want = [mock.call("smtp-relay.configured")]
+        want = [mock.call("postfix-relay.configured")]
         set_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(set_flag.mock_calls))
 
-        want = [mock.call("smtp-relay.active")]
+        want = [mock.call("postfix-relay.active")]
         clear_flag.assert_has_calls(want, any_order=True)
         self.assertEqual(len(want), len(clear_flag.mock_calls))
 
     def test__calculate_offset(self):
-        self.assertEqual(33, charm._calculate_offset("smtp-relay"))
+        self.assertEqual(33, charm._calculate_offset("postfix-relay"))
 
-        self.assertEqual(153, charm._calculate_offset("smtp-relay-canonical"))
-        self.assertEqual(146, charm._calculate_offset("smtp-relay-internal"))
+        self.assertEqual(153, charm._calculate_offset("postfix-relay-canonical"))
+        self.assertEqual(146, charm._calculate_offset("postfix-relay-internal"))
 
-        self.assertEqual(8607, charm._calculate_offset("smtp-relay", 4))
+        self.assertEqual(8607, charm._calculate_offset("postfix-relay", 4))
 
     def test__generate_fqdn(self):
-        want = "smtp-relay-0.mydomain.local"
+        want = "postfix-relay-0.mydomain.local"
         self.assertEqual(want, charm._generate_fqdn("mydomain.local"))
 
     @mock.patch("charmhelpers.core.hookenv.related_units")
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     def test__get_peers(self, relation_ids, related_units):
         relation_ids.return_value = ["peer:53"]
-        related_units.return_value = ["smtp-relay/3", "smtp-relay/4"]
-        want = ["smtp-relay/0", "smtp-relay/3", "smtp-relay/4"]
+        related_units.return_value = ["postfix-relay/3", "postfix-relay/4"]
+        want = ["postfix-relay/0", "postfix-relay/3", "postfix-relay/4"]
         self.assertEqual(want, charm._get_peers())
         relation_ids.assert_called_with("peer")
         related_units.assert_called_with("peer:53")
@@ -1325,7 +1325,7 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     def test__get_peers_no_peer_relation(self, relation_ids, related_units):
         relation_ids.return_value = []
-        want = ["smtp-relay/0"]
+        want = ["postfix-relay/0"]
         self.assertEqual(want, charm._get_peers())
         relation_ids.assert_called_with("peer")
         related_units.assert_not_called()
@@ -1335,7 +1335,7 @@ class TestCharm(unittest.TestCase):
     def test__get_peers_no_peers(self, relation_ids, related_units):
         relation_ids.return_value = ["peer:53"]
         related_units.return_value = []
-        want = ["smtp-relay/0"]
+        want = ["postfix-relay/0"]
         self.assertEqual(want, charm._get_peers())
         relation_ids.assert_called_with("peer")
         related_units.assert_called_with("peer:53")
@@ -1344,8 +1344,8 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     def test__get_peers_single_peer(self, relation_ids, related_units):
         relation_ids.return_value = ["peer:53"]
-        related_units.return_value = ["smtp-relay/1"]
-        want = ["smtp-relay/0", "smtp-relay/1"]
+        related_units.return_value = ["postfix-relay/1"]
+        want = ["postfix-relay/0", "postfix-relay/1"]
         self.assertEqual(want, charm._get_peers())
         relation_ids.assert_called_with("peer")
         related_units.assert_called_with("peer:53")
@@ -1354,8 +1354,8 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     def test__get_peers_single_sorted(self, relation_ids, related_units):
         relation_ids.return_value = ["peer:53"]
-        related_units.return_value = ["smtp-relay/4", "smtp-relay/3", "smtp-relay/2"]
-        want = ["smtp-relay/0", "smtp-relay/2", "smtp-relay/3", "smtp-relay/4"]
+        related_units.return_value = ["postfix-relay/4", "postfix-relay/3", "postfix-relay/2"]
+        want = ["postfix-relay/0", "postfix-relay/2", "postfix-relay/3", "postfix-relay/4"]
         self.assertEqual(want, charm._get_peers())
         relation_ids.assert_called_with("peer")
         related_units.assert_called_with("peer:53")
@@ -1365,8 +1365,8 @@ class TestCharm(unittest.TestCase):
     def test__get_peers_duplicates(self, relation_ids, related_units):
         # Duplicate, shouldn't happen but just in case.
         relation_ids.return_value = ["peer:53"]
-        related_units.return_value = ["smtp-relay/0", "smtp-relay/4"]
-        want = ["smtp-relay/0", "smtp-relay/4"]
+        related_units.return_value = ["postfix-relay/0", "postfix-relay/4"]
+        want = ["postfix-relay/0", "postfix-relay/4"]
         self.assertEqual(want, charm._get_peers())
 
     @mock.patch("charmhelpers.core.hookenv.related_units")
@@ -1374,7 +1374,7 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     @mock.patch("reactive.charm._get_peers")
     def test__get_milters(self, get_peers, relation_ids, relation_get, related_units):
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1"]
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1"]
         relation_ids.return_value = ["milter:54"]
         related_units.return_value = ["smtp-dkim-signing-charm/1", "smtp-dkim-signing-charm/4"]
         relation_get.return_value = {
@@ -1392,7 +1392,7 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     @mock.patch("reactive.charm._get_peers")
     def test__get_milters_multiple(self, get_peers, relation_ids, relation_get, related_units):
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1"]
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1"]
         relation_ids.return_value = ["milter:54", "milter:55"]
         related_units.return_value = ["smtp-dkim-signing-charm/1", "smtp-dkim-signing-charm/4"]
         relation_get.return_value = {
@@ -1421,7 +1421,7 @@ class TestCharm(unittest.TestCase):
         self, get_peers, calculate_offset, relation_ids, relation_get, related_units
     ):
         calculate_offset.return_value = 1
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1"]
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1"]
         relation_ids.return_value = ["milter:54"]
         related_units.return_value = [
             "smtp-dkim-signing-charm/1",
@@ -1436,8 +1436,8 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     @mock.patch("reactive.charm._get_peers")
     def test__get_milters_map_second(self, get_peers, relation_ids, relation_get, related_units):
-        self.mock_local_unit.return_value = "smtp-relay/1"
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1"]
+        self.mock_local_unit.return_value = "postfix-relay/1"
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1"]
         relation_ids.return_value = ["milter:54"]
         related_units.return_value = ["smtp-dkim-signing-charm/1", "smtp-dkim-signing-charm/4"]
         charm._get_milters()
@@ -1450,8 +1450,8 @@ class TestCharm(unittest.TestCase):
     def test__get_milters_map_wrap_around(
         self, get_peers, relation_ids, relation_get, related_units
     ):
-        self.mock_local_unit.return_value = "smtp-relay/2"
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1", "smtp-relay/2"]
+        self.mock_local_unit.return_value = "postfix-relay/2"
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1", "postfix-relay/2"]
         relation_ids.return_value = ["milter:54"]
         related_units.return_value = ["smtp-dkim-signing-charm/1", "smtp-dkim-signing-charm/4"]
         charm._get_milters()
@@ -1464,13 +1464,13 @@ class TestCharm(unittest.TestCase):
     def test__get_milters_map_wrap_around_twice(
         self, get_peers, relation_ids, relation_get, related_units
     ):
-        self.mock_local_unit.return_value = "smtp-relay/4"
+        self.mock_local_unit.return_value = "postfix-relay/4"
         get_peers.return_value = [
-            "smtp-relay/0",
-            "smtp-relay/1",
-            "smtp-relay/2",
-            "smtp-relay/3",
-            "smtp-relay/4",
+            "postfix-relay/0",
+            "postfix-relay/1",
+            "postfix-relay/2",
+            "postfix-relay/3",
+            "postfix-relay/4",
         ]
         relation_ids.return_value = ["milter:54"]
         related_units.return_value = ["smtp-dkim-signing-charm/1", "smtp-dkim-signing-charm/4"]
@@ -1484,8 +1484,8 @@ class TestCharm(unittest.TestCase):
     def test__get_milters_no_map_milter_units(
         self, get_peers, relation_ids, relation_get, related_units
     ):
-        self.mock_local_unit.return_value = "smtp-relay/1"
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1"]
+        self.mock_local_unit.return_value = "postfix-relay/1"
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1"]
         relation_ids.return_value = ["milter:54"]
         related_units.return_value = []
         want = ""
@@ -1496,7 +1496,7 @@ class TestCharm(unittest.TestCase):
     @mock.patch("charmhelpers.core.hookenv.relation_ids")
     @mock.patch("reactive.charm._get_peers")
     def test__get_milters_no_milter_relation(self, get_peers, relation_ids, related_units):
-        get_peers.return_value = ["smtp-relay/0", "smtp-relay/1"]
+        get_peers.return_value = ["postfix-relay/0", "postfix-relay/1"]
         want = ""
         self.assertEqual(want, charm._get_milters())
         relation_ids.assert_called_with("milter")
@@ -1505,7 +1505,7 @@ class TestCharm(unittest.TestCase):
     def test_set_active(self, set_flag):
         charm.set_active()
         status.active.assert_called_once_with("Ready")
-        set_flag.assert_called_once_with("smtp-relay.active")
+        set_flag.assert_called_once_with("postfix-relay.active")
 
     @mock.patch("charms.reactive.set_flag")
     def test_set_active_revno(self, set_flag):

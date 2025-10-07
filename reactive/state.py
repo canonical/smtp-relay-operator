@@ -160,7 +160,7 @@ class State(BaseModel):  # pylint: disable=too-few-public-methods,too-many-insta
         relay_domains: List of destination domains to relay mail to.
         restrict_recipients: Access map for restrictions by recipient address or domain.
         restrict_senders: Access map for restrictions by sender address or domain.
-        relay_host: SMTP relay host to forward mail to.
+        relay_host: Postfix relay host to forward mail to.
         relay_recipient_maps: Map that alias mail addresses or domains to
             addresses.
         restrict_sender_access: List of domains, addresses or hosts to restrict relay from.
