@@ -117,14 +117,11 @@ class SMTPRelayCharm(ops.CharmBase):
         contents = construct_dovecot_config_file_content(
             dovecot_users, charm_state.enable_smtp_auth
         )
-        changed = utils.write_file(contents, dovecot_config)
+        utils.write_file(contents, dovecot_config)
 
         if charm_state.smtp_auth_users:
             contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
-            changed = (
-                utils.write_file(contents, dovecot_users, perms=0o640, group=DOVECOT_NAME)
-                or changed
-            )
+            utils.write_file(contents, dovecot_users, perms=0o640, group=DOVECOT_NAME)
 
         if not charm_state.enable_smtp_auth:
             self.unit.status = ops.MaintenanceStatus(
@@ -145,9 +142,7 @@ class SMTPRelayCharm(ops.CharmBase):
             systemd.service_resume(DOVECOT_NAME)
             return
 
-        if changed:
-            self.unit.status = ops.MaintenanceStatus("Restarting Dovecot due to config changes")
-            systemd.service_reload(DOVECOT_NAME)
+        systemd.service_reload(DOVECOT_NAME)
 
     def _generate_fqdn(self, domain: str) -> str:
         return f"{self.unit.name.replace('/', '-')}.{domain}"
@@ -177,12 +172,12 @@ class SMTPRelayCharm(ops.CharmBase):
             milters=milters,
         )
         contents = utils.render_jinja2_template(context, "templates/postfix_main_cf.tmpl")
-        changed = utils.write_file(contents, Path(postfix_conf_dir) / "main.cf")
+        utils.write_file(contents, Path(postfix_conf_dir) / "main.cf")
         contents = utils.render_jinja2_template(context, "templates/postfix_master_cf.tmpl")
-        changed = utils.write_file(contents, Path(postfix_conf_dir) / "master.cf") or changed
+        utils.write_file(contents, Path(postfix_conf_dir) / "master.cf")
 
         postfix_maps = build_postfix_maps(postfix_conf_dir, charm_state)
-        changed = self._apply_postfix_maps(list(postfix_maps.values())) or changed
+        self._apply_postfix_maps(list(postfix_maps.values()))
 
         self._update_aliases(charm_state.admin_email)
 
@@ -192,13 +187,10 @@ class SMTPRelayCharm(ops.CharmBase):
             systemd.service_resume(POSTFIX_NAME)
             return
 
-        if changed:
-            self.unit.status = ops.MaintenanceStatus("Reloading postfix due to config changes")
-            systemd.service_reload(POSTFIX_NAME)
+        systemd.service_reload(POSTFIX_NAME)
 
     @staticmethod
-    def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> bool:
-        any_changed = False
+    def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> None:
         for postfix_map in postfix_maps:
             changed = False
             if not postfix_map.path.is_file():
@@ -207,9 +199,6 @@ class SMTPRelayCharm(ops.CharmBase):
             changed = utils.write_file(postfix_map.content, str(postfix_map.path)) or changed
             if changed and postfix_map.type == "hash":
                 subprocess.check_call(["postmap", postfix_map.source])  # nosec
-
-            any_changed = any_changed or changed
-        return changed
 
     @staticmethod
     def _calculate_offset(seed: str, length: int = 2) -> int:

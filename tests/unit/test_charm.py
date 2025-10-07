@@ -175,23 +175,17 @@ class TestReconcile:
 
             assert out.unit_status == ops.testing.ActiveStatus()
 
-        @pytest.mark.parametrize(
-            ("changed"),
-            [pytest.param(True, id="config change"), pytest.param(False, id="no config change")],
-        )
         @patch("charm.construct_dovecot_user_file_content")
         @patch("charm.construct_dovecot_config_file_content")
         @patch("charm.systemd")
         @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
         @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock())
-        @patch("charm.utils.write_file")
+        @patch("charm.utils.write_file", new=Mock())
         def test_with_auth_dovecot_running(
             self,
-            mock_write_file: Mock,
             mock_systemd: "systemd",
             mock_construct_dovecot_config_file_content: Mock,
             mock_construct_dovecot_user_file_content: Mock,
-            changed: bool,
             context: Context[SMTPRelayCharm],
         ) -> None:
             """
@@ -199,7 +193,6 @@ class TestReconcile:
             act: Run the config-changed event hook on the charm.
             assert: Reloads the dovecot service only if the configuration file was modified.
             """
-            mock_write_file.return_value = changed
 
             charm_state = State(config={"enable_smtp_auth": True}, leader=True)
             mock_systemd.service_running.return_value = True
@@ -211,12 +204,7 @@ class TestReconcile:
             )
             assert {TCPPort(465), TCPPort(587)}.issubset(out.opened_ports)
 
-            if changed:
-                mock_systemd.service_reload.assert_called_with("dovecot")
-            else:
-                mock_systemd.service_reload.assert_not_called()
-            mock_systemd.service_resume.assert_not_called()
-            mock_systemd.service_pause.assert_not_called()
+            mock_systemd.service_reload.assert_called_with("dovecot")
 
             mock_construct_dovecot_user_file_content.assert_not_called()
 
@@ -356,18 +344,11 @@ class TestReconcile:
                 pytest.param(False, id="service-not-running"),
             ],
         )
-        @pytest.mark.parametrize(
-            "changed",
-            [
-                pytest.param(True, id="change"),
-                pytest.param(False, id="no-change"),
-            ],
-        )
         @patch("charm.socket.gethostname", Mock(return_value="hostname"))
         @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
         @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
         @patch("charm.SMTPRelayCharm._update_aliases", Mock())
-        @patch("charm.SMTPRelayCharm._apply_postfix_maps")
+        @patch("charm.SMTPRelayCharm._apply_postfix_maps", new=Mock())
         @patch("charm.construct_postfix_config_params", Mock(return_value={}))
         @patch("charm.systemd")
         @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
@@ -376,8 +357,6 @@ class TestReconcile:
         def test_service_control(
             self,
             mock_systemd: "systemd",
-            mock_apply_postfix_maps: Mock,
-            changed,
             service_running: bool,
             context: Context[SMTPRelayCharm],
         ) -> None:
@@ -389,7 +368,6 @@ class TestReconcile:
                 if it is running and config is unchanged.
             """
             charm_state = State(config={}, leader=True)
-            mock_apply_postfix_maps.return_value = changed
             mock_systemd.service_running.return_value = service_running
 
             out = context.run(context.on.config_changed(), charm_state)
@@ -397,12 +375,9 @@ class TestReconcile:
             if not service_running:
                 mock_systemd.service_resume.assert_called_once_with("postfix")
                 mock_systemd.service_reload.assert_not_called()
-            elif changed:
+            else:
                 mock_systemd.service_reload.assert_called_once_with("postfix")
                 mock_systemd.service_resume.assert_not_called()
-            else:
-                mock_systemd.service_resume.assert_not_called()
-                mock_systemd.service_reload.assert_not_called()
 
             assert out.unit_status == ops.testing.ActiveStatus()
             assert TCPPort(25) in out.opened_ports
