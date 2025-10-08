@@ -8,10 +8,10 @@
 import base64
 import hashlib
 import logging
+import os
 import smtplib
 import socket
 import time
-import os
 
 import jubilant
 import pytest
@@ -21,7 +21,7 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
-def sha512(password: str, salt: bytes = None) -> str:
+def sha512(password: str, salt: bytes | None = None) -> str:
     if salt is None:
         salt = os.urandom(8)
     digest = hashlib.sha512(password.encode("utf-8") + salt).digest()
