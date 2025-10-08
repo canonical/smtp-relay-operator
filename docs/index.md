@@ -1,7 +1,7 @@
 # Postfix relay operator
 
 A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
-deploying and managing a postfix Postfix relay server on bare metal. SMTP
+deploying and managing a SMTP relay server on bare metal. SMTP
 is an Internet standard communication protocol for email transmission.
 
 Features include (not limited to):
