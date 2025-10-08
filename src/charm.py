@@ -98,6 +98,7 @@ class PostfixRelayCharm(ops.CharmBase):
         try:
             charm_state = State.from_charm(self.config)
         except ConfigurationError:
+            logger.exception("Error validating the charm configuration.")
             self.unit.status = ops.BlockedStatus("Invalid config")
             return
 
@@ -120,17 +121,13 @@ class PostfixRelayCharm(ops.CharmBase):
             utils.write_file(contents, DOVECOT_USERS_FILEPATH, perms=0o640, group=DOVECOT_NAME)
 
         if not charm_state.enable_smtp_auth:
-            self.unit.status = ops.MaintenanceStatus(
-                "SMTP authentication not enabled, ensuring ports are closed"
-            )
+            logger.info("SMTP authentication not enabled, ensuring ports are closed")
             for port in DOVECOT_PORTS:
                 self.unit.close_port(port.protocol, port.port)
             systemd.service_pause(DOVECOT_NAME)
             return
 
-        self.unit.status = ops.MaintenanceStatus(
-            "Opening additional ports for SMTP authentication"
-        )
+        logger.info("Opening additional ports for SMTP authentication")
         for port in DOVECOT_PORTS:
             self.unit.open_port(port.protocol, port.port)
 
@@ -144,8 +141,8 @@ class PostfixRelayCharm(ops.CharmBase):
         return f"{self.unit.name.replace('/', '-')}.{domain}"
 
     def _configure_relay(self, charm_state: State) -> None:
-        """Generate and apply SMTP relay (Postfix) configuration."""
-        self.unit.status = ops.MaintenanceStatus("Setting up SMTP relay")
+        """Generate and apply Postfix configuration."""
+        self.unit.status = ops.MaintenanceStatus("Setting up Postfix relay")
 
         tls_config_paths = get_tls_config_paths(TLS_DH_PARAMS_FILEPATH)
         fqdn = self._generate_fqdn(charm_state.domain) if charm_state.domain else socket.getfqdn()
@@ -170,6 +167,7 @@ class PostfixRelayCharm(ops.CharmBase):
         postfix_maps = build_postfix_maps(POSTFIX_CONF_DIRPATH, charm_state)
         self._apply_postfix_maps(list(postfix_maps.values()))
 
+        logger.info("Updating aliases")
         self._update_aliases(charm_state.admin_email)
 
         self.unit.open_port(POSTFIX_PORT.protocol, POSTFIX_PORT.port)
@@ -182,6 +180,7 @@ class PostfixRelayCharm(ops.CharmBase):
 
     @staticmethod
     def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> None:
+        logger.info("Applying postfix maps")
         for postfix_map in postfix_maps:
             changed = utils.write_file(postfix_map.content, postfix_map.path)
             if changed and postfix_map.type == PostfixLookupTableType.HASH:
@@ -263,15 +262,12 @@ class PostfixRelayCharm(ops.CharmBase):
 
     def _configure_policyd_spf(self, charm_state: State) -> None:
         """Configure Postfix SPF policy server (policyd-spf) based on charm state."""
+        self.unit.status = ops.MaintenanceStatus("Configuring Postfix policy server")
         if not charm_state.enable_spf:
-            self.unit.status = ops.MaintenanceStatus(
-                "Postfix policy server for SPF checking (policyd-spf) disabled"
-            )
+            logger.info("Postfix policy server for SPF checking (policyd-spf) disabled")
             return
 
-        self.unit.status = ops.MaintenanceStatus(
-            "Setting up Postfix policy server for SPF checking (policyd-spf)"
-        )
+        logger.info("Setting up Postfix policy server for SPF checking (policyd-spf)")
 
         contents = construct_policyd_spf_config_file_content(charm_state.spf_skip_addresses)
         utils.write_file(contents, POLICYD_SPF_FILEPATH)
