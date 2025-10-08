@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Unit tests for the SMTP Relay charm."""
+"""Unit tests for the Postfix Relay charm."""
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -34,7 +34,7 @@ DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
 @patch("charm.apt.add_package")
 def test_install(
     mock_add_package: Mock,
-    context: Context[charm.SMTPRelayCharm],
+    context: Context[charm.PostfixRelayCharm],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -61,7 +61,7 @@ def test_install(
 
 
 @patch("charm.State.from_charm", Mock(side_effect=ConfigurationError("Invalid configuration")))
-def test_invalid_config(context: Context[charm.SMTPRelayCharm]) -> None:
+def test_invalid_config(context: Context[charm.PostfixRelayCharm]) -> None:
     """
     arrange: Invalid charm config.
     act: Run the config-changed event hook on the charm.
@@ -75,8 +75,8 @@ def test_invalid_config(context: Context[charm.SMTPRelayCharm]) -> None:
 
 
 @patch("charm.subprocess.check_call", Mock())
-class TestConfigureSMTPAuth:
-    """Unit tests for _configure_smtp_auth."""
+class TestConfigureAuth:
+    """Unit tests for _configure_auth."""
 
     @pytest.mark.parametrize(
         "smtp_auth_users",
@@ -89,7 +89,7 @@ class TestConfigureSMTPAuth:
         mock_write_file: Mock,
         mock_systemd: "systemd",
         smtp_auth_users: str,
-        context: Context[charm.SMTPRelayCharm],
+        context: Context[charm.PostfixRelayCharm],
     ) -> None:
         """
         arrange: Charm with SMTP auth disabled.
@@ -135,7 +135,7 @@ class TestConfigureSMTPAuth:
         mock_write_file: Mock,
         mock_systemd: "systemd",
         dovecot_running: bool,
-        context: Context[charm.SMTPRelayCharm],
+        context: Context[charm.PostfixRelayCharm],
     ) -> None:
         """
         arrange: Charm with SMTP auth enabled and dovecot not running.
@@ -176,12 +176,12 @@ class TestConfigureSMTPAuth:
 @patch("charm.systemd")
 @patch("charm.utils.write_file", Mock())
 @patch("charm.subprocess.check_call")
-def test_configure_smtp_relay(
+def test_configure_relay(
     mock_subprocess_check_call: Mock,
     mock_systemd: "systemd",
     mock_construct_postfix_config_params: Mock,
     postfix_running: bool,
-    context: Context[charm.SMTPRelayCharm],
+    context: Context[charm.PostfixRelayCharm],
 ) -> None:
     """
     arrange: Configure the charm with a specific domain.
@@ -215,8 +215,8 @@ def test_configure_smtp_relay(
             ops.testing.Relation(
                 "milter",
                 remote_units_data={
-                    0: {"ingress-address": "10.0.1.10"},
-                    1: {},
+                    0: {},
+                    1: {"ingress-address": "10.0.1.10"},
                 },
             ),
             ops.testing.PeerRelation(
@@ -239,9 +239,9 @@ def test_configure_smtp_relay(
         tls_cert_path=DEFAULT_TLS_CONFIG_PATHS.tls_cert,
         tls_key_path=DEFAULT_TLS_CONFIG_PATHS.tls_key,
         tls_cert_key_path=DEFAULT_TLS_CONFIG_PATHS.tls_cert_key,
-        fqdn="smtp-relay-0.example-domain.com",
+        fqdn="postfix-relay-0.example-domain.com",
         hostname=ANY,
-        milters="inet:10.0.0.10:8892 inet:10.0.1.11:9999",
+        milters="inet:10.0.0.11:9999 inet:10.0.1.10:8892",
     )
 
     mock_subprocess_check_call.assert_has_calls(
@@ -288,7 +288,7 @@ class TestUpdateAliases:
         """
         mock_write_file.return_value = changed
 
-        charm.SMTPRelayCharm._update_aliases("admin@email.com")
+        charm.PostfixRelayCharm._update_aliases("admin@email.com")
         if changed:
             mock_check_call.assert_called_once_with(["newaliases"])
         else:
@@ -350,7 +350,7 @@ class TestUpdateAliases:
 
         monkeypatch.setattr(charm, "ALIASES_FILEPATH", aliases_path)
 
-        charm.SMTPRelayCharm._update_aliases(admin_email_address)
+        charm.PostfixRelayCharm._update_aliases(admin_email_address)
 
         if not admin_email_address:
             expected_content = "\n".join(
@@ -373,7 +373,7 @@ class TestUpdateAliases:
         non_existing_path = tmp_path / "aliases"
         monkeypatch.setattr(charm, "ALIASES_FILEPATH", non_existing_path)
 
-        charm.SMTPRelayCharm._update_aliases(None)
+        charm.PostfixRelayCharm._update_aliases(None)
 
         assert non_existing_path.is_file()
         assert non_existing_path.read_text() == "devnull:       /dev/null\n"
@@ -389,7 +389,7 @@ class TestUpdateAliases:
 def test_configure_policyd_spf(
     mock_write_file: Mock,
     enable_spf: bool,
-    context: Context[charm.SMTPRelayCharm],
+    context: Context[charm.PostfixRelayCharm],
 ) -> None:
     """
     arrange: Configure the charm state with SPF enabled or disabled.

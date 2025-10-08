@@ -2,14 +2,14 @@
 # See LICENSE file for licensing details.
 
 type: "charm"
-name: smtp-relay
-title: SMTP Relay
-summary: SMTP Relay
+name: postfix-relay
+title: Postfix Relay
+summary: Postfix Relay
 links:
-  issues: https://github.com/canonical/smtp-relay-operator/issues
-  source: https://github.com/canonical/smtp-relay-operator
+  issues: https://github.com/canonical/postfix-relay-operator/issues
+  source: https://github.com/canonical/postfix-relay-operator
   contact: https://launchpad.net/~canonical-is-devops
-  documentation: https://discourse.charmhub.io/t/smtp-relay-documentation-overview/16137
+  documentation: https://discourse.charmhub.io/t/postfix-relay-documentation-overview/16137
 
 description: |
   Installs an SMTP server and configures it to allow SMTP relaying for
@@ -41,7 +41,7 @@ charm-libs:
 
 peers:
   peer:
-    interface: smtp-relay-peer
+    interface: postfix-relay-peer
 provides:
   metrics:
     interface: postfix-metrics

@@ -1,3 +1,3 @@
-# How to redeploy SMTP Relay
+# How to redeploy Postfix relay
 
-The SMTP Relay charm is stateless and no specific migration procedure is needed. The charm can be redeployed by running `juju deploy`.
+The Postfix relay charm is stateless and no specific migration procedure is needed. The charm can be redeployed by running `juju deploy`.

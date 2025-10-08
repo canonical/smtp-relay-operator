@@ -41,14 +41,14 @@ def machine_ip_address_fixture() -> str:
 
 
 @pytest.mark.abort_on_fail
-def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
+def test_simple_relay(juju: jubilant.Juju, postfix_relay_app, machine_ip_address):
     """
-    arrange: Deploy smtp-relay charm with the testrelay.internal domain in relay domains.
+    arrange: Deploy postfix-relay charm with the testrelay.internal domain in relay domains.
     act: Send an email to an address with the testrelay.internal domain.
     assert: The email is correctly relayed to the mailcatcher local test smtp server.
     """
     status = juju.status()
-    unit = list(status.apps[smtp_relay_app].units.values())[0]
+    unit = list(status.apps[postfix_relay_app].units.values())[0]
     unit_ip = unit.public_address
 
     command_to_put_domain = (
@@ -56,9 +56,9 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
     )
     juju.exec(machine=unit.machine, command=command_to_put_domain)
 
-    juju.config(smtp_relay_app, {"relay_domains": "- testrelay.internal"})
+    juju.config(postfix_relay_app, {"relay_domains": "- testrelay.internal"})
     juju.wait(
-        lambda status: status.apps[smtp_relay_app].is_active,
+        lambda status: status.apps[postfix_relay_app].is_active,
         error=jubilant.any_blocked,
         timeout=6 * 60,
     )
@@ -86,14 +86,14 @@ def test_simple_relay(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
 
 
 @pytest.mark.abort_on_fail
-def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_address):
+def test_authentication(juju: jubilant.Juju, postfix_relay_app, machine_ip_address):
     """
-    arrange: Deploy smtp-relay charm with SMTP authentication enabled and a test user.
+    arrange: Deploy postfix-relay charm with SMTP authentication enabled and a test user.
     act: Attempt to send an email without authentication then with authentication.
     assert: Unauthenticated email sending is refused, authenticated email sending is accepted
     """
     status = juju.status()
-    unit = list(status.apps[smtp_relay_app].units.values())[0]
+    unit = list(status.apps[postfix_relay_app].units.values())[0]
     unit_ip = unit.public_address
     mailcatcher_url = "http://127.0.0.1:1080"
 
@@ -103,7 +103,7 @@ def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_add
     auth_users_yaml = yaml.dump([f"{username}:{hashed_password}"])
 
     juju.config(
-        smtp_relay_app,
+        postfix_relay_app,
         {
             "enable_smtp_auth": "true",
             "smtp_auth_users": auth_users_yaml,
@@ -113,7 +113,7 @@ def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_add
     )
 
     juju.wait(
-        lambda s: s.apps[smtp_relay_app].is_active,
+        lambda s: s.apps[postfix_relay_app].is_active,
         error=jubilant.any_blocked,
         timeout=5 * 60,
     )

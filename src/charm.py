@@ -3,7 +3,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""SMTP Relay charm."""
+"""Postfix Relay charm."""
 
 import hashlib
 import logging
@@ -69,11 +69,11 @@ MILTER_RELATION_NAME = "milter"
 PEER_RELATION_NAME = "peer"
 
 
-class SMTPRelayCharm(ops.CharmBase):
-    """SMTP Relay."""
+class PostfixRelayCharm(ops.CharmBase):
+    """Postfix Relay."""
 
     def __init__(self, *args: Any) -> None:
-        """SMTP Relay."""
+        """Postfix Relay."""
         super().__init__(*args)
 
         self.framework.observe(self.on.install, self._on_install)
@@ -101,12 +101,12 @@ class SMTPRelayCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Invalid config")
             return
 
-        self._configure_smtp_auth(charm_state)
-        self._configure_smtp_relay(charm_state)
+        self._configure_auth(charm_state)
+        self._configure_relay(charm_state)
         self._configure_policyd_spf(charm_state)
         self.unit.status = ops.ActiveStatus()
 
-    def _configure_smtp_auth(self, charm_state: State) -> None:
+    def _configure_auth(self, charm_state: State) -> None:
         """Ensure SMTP authentication is configured or disabled via Dovecot."""
         self.unit.status = ops.MaintenanceStatus("Setting up SMTP authentication (dovecot)")
 
@@ -143,7 +143,7 @@ class SMTPRelayCharm(ops.CharmBase):
     def _generate_fqdn(self, domain: str) -> str:
         return f"{self.unit.name.replace('/', '-')}.{domain}"
 
-    def _configure_smtp_relay(self, charm_state: State) -> None:
+    def _configure_relay(self, charm_state: State) -> None:
         """Generate and apply SMTP relay (Postfix) configuration."""
         self.unit.status = ops.MaintenanceStatus("Setting up SMTP relay")
 
@@ -212,8 +212,8 @@ class SMTPRelayCharm(ops.CharmBase):
         peers = self._get_peers()
         index = peers.index(self.unit.name)
         # We want to ensure multiple applications related to the same set
-        # of milters are better spread across them. e.g. smtp-relay-A with
-        # 2 units, smtp-relay-B also with 2 units, but dkim-signing with 5
+        # of milters are better spread across them. e.g. postfix-relay-A with
+        # 2 units, postfix-relay-B also with 2 units, but dkim-signing with 5
         # units. We don't want only the first 2 dkim-signing units to be
         # used.
         offset = index + self._calculate_offset(self.app.name)
@@ -278,4 +278,4 @@ class SMTPRelayCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(SMTPRelayCharm)
+    ops.main(PostfixRelayCharm)
