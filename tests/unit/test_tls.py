@@ -79,11 +79,10 @@ class TestGetTlsConfigPaths:
             pytest.param(True, id="with_dhparams"),
         ],
     )
-    @patch("tls.subprocess.call")
-    @patch("tls._get_autocert_cn", return_value="")
+    @patch("tls.subprocess.check_call")
+    @patch("tls._get_autocert_cn", Mock(return_value=""))
     def test_path_logic_without_autocert(
         self,
-        _mock_get_autocert_cn: Mock,
         mock_subprocess_call: Mock,
         dhparams_exist: bool,
         tmp_path: "Path",
@@ -110,13 +109,11 @@ class TestGetTlsConfigPaths:
         assert result.tls_key == "/etc/ssl/private/ssl-cert-snakeoil.key"
         assert result.tls_dh_params == str(dhparams_path)
 
-    @patch("tls.subprocess.call")
-    @patch("tls._get_autocert_cn", return_value="smtp.example.com")
-    @patch("tls.os.path.exists", return_value=False)
+    @patch("tls.subprocess.check_call")
+    @patch("tls._get_autocert_cn", Mock(return_value="smtp.example.com"))
+    @patch("tls.os.path.exists", Mock(return_value=False))
     def test_path_logic_with_autocert(
         self,
-        _mock_exists: Mock,
-        _mock_get_autocert_cn: Mock,
         mock_subprocess_call: Mock,
         tmp_path: "Path",
     ) -> None:

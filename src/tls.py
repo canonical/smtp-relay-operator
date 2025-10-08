@@ -58,7 +58,7 @@ def get_tls_config_paths(tls_dh_params: str) -> TLSConfigPaths:
         tls_key = f"/etc/postfix/ssl/{tls_cn}.key"
         tls_dh_params = "/etc/postfix/ssl/dhparams.pem"
     if not os.path.exists(tls_dh_params):
-        subprocess.call(["openssl", "dhparam", "-out", tls_dh_params, "2048"])  # nosec
+        subprocess.check_call(["openssl", "dhparam", "-out", tls_dh_params, "2048"])  # nosec
 
     return TLSConfigPaths(
         tls_dh_params=tls_dh_params,

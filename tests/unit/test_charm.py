@@ -3,8 +3,9 @@
 
 """Unit tests for the SMTP Relay charm."""
 
+from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, call, patch
+from unittest.mock import ANY, Mock, call, patch
 
 import ops.testing
 import pytest
@@ -16,10 +17,10 @@ import tls
 from state import ConfigurationError
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from charms.operator_libs_linux.v1 import systemd
 
+
+FILES_PATH = Path(__file__).parent / "files"
 
 DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
     "/etc/ssl/private/dhparams.pem",
@@ -29,15 +30,24 @@ DEFAULT_TLS_CONFIG_PATHS = tls.TLSConfigPaths(
 )
 
 
-@patch("charm.utils.write_file", Mock())
 @patch("charm.utils.copy_file", Mock())
 @patch("charm.apt.add_package")
-def test_install(mock_add_package: Mock, context: Context[charm.SMTPRelayCharm]) -> None:
+def test_install(
+    mock_add_package: Mock,
+    context: Context[charm.SMTPRelayCharm],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     arrange: Set up a charm state.
     act: Run the install event hook on the charm.
     assert: The unit status is set to maintenance and the correct packages are installed.
     """
+    log_rotate_syslog = tmp_path / "rsyslog"
+    log_rotate_syslog.write_text((FILES_PATH / "logrotate").read_text())
+    monkeypatch.setattr(charm, "LOG_ROTATE_SYSLOG", log_rotate_syslog)
+    expected_path = FILES_PATH / "logrotate_frequency"
+
     charm_state = State(config={}, leader=True)
 
     out = context.run(context.on.install(), charm_state)
@@ -47,338 +57,221 @@ def test_install(mock_add_package: Mock, context: Context[charm.SMTPRelayCharm])
         ["dovecot-core", "postfix", "postfix-policyd-spf-python"],
         update_cache=True,
     )
+    assert log_rotate_syslog.read_text() == expected_path.read_text()
 
 
-class TestReconcile:
-    """Unit tests for the _reconcile method"""
+@patch("charm.State.from_charm", Mock(side_effect=ConfigurationError("Invalid configuration")))
+def test_invalid_config(context: Context[charm.SMTPRelayCharm]) -> None:
+    """
+    arrange: Invalid charm config.
+    act: Run the config-changed event hook on the charm.
+    assert: The unit status is set to blocked with the correct error message.
+    """
+    charm_state = State(config={}, leader=True)
 
-    @patch("charm.State.from_charm", Mock(side_effect=ConfigurationError("Invalid configuration")))
-    def test_invalid_config(self, context: Context[charm.SMTPRelayCharm]) -> None:
+    out = context.run(context.on.config_changed(), charm_state)
+
+    assert out.unit_status == ops.testing.BlockedStatus("Invalid config")
+
+
+@patch("charm.subprocess.check_call", Mock())
+class TestConfigureSMTPAuth:
+    """Unit tests for _configure_smtp_auth."""
+
+    @pytest.mark.parametrize(
+        "smtp_auth_users",
+        [pytest.param("", id="no auth users"), pytest.param("- user", id="with auth users")],
+    )
+    @patch("charm.systemd")
+    @patch("charm.utils.write_file")
+    def test_no_auth(
+        self,
+        mock_write_file: Mock,
+        mock_systemd: "systemd",
+        smtp_auth_users: str,
+        context: Context[charm.SMTPRelayCharm],
+    ) -> None:
         """
-        arrange: Invalid charm config.
+        arrange: Charm with SMTP auth disabled.
         act: Run the config-changed event hook on the charm.
-        assert: The unit status is set to blocked with the correct error message.
+        assert: The charm correctly configures dovecot for a disabled state,
+            pauses the dovecot service, and does not open SMTP auth ports.
         """
-        charm_state = State(config={}, leader=True)
+        charm_state = State(
+            config={
+                "enable_smtp_auth": False,
+                "smtp_auth_users": smtp_auth_users,
+            },
+            leader=True,
+        )
 
         out = context.run(context.on.config_changed(), charm_state)
 
-        assert out.unit_status == ops.testing.BlockedStatus("Invalid config")
+        assert {TCPPort(465), TCPPort(587)}.isdisjoint(out.opened_ports)
 
-    class TestConfigureSMTPAuth:
-        """Unit tests for _configure_smtp_auth."""
+        expected_systemd_call = call("dovecot")
+        assert expected_systemd_call in mock_systemd.service_pause.mock_calls
+        assert expected_systemd_call not in mock_systemd.service_enable.mock_calls
+        assert expected_systemd_call not in mock_systemd.service_reload.mock_calls
 
-        @pytest.mark.parametrize(
-            ("smtp_auth_users"),
-            [pytest.param("", id="no auth users"), pytest.param("- user", id="with auth users")],
-        )
-        @patch("charm.construct_dovecot_user_file_content")
-        @patch("charm.construct_dovecot_config_file_content")
-        @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock())
-        @patch("charm.utils.write_file", Mock())
-        def test_no_auth(
-            self,
-            mock_systemd: "systemd",
-            mock_construct_dovecot_config_file_content: Mock,
-            mock_construct_dovecot_user_file_content: Mock,
-            smtp_auth_users: str,
-            context: Context[charm.SMTPRelayCharm],
-        ) -> None:
-            """
-            arrange: Charm with SMTP auth disabled.
-            act: Run the config-changed event hook on the charm.
-            assert: The charm correctly configures dovecot for a disabled state,
-                pauses the dovecot service, and does not open SMTP auth ports.
-            """
-            charm_state = State(
-                config={
-                    "enable_smtp_auth": False,
-                    "smtp_auth_users": smtp_auth_users,
+        expected_write_calls = [call(ANY, charm.DOVECOT_CONFIG_FILEPATH)]
+        if smtp_auth_users:
+            expected_write_calls.append(
+                call(ANY, charm.DOVECOT_USERS_FILEPATH, perms=0o640, group=charm.DOVECOT_NAME)
+            )
+
+        mock_write_file.assert_has_calls(expected_write_calls)
+
+        assert out.unit_status == ops.testing.ActiveStatus()
+
+    @pytest.mark.parametrize(
+        "dovecot_running",
+        [pytest.param(True, id="dovecot_running"), pytest.param(False, id="dovecot_not_running")],
+    )
+    @patch("charm.systemd")
+    @patch("charm.utils.write_file")
+    def test_with_auth_dovecot(
+        self,
+        mock_write_file: Mock,
+        mock_systemd: "systemd",
+        dovecot_running: bool,
+        context: Context[charm.SMTPRelayCharm],
+    ) -> None:
+        """
+        arrange: Charm with SMTP auth enabled and dovecot not running.
+        act: Run the config-changed event hook on the charm.
+        assert: Opensthe required ports, generates the dovecot config,
+            and resumes the dovecot service.
+        """
+        charm_state = State(config={"enable_smtp_auth": True}, leader=True)
+        mock_systemd.service_running.return_value = dovecot_running
+
+        out = context.run(context.on.config_changed(), charm_state)
+
+        assert {TCPPort(465), TCPPort(587)}.issubset(out.opened_ports)
+
+        expected_systemd_call = call("dovecot")
+        if dovecot_running:
+            assert expected_systemd_call in mock_systemd.service_reload.mock_calls
+            assert expected_systemd_call not in mock_systemd.service_resume.mock_calls
+            assert expected_systemd_call not in mock_systemd.service_pause.mock_calls
+        else:
+            assert expected_systemd_call in mock_systemd.service_resume.mock_calls
+            assert expected_systemd_call not in mock_systemd.service_reload.mock_calls
+            assert expected_systemd_call not in mock_systemd.service_pause.mock_calls
+
+        mock_write_file.assert_has_calls([call(ANY, charm.DOVECOT_CONFIG_FILEPATH)])
+
+        assert out.unit_status == ops.testing.ActiveStatus()
+
+
+@pytest.mark.parametrize(
+    "postfix_running",
+    [pytest.param(True, id="postfix_running"), pytest.param(False, id="postfix_not_running")],
+)
+@patch.object(
+    charm, "construct_postfix_config_params", wraps=charm.construct_postfix_config_params
+)
+@patch.object(charm, "get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
+@patch("charm.systemd")
+@patch("charm.utils.write_file", Mock())
+@patch("charm.subprocess.check_call")
+def test_configure_smtp_relay(
+    mock_subprocess_check_call: Mock,
+    mock_systemd: "systemd",
+    mock_construct_postfix_config_params: Mock,
+    postfix_running: bool,
+    context: Context[charm.SMTPRelayCharm],
+) -> None:
+    """
+    arrange: Configure the charm with a specific domain.
+    act: Run the config-changed event hook.
+    assert: The charm constructs the correct FQDN.
+    """
+    charm_state = State(
+        config={
+            "domain": "example-domain.com",
+        },
+        relations=[
+            ops.testing.Relation(
+                "milter",
+                remote_units_data={
+                    0: {"ingress-address": "10.0.0.10"},
+                    1: {"ingress-address": "10.0.0.11", "port": "9999"},
+                    2: {},
                 },
-                leader=True,
-            )
+            ),
+            ops.testing.Relation(
+                "milter",
+                remote_units_data={
+                    0: {"ingress-address": "10.0.1.10"},
+                    1: {"ingress-address": "10.0.1.11", "port": "9999"},
+                },
+            ),
+            ops.testing.Relation(
+                "milter",
+                remote_units_data={},
+            ),
+            ops.testing.Relation(
+                "milter",
+                remote_units_data={
+                    0: {"ingress-address": "10.0.1.10"},
+                    1: {},
+                },
+            ),
+            ops.testing.PeerRelation(
+                "peer",
+                peers_data={
+                    1: {},
+                    2: {},
+                },
+            ),
+        ],
+        leader=True,
+    )
+    mock_systemd.service_running.return_value = postfix_running
 
-            out = context.run(context.on.config_changed(), charm_state)
+    out = context.run(context.on.config_changed(), charm_state)
 
-            mock_construct_dovecot_config_file_content.assert_called_once_with(
-                charm.DOVECOT_USERS_FILEPATH, False
-            )
+    mock_construct_postfix_config_params.assert_called_once_with(
+        charm_state=ANY,
+        tls_dh_params_path=DEFAULT_TLS_CONFIG_PATHS.tls_dh_params,
+        tls_cert_path=DEFAULT_TLS_CONFIG_PATHS.tls_cert,
+        tls_key_path=DEFAULT_TLS_CONFIG_PATHS.tls_key,
+        tls_cert_key_path=DEFAULT_TLS_CONFIG_PATHS.tls_cert_key,
+        fqdn="smtp-relay-0.example-domain.com",
+        hostname=ANY,
+        milters="inet:10.0.0.10:8892 inet:10.0.1.11:9999",
+    )
 
-            assert {TCPPort(465), TCPPort(587)}.isdisjoint(out.opened_ports)
+    mock_subprocess_check_call.assert_has_calls(
+        [
+            call(["postmap", "hash:/etc/postfix/relay_recipient"]),
+            call(["postmap", "hash:/etc/postfix/restricted_recipients"]),
+            call(["postmap", "hash:/etc/postfix/restricted_senders"]),
+            call(["postmap", "hash:/etc/postfix/access"]),
+            call(["postmap", "hash:/etc/postfix/sender_login"]),
+            call(["postmap", "hash:/etc/postfix/tls_policy"]),
+            call(["postmap", "hash:/etc/postfix/transport"]),
+            call(["postmap", "hash:/etc/postfix/virtual_alias"]),
+        ],
+    )
+    expected_systemd_call = call("postfix")
+    if postfix_running:
+        assert expected_systemd_call in mock_systemd.service_reload.mock_calls
+        assert expected_systemd_call not in mock_systemd.service_resume.mock_calls
+    else:
+        assert expected_systemd_call in mock_systemd.service_resume.mock_calls
+        assert expected_systemd_call not in mock_systemd.service_reload.mock_calls
 
-            mock_systemd.service_pause.assert_called_once_with("dovecot")
-            mock_systemd.service_enable.assert_not_called()
-            mock_systemd.service_reload.assert_not_called()
-
-            if smtp_auth_users:
-                mock_construct_dovecot_user_file_content.assert_called_once_with(["user"])
-            else:
-                mock_construct_dovecot_user_file_content.assert_not_called()
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-
-        @patch("charm.construct_dovecot_user_file_content")
-        @patch("charm.construct_dovecot_config_file_content")
-        @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock())
-        @patch("charm.utils.write_file", Mock())
-        def test_with_auth_dovecot_not_running(
-            self,
-            mock_systemd: "systemd",
-            mock_construct_dovecot_config_file_content: Mock,
-            mock_construct_dovecot_user_file_content: Mock,
-            context: Context[charm.SMTPRelayCharm],
-        ) -> None:
-            """
-            arrange: Charm with SMTP auth enabled and dovecot not running.
-            act: Run the config-changed event hook on the charm.
-            assert: Opensthe required ports, generates the dovecot config,
-                and resumes the dovecot service.
-            """
-            charm_state = State(config={"enable_smtp_auth": True}, leader=True)
-            mock_systemd.service_running.return_value = False
-
-            out = context.run(context.on.config_changed(), charm_state)
-
-            mock_construct_dovecot_config_file_content.assert_called_once_with(
-                charm.DOVECOT_USERS_FILEPATH, True
-            )
-            assert {TCPPort(465), TCPPort(587)}.issubset(out.opened_ports)
-
-            mock_systemd.service_resume.assert_called_once_with("dovecot")
-            mock_systemd.service_reload.assert_not_called()
-            mock_systemd.service_pause.assert_not_called()
-
-            mock_construct_dovecot_user_file_content.assert_not_called()
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-
-        @patch("charm.construct_dovecot_user_file_content")
-        @patch("charm.construct_dovecot_config_file_content")
-        @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock())
-        @patch("charm.utils.write_file", new=Mock())
-        def test_with_auth_dovecot_running(
-            self,
-            mock_systemd: "systemd",
-            mock_construct_dovecot_config_file_content: Mock,
-            mock_construct_dovecot_user_file_content: Mock,
-            context: Context[charm.SMTPRelayCharm],
-        ) -> None:
-            """
-            arrange: Charm with SMTP auth enabled and with dovecot running.
-            act: Run the config-changed event hook on the charm.
-            assert: Reloads the dovecot service only if the configuration file was modified.
-            """
-            charm_state = State(config={"enable_smtp_auth": True}, leader=True)
-            mock_systemd.service_running.return_value = True
-
-            out = context.run(context.on.config_changed(), charm_state)
-
-            mock_construct_dovecot_config_file_content.assert_called_once_with(
-                charm.DOVECOT_USERS_FILEPATH, True
-            )
-            assert {TCPPort(465), TCPPort(587)}.issubset(out.opened_ports)
-
-            mock_systemd.service_reload.assert_called_with("dovecot")
-
-            mock_construct_dovecot_user_file_content.assert_not_called()
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-
-    class TestConfigureSMTPRelay:
-        """Unit tests for _configure_smtp_relay"""
-
-        @patch("charm.subprocess.check_call", Mock())
-        @patch("charm.Path.is_file", lambda x: {charm.ALIASES_FILEPATH: False}.get(x, True))
-        @patch("charm.socket.gethostname", Mock(return_value="hostname"))
-        @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
-        @patch("charm.construct_postfix_config_params", return_value={})
-        @patch("charm.systemd", Mock(return_value=Mock(return_value=True)))
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-        @patch("charm.utils.write_file", Mock(return_value=False))
-        def test_generate_fqdn(
-            self,
-            mock_construct_postfix_config_params: Mock,
-            context: Context[charm.SMTPRelayCharm],
-        ) -> None:
-            """
-            arrange: Configure the charm with a specific domain.
-            act: Run the config-changed event hook.
-            assert: The charm constructs the correct FQDN.
-            """
-            charm_state = State(config={"domain": "example-domain.com"}, leader=True)
-
-            out = context.run(context.on.config_changed(), charm_state)
-
-            _, kwargs = mock_construct_postfix_config_params.call_args
-            assert kwargs["fqdn"] == "smtp-relay-0.example-domain.com"
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-            assert TCPPort(25) in out.opened_ports
-
-        @patch("charm.subprocess.check_call", Mock())
-        @patch("charm.Path.is_file", lambda x: {charm.ALIASES_FILEPATH: False}.get(x, True))
-        @patch("charm.socket.gethostname", Mock(return_value="hostname"))
-        @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
-        @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
-        @patch("charm.construct_postfix_config_params", return_value={})
-        @patch("charm.systemd", Mock(return_value=Mock(return_value=True)))
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-        @patch("charm.utils.write_file", Mock(return_value=False))
-        def test_get_milters(
-            self,
-            mock_construct_postfix_config_params: Mock,
-            context: Context[charm.SMTPRelayCharm],
-        ) -> None:
-            """
-            arrange: Set up a charm state with active milter relations containing
-                remote unit data.
-            act: Run the config-changed event hook.
-            assert: The charm correctly parses the milter addresses from the
-                relation data and passes them to the postfix config generator.
-            """
-            charm_state = State(
-                relations=[
-                    ops.testing.Relation(
-                        "milter",
-                        remote_units_data={
-                            0: {"ingress-address": "10.0.0.10"},
-                            1: {"ingress-address": "10.0.0.11", "port": "9999"},
-                            2: {},
-                        },
-                    ),
-                    ops.testing.Relation(
-                        "milter",
-                        remote_units_data={
-                            0: {"ingress-address": "10.0.1.10"},
-                            1: {"ingress-address": "10.0.1.11", "port": "9999"},
-                        },
-                    ),
-                    ops.testing.Relation(
-                        "milter",
-                        remote_units_data={},
-                    ),
-                    ops.testing.Relation(
-                        "milter",
-                        remote_units_data={
-                            0: {"ingress-address": "10.0.1.10"},
-                            1: {},
-                        },
-                    ),
-                    ops.testing.PeerRelation(
-                        "peer",
-                        peers_data={
-                            1: {},
-                            2: {},
-                        },
-                    ),
-                ],
-            )
-
-            out = context.run(context.on.config_changed(), charm_state)
-
-            _, kwargs = mock_construct_postfix_config_params.call_args
-            assert kwargs["milters"] == "inet:10.0.0.10:8892 inet:10.0.1.11:9999"
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-            assert TCPPort(25) in out.opened_ports
-
-        @patch("charm.subprocess.check_call")
-        @patch("charm.socket.gethostname", Mock(return_value="hostname"))
-        @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
-        @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
-        @patch("charm.systemd", Mock(return_value=Mock(return_value=True)))
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-        @patch("charm.utils.write_file", Mock(return_value=True))
-        def test_apply_postfix_maps(
-            self, mock_check_call: Mock, context: Context[charm.SMTPRelayCharm]
-        ) -> None:
-            """
-            arrange: Set up a charm state where postfix map files do not exist.
-            act: Run the config-changed event hook.
-            assert: Has expected calls to the underlying system command to apply postfix maps.
-            """
-            charm_state = State(config={}, leader=True)
-
-            out = context.run(context.on.config_changed(), charm_state)
-
-            mock_check_call.assert_has_calls(
-                [
-                    call(["postmap", "hash:/etc/postfix/relay_recipient"]),
-                    call(["postmap", "hash:/etc/postfix/restricted_recipients"]),
-                    call(["postmap", "hash:/etc/postfix/restricted_senders"]),
-                    call(["postmap", "hash:/etc/postfix/access"]),
-                    call(["postmap", "hash:/etc/postfix/sender_login"]),
-                    call(["postmap", "hash:/etc/postfix/tls_policy"]),
-                    call(["postmap", "hash:/etc/postfix/transport"]),
-                    call(["postmap", "hash:/etc/postfix/virtual_alias"]),
-                ],
-            )
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-            assert TCPPort(25) in out.opened_ports
-
-        @pytest.mark.parametrize(
-            "service_running",
-            [
-                pytest.param(True, id="service-running"),
-                pytest.param(False, id="service-not-running"),
-            ],
-        )
-        @patch("charm.socket.gethostname", Mock(return_value="hostname"))
-        @patch("charm.socket.getfqdn", Mock(return_value="fqdn"))
-        @patch("charm.get_tls_config_paths", Mock(return_value=DEFAULT_TLS_CONFIG_PATHS))
-        @patch("charm.SMTPRelayCharm._update_aliases", Mock())
-        @patch("charm.SMTPRelayCharm._apply_postfix_maps", new=Mock())
-        @patch("charm.construct_postfix_config_params", Mock(return_value={}))
-        @patch("charm.systemd")
-        @patch("charm.SMTPRelayCharm._configure_policyd_spf", Mock())
-        @patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-        @patch("charm.utils.write_file", Mock(return_value=False))
-        def test_service_control(
-            self,
-            mock_systemd: "systemd",
-            service_running: bool,
-            context: Context[charm.SMTPRelayCharm],
-        ) -> None:
-            """
-            arrange: Parameterize the postfix service state and the configuration changing.
-            act: Run the config-changed event hook.
-            assert: The charm correctly resumes the service if it's not running,
-                reloads it if it is running and config changed, and does nothing
-                if it is running and config is unchanged.
-            """
-            charm_state = State(config={}, leader=True)
-            mock_systemd.service_running.return_value = service_running
-
-            out = context.run(context.on.config_changed(), charm_state)
-
-            if not service_running:
-                mock_systemd.service_resume.assert_called_once_with("postfix")
-                mock_systemd.service_reload.assert_not_called()
-            else:
-                mock_systemd.service_reload.assert_called_once_with("postfix")
-                mock_systemd.service_resume.assert_not_called()
-
-            assert out.unit_status == ops.testing.ActiveStatus()
-            assert TCPPort(25) in out.opened_ports
+    assert out.unit_status == ops.testing.ActiveStatus()
+    assert TCPPort(25) in out.opened_ports
 
 
 class TestUpdateAliases:
     @pytest.mark.parametrize(
         ("changed"),
-        [
-            pytest.param(True, id="change"),
-            pytest.param(False, id="no-change"),
-        ],
+        [pytest.param(True, id="change"), pytest.param(False, id="no_change")],
     )
     @patch("charm.utils.write_file")
     @patch("charm.subprocess.check_call")
@@ -452,7 +345,6 @@ class TestUpdateAliases:
         act: Call the internal _update_aliases method.
         assert: The content of the aliases file is updated to the expected state.
         """
-
         aliases_path = tmp_path / "aliases"
         aliases_path.write_text(initial_content)
 
@@ -489,17 +381,13 @@ class TestUpdateAliases:
 
 @pytest.mark.parametrize(
     "enable_spf",
-    [
-        pytest.param(True, id="enable-spf"),
-        pytest.param(False, id="disable-spf"),
-    ],
+    [pytest.param(True, id="enable_spf"), pytest.param(False, id="disable_spf")],
 )
-@patch("charm.utils.write_file", Mock())
-@patch("charm.SMTPRelayCharm._configure_smtp_relay", Mock())
-@patch("charm.SMTPRelayCharm._configure_smtp_auth", Mock())
-@patch("charm.construct_policyd_spf_config_file_content")
+@patch("charm.systemd", Mock())
+@patch("charm.subprocess.check_call", Mock())
+@patch("charm.utils.write_file")
 def test_configure_policyd_spf(
-    mock_construct_policyd_spf_config_file_content: Mock,
+    mock_write_file: Mock,
     enable_spf: bool,
     context: Context[charm.SMTPRelayCharm],
 ) -> None:
@@ -516,8 +404,12 @@ def test_configure_policyd_spf(
     )
 
     out = context.run(context.on.config_changed(), charm_state)
+
+    investigated_call = call(ANY, charm.POLICYD_SPF_FILEPATH)
+
     if enable_spf:
-        mock_construct_policyd_spf_config_file_content.assert_called_once()
+        mock_write_file.assert_has_calls([investigated_call])
     else:
-        mock_construct_policyd_spf_config_file_content.assert_not_called()
+        assert investigated_call not in mock_write_file.mock_calls
+
     assert out.unit_status == ops.testing.ActiveStatus()

@@ -50,9 +50,9 @@ POLICYD_SPF_FILEPATH = Path("/etc/postfix-policyd-spf-python/policyd-spf.conf")
 TLS_DH_PARAMS_FILEPATH = Path("/etc/ssl/private/dhparams.pem")
 MILTER_PORT = ops.Port("tcp", 8892)
 MAIN_CF = "main.cf"
-MAIN_CF_TPL = "postfix_main_cf.tmpl"
+MAIN_CF_TMPL = "postfix_main_cf.tmpl"
 MASTER_CF = "master.cf"
-MASTER_CF_TPL = "postfix_master_cf.tmpl"
+MASTER_CF_TMPL = "postfix_master_cf.tmpl"
 
 DOVECOT_NAME = "dovecot"
 DOVECOT_PORTS = (ops.Port("tcp", 465), ops.Port("tcp", 587))
@@ -117,9 +117,7 @@ class SMTPRelayCharm(ops.CharmBase):
 
         if charm_state.smtp_auth_users:
             contents = construct_dovecot_user_file_content(charm_state.smtp_auth_users)
-            utils.write_file(
-                contents, DOVECOT_USERS_FILEPATH, perms=0o640, group=DOVECOT_NAME
-            )
+            utils.write_file(contents, DOVECOT_USERS_FILEPATH, perms=0o640, group=DOVECOT_NAME)
 
         if not charm_state.enable_smtp_auth:
             self.unit.status = ops.MaintenanceStatus(
@@ -164,9 +162,9 @@ class SMTPRelayCharm(ops.CharmBase):
             hostname=hostname,
             milters=milters,
         )
-        contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MAIN_CF_TPL)
+        contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MAIN_CF_TMPL)
         utils.write_file(contents, POSTFIX_CONF_DIRPATH / MAIN_CF)
-        contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MASTER_CF_TPL)
+        contents = utils.render_jinja2_template(context, TEMPLATES_DIRPATH / MASTER_CF_TMPL)
         utils.write_file(contents, POSTFIX_CONF_DIRPATH / MASTER_CF)
 
         postfix_maps = build_postfix_maps(POSTFIX_CONF_DIRPATH, charm_state)
@@ -185,7 +183,7 @@ class SMTPRelayCharm(ops.CharmBase):
     @staticmethod
     def _apply_postfix_maps(postfix_maps: list[PostfixMap]) -> None:
         for postfix_map in postfix_maps:
-            changed = utils.write_file(postfix_map.content, str(postfix_map.path))
+            changed = utils.write_file(postfix_map.content, postfix_map.path)
             if changed and postfix_map.type == PostfixLookupTableType.HASH:
                 subprocess.check_call(["postmap", postfix_map.source])  # nosec
 
