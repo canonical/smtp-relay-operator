@@ -5,18 +5,28 @@
 
 """Integration tests."""
 
+import base64
+import hashlib
 import logging
 import smtplib
 import socket
 import time
+import os
 
 import jubilant
 import pytest
 import requests
 import yaml
-from passlib.hash import sha512_crypt
 
 logger = logging.getLogger(__name__)
+
+
+def sha512(password: str, salt: bytes = None) -> str:
+    if salt is None:
+        salt = os.urandom(8)
+    digest = hashlib.sha512(password.encode("utf-8") + salt).digest()
+    b64 = base64.b64encode(digest + salt).decode("ascii")
+    return "{SSHA512}" + b64
 
 
 @pytest.fixture(scope="session", name="machine_ip_address")
@@ -89,7 +99,7 @@ def test_smtp_authentication(juju: jubilant.Juju, smtp_relay_app, machine_ip_add
 
     username = "testuser"
     password = "testpassword"  # nosec
-    hashed_password = sha512_crypt.hash(password)
+    hashed_password = sha512(password)
     auth_users_yaml = yaml.dump([f"{username}:{hashed_password}"])
 
     juju.config(
